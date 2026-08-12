@@ -173,6 +173,8 @@ async function main() {
       },
       onEscape: () => chrome?.handleEscape(),
     });
+
+    chrome = new AppChrome({
       appRoot,
       nav: document.getElementById("app-nav"),
       scrim: document.getElementById("chrome-scrim"),
