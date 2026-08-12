@@ -27,10 +27,22 @@ const ATTITUDE_STIFFNESS = 7;
 const ATTITUDE_DAMPING = 2 * Math.sqrt(ATTITUDE_STIFFNESS);
 const MAX_ANGULAR_SPEED = 2.0;
 
-/** Every hop takes the same wall-clock time, regardless of distance. */
-const TRAVEL_DURATION = 6;
-/** Spool up to cruise over this long. */
+/**
+ * Hop duration grows with the log of the distance: a short trip inside
+ * {@link TRAVEL_NEAR_PC} takes {@link TRAVEL_NEAR_SECONDS}, and each further
+ * decade adds {@link TRAVEL_SECONDS_PER_DECADE} — so 10 pc ≈ 2 s, 100 pc ≈ 5 s,
+ * 1000 pc ≈ 8 s — up to a hard ceiling.
+ */
+const TRAVEL_NEAR_PC = 10;
+const TRAVEL_NEAR_SECONDS = 2;
+const TRAVEL_SECONDS_PER_DECADE = 3;
+const TRAVEL_MAX_SECONDS = 9;
+/**
+ * Spool up to cruise over this long, but never more than a quarter of the hop
+ * so brief trips keep a recognisable accelerate / cruise / brake shape.
+ */
 const DEPART_ACCEL_SECONDS = 1.4;
+const DEPART_ACCEL_FRACTION = 0.25;
 /**
  * Burn off cruise speed over this long, settling onto the orbit tangent. Far
  * hops cruise faster and so need longer to shed it: the brake grows with the
@@ -41,6 +53,7 @@ const ARRIVAL_BRAKE_SECONDS = 1.5;
 const ARRIVAL_BRAKE_MAX_SECONDS = 3.2;
 const ARRIVAL_BRAKE_GROWTH = 0.45;
 const ARRIVAL_BRAKE_REFERENCE_PC = 12;
+const ARRIVAL_BRAKE_FRACTION = 0.45;
 /**
  * Weights the brake towards its tail. Raising a ramp to this power sheds speed
  * early and then creeps in, so the closing rate measured against the remaining
@@ -62,7 +75,7 @@ const MAX_TANGENT_FRAC = 0.4;
 const ARC_SAMPLES = 128;
 
 /**
- * Free-fly camera with fixed-duration Bezier travel between systems.
+ * Free-fly camera with Bezier travel between systems.
  *
  * Orientation is an orthonormal basis (no yaw/pitch integration): each frame
  * the shortest rotation from the current basis to the desired one is fed to a
@@ -299,14 +312,15 @@ export class FlyCamera {
 
     const p0 = { ...this.position };
     const p3 = orbitPosition(this._slot);
+    const duration = travelDurationFor(length3(sub3(dest, p0)));
 
     // Hermite tangents: leave along current velocity, arrive along the orbit
     // tangent. A near-zero start tangent eases out of rest naturally.
     const v0 = { ...this._velocity };
     const v1 = orbitTangentVelocity(this._slot, this.autoOrbitSpeed);
     const tangentLimit = MAX_TANGENT_FRAC * Math.max(length3(sub3(p3, p0)), 1e-3);
-    const p1 = add3(p0, clampLength(scale3(v0, TRAVEL_DURATION / 3), tangentLimit));
-    const p2 = sub3(p3, clampLength(scale3(v1, TRAVEL_DURATION / 3), tangentLimit));
+    const p1 = add3(p0, clampLength(scale3(v0, duration / 3), tangentLimit));
+    const p2 = sub3(p3, clampLength(scale3(v1, duration / 3), tangentLimit));
 
     // Timing is driven along the path itself, so the brake lasts a set number
     // of seconds no matter how the curve is shaped.
@@ -315,7 +329,7 @@ export class FlyCamera {
       arc.length,
       length3(v0),
       length3(v1),
-      TRAVEL_DURATION
+      duration
     );
 
     this._travel = {
@@ -326,7 +340,7 @@ export class FlyCamera {
       arc,
       schedule,
       vEnd: v1,
-      duration: TRAVEL_DURATION,
+      duration,
       elapsed: 0,
       dest,
       arrivalUp: { ...basis.ey },
@@ -905,6 +919,19 @@ function rotateAroundAxis(v, axis, angle) {
 }
 
 /**
+ * Seconds to spend crossing `distancePc`, on a log scale between a floor for
+ * anything nearby and a hard ceiling for the far side of the catalog.
+ */
+function travelDurationFor(distancePc) {
+  if (!(distancePc > TRAVEL_NEAR_PC)) return TRAVEL_NEAR_SECONDS;
+  const decades = Math.log10(distancePc / TRAVEL_NEAR_PC);
+  return Math.min(
+    TRAVEL_MAX_SECONDS,
+    TRAVEL_NEAR_SECONDS + TRAVEL_SECONDS_PER_DECADE * decades
+  );
+}
+
+/**
  * Sample the curve into a distance → parameter table. Driving the hop by
  * distance (rather than by the raw Bezier parameter) is what lets the brake
  * last a fixed number of seconds instead of a fixed slice of the curve.
@@ -996,9 +1023,13 @@ function integrateProfile(sched, f) {
  * hop is too short to hold a cruise faster than the orbit it ends on.
  */
 function buildSpeedSchedule(length, startSpeed, endSpeed, duration) {
-  const accelSeconds = DEPART_ACCEL_SECONDS;
+  const accelSeconds = Math.min(
+    DEPART_ACCEL_SECONDS,
+    duration * DEPART_ACCEL_FRACTION
+  );
   const brakeSeconds = Math.min(
     ARRIVAL_BRAKE_MAX_SECONDS,
+    duration * ARRIVAL_BRAKE_FRACTION,
     ARRIVAL_BRAKE_SECONDS +
       ARRIVAL_BRAKE_GROWTH * Math.log1p(Math.max(length, 0) / ARRIVAL_BRAKE_REFERENCE_PC)
   );
