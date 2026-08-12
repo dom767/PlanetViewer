@@ -18,26 +18,25 @@ import {
 const ARRIVAL_ELEVATION = SYSTEM_VIEW_ELEVATION;
 const WORLD_UP = { x: 0, y: 0, z: 1 };
 
-/** Rotation: max rate scales with misalignment via (1 − dot). */
-const ROT_RATE_MIN = 0.35;
-const ROT_RATE_MAX = 2.4;
+/**
+ * Heading spring: accel = −k·θ − c·ω along the shortest arc.
+ * Critically damped so rate falls as remaining heading error shrinks.
+ */
+const LOOK_SPRING_STIFF = 9;
+const LOOK_SPRING_DAMP = 2 * Math.sqrt(LOOK_SPRING_STIFF);
 
-/** Bezier travel timing (parsecs / seconds). */
-const CRUISE_SPEED_MIN = 10;
-const CRUISE_SPEED_MAX = 120;
-const CRUISE_SPEED_FRAC = 0.32;
-const TRAVEL_T_MIN = 1.2;
-const TRAVEL_T_MAX = 28;
+/** Fixed Bezier hop duration (seconds), independent of distance. */
+const TRAVEL_DURATION = 6;
 /** Reveal system orbits near the end of the hop. */
 const ARRIVE_REVEAL_U = 0.72;
 
 /**
  * Free-fly camera with Bezier travel between systems.
  *
- * Travel orientation uses an orthonormal basis (not yaw/pitch): shortest-arc
- * rotation toward the destination, with angular speed limited by
- * dot(currentFwd, targetFwd). Position follows a cubic Bezier that matches
- * start/end velocity so arrival into overlook orbit has no snap.
+ * Travel orientation uses an orthonormal basis (not yaw/pitch): a critically
+ * damped spring drives shortest-arc rotation toward the destination so turn
+ * rate falls as heading error shrinks. Position follows a fixed-duration cubic
+ * Bezier that matches start/end velocity for a seamless overlook handoff.
  */
 export class FlyCamera {
   constructor() {
@@ -62,6 +61,8 @@ export class FlyCamera {
     this._fwd = this.forwardFromYawPitch();
     this._upBody = { ...WORLD_UP };
     this._velocity = { x: 0, y: 0, z: 0 };
+    /** Angular velocity (rad/s) of the heading spring along the look arc. */
+    this._lookAngVel = 0;
 
     this.autoOrbitResumeDelay = 5.5;
     this._reattachCooldown = 0;
@@ -257,8 +258,7 @@ export class FlyCamera {
     const p0 = { ...this.position };
     const p3 = orbitPosition(this._slot);
     const hop = Math.max(length3(sub3(p3, p0)), 0.5);
-    const cruise = clamp(hop * CRUISE_SPEED_FRAC, CRUISE_SPEED_MIN, CRUISE_SPEED_MAX);
-    const duration = clamp(hop / cruise, TRAVEL_T_MIN, TRAVEL_T_MAX);
+    const duration = TRAVEL_DURATION;
 
     // Start velocity: keep motion if already moving, else leave host / nose
     let v0 = { ...this._velocity };
@@ -284,10 +284,11 @@ export class FlyCamera {
     const v1 = orbitTangentVelocity(this._slot, this.autoOrbitSpeed);
 
     // Cubic Bezier with Hermite end velocities: B'(0)=3(P1−P0), B'(1)=3(P3−P2)
-    // Parameter u ∈ [0,1] over `duration` ⇒ world vel = (dB/du)/duration
+    // Parameter u ∈ [0,1] over fixed duration ⇒ world vel = (dB/du)/duration
     const p1 = add3(p0, scale3(v0, duration / 3));
     const p2 = sub3(p3, scale3(v1, duration / 3));
 
+    this._lookAngVel = 0;
     this._travel = {
       p0,
       p1,
@@ -354,6 +355,7 @@ export class FlyCamera {
   cancelTravel() {
     if (this._flightMode === "travel") {
       this._travel = null;
+      this._lookAngVel = 0;
       if (this._slot) {
         this._flightMode = "orbit";
         this._phase = "orbit";
@@ -372,6 +374,7 @@ export class FlyCamera {
     this._upBody = { ...WORLD_UP };
     this._fwd = this.forwardFromYawPitch();
     this._velocity = { x: 0, y: 0, z: 0 };
+    this._lookAngVel = 0;
   }
 
   /** Resume overlook orbit after drag / zoom pause. */
@@ -497,8 +500,7 @@ export class FlyCamera {
   }
 
   /**
-   * Bezier position + shortest-arc basis rotation toward the destination star.
-   * Angular speed is gated by dot(currentFwd, targetFwd).
+   * Bezier position + spring-driven shortest-arc rotation toward the star.
    */
   _updateTravel(dt) {
     const tr = this._travel;
@@ -523,7 +525,14 @@ export class FlyCamera {
     const targetFwd =
       length3(toStar) > 1e-6 ? normalize3(toStar) : this._fwd;
 
-    this._fwd = rotateBasisToward(this._fwd, targetFwd, dt);
+    const look = springRotateToward(
+      this._fwd,
+      targetFwd,
+      this._lookAngVel,
+      dt
+    );
+    this._fwd = look.dir;
+    this._lookAngVel = look.angVel;
     // Blend camera up toward the planetary plane normal along the hop
     const upMix = smoothstep(clamp((u - 0.35) / 0.5, 0, 1));
     const desiredUp = normalize3(lerp3(WORLD_UP, tr.arrivalUp, upMix));
@@ -552,6 +561,7 @@ export class FlyCamera {
       this._upBody = orthonormalizeUp(look, slot.basis.ey);
       this._syncYawPitchFromDir(look);
     }
+    this._lookAngVel = 0;
     this._travel = null;
     this._flightMode = "orbit";
     this._phase = "orbit";
@@ -573,7 +583,14 @@ export class FlyCamera {
     this._velocity = lerp3(this._velocity, desiredVel, clamp(6 * dt, 0, 1));
 
     const lookStar = normalize3(sub3(slot.target, this.position));
-    this._fwd = rotateBasisToward(this._fwd, lookStar, dt);
+    const look = springRotateToward(
+      this._fwd,
+      lookStar,
+      this._lookAngVel,
+      dt
+    );
+    this._fwd = look.dir;
+    this._lookAngVel = look.angVel;
     this._upBody = orthonormalizeUp(this._fwd, slot.basis.ey);
     this._syncYawPitchFromDir(this._fwd);
   }
@@ -725,30 +742,44 @@ function orthonormalizeUp(forward, approxUp) {
 }
 
 /**
- * Shortest-arc rotate `from` toward `to`. Rate is limited by
- * dot(from, to): opposite directions turn fastest, aligned slowest.
+ * Critically damped spring along the shortest arc from `from` toward `to`.
+ * Error θ = acos(dot); accel = −k·θ − c·ω so |ω| falls as heading converges.
+ * @returns {{dir:{x:number,y:number,z:number}, angVel:number}}
  */
-function rotateBasisToward(from, to, dt) {
+function springRotateToward(from, to, angVel, dt) {
   const a = normalize3(from);
   const b = normalize3(to);
   const d = clamp(dot3(a, b), -1, 1);
-  if (d > 0.999999) return b;
+  if (d > 0.999999) {
+    return { dir: b, angVel: 0 };
+  }
 
-  // Remaining angle and shortest axis (basis-matrix style, no yaw/pitch)
-  const ang = Math.acos(d);
-  const misalign = 0.5 * (1 - d); // 0 aligned → 1 opposite
-  const rate = ROT_RATE_MIN + (ROT_RATE_MAX - ROT_RATE_MIN) * misalign;
-  const step = Math.min(ang, rate * dt);
-  if (step < 1e-8) return a;
+  const error = Math.acos(d);
+  let ω = angVel;
+  const accel = -LOOK_SPRING_STIFF * error - LOOK_SPRING_DAMP * ω;
+  ω += accel * dt;
+
+  // Integrate along the arc; clamp so we never overshoot the target heading
+  let step = ω * dt;
+  if (step <= 0) {
+    // Spring pulled the wrong way (rare with semi-implicit); nudge toward target
+    ω = Math.max(ω, 0);
+    step = Math.max(0, ω * dt);
+  }
+  if (step >= error) {
+    return { dir: b, angVel: 0 };
+  }
+  if (step < 1e-10) {
+    return { dir: a, angVel: ω };
+  }
 
   let axis = cross3(a, b);
   if (length3(axis) < 1e-8) {
-    // 180°: pick any perpendicular axis
     axis = cross3(a, WORLD_UP);
     if (length3(axis) < 1e-8) axis = cross3(a, { x: 1, y: 0, z: 0 });
   }
   axis = normalize3(axis);
-  return rotateAroundAxis(a, axis, step);
+  return { dir: rotateAroundAxis(a, axis, step), angVel: ω };
 }
 
 function rotateAroundAxis(v, axis, angle) {
