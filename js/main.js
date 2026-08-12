@@ -172,8 +172,20 @@ async function main() {
     if (pick) selectSystem(pick);
   });
 
+  let closeSystemSearch = null;
+
   window.addEventListener("keydown", (e) => {
-    if (e.code === "Escape") panel.close();
+    if (e.code !== "Escape") return;
+    const searchWrap = document.getElementById("system-search");
+    if (
+      closeSystemSearch &&
+      searchWrap &&
+      !searchWrap.classList.contains("hidden")
+    ) {
+      closeSystemSearch();
+      return;
+    }
+    panel.close();
   });
 
   function selectSystem(system) {
@@ -193,7 +205,14 @@ async function main() {
   const searchInput = document.getElementById("system-search-input");
   const searchResults = document.getElementById("system-search-results");
   const searchWrap = document.getElementById("system-search");
-  if (searchInput && searchResults && searchWrap && systemSearchIndex.length) {
+  const searchTrigger = document.getElementById("hud-selection-trigger");
+  if (
+    searchInput &&
+    searchResults &&
+    searchWrap &&
+    searchTrigger &&
+    systemSearchIndex.length
+  ) {
     const normalizeQuery = (q) =>
       String(q).toUpperCase().trim().replace(/\s+/g, "");
 
@@ -206,6 +225,27 @@ async function main() {
       activeIndex = -1;
       currentMatches = [];
     }
+
+    function closeSearch() {
+      hideResults();
+      searchWrap.classList.add("hidden");
+      searchInput.value = "";
+      searchInput.blur();
+    }
+    closeSystemSearch = closeSearch;
+
+    function openSearch() {
+      searchWrap.classList.remove("hidden");
+      searchInput.value = "";
+      hideResults();
+      requestAnimationFrame(() => searchInput.focus());
+    }
+
+    searchTrigger.addEventListener("click", (e) => {
+      e.stopPropagation();
+      if (searchWrap.classList.contains("hidden")) openSearch();
+      else closeSearch();
+    });
 
     function renderResults(matches) {
       searchResults.innerHTML = "";
@@ -227,8 +267,7 @@ async function main() {
         btn.textContent = system.name;
         btn.addEventListener("click", (e) => {
           e.stopPropagation();
-          hideResults();
-          searchInput.value = system.name;
+          closeSearch();
           selectSystem(system);
         });
         searchResults.appendChild(btn);
@@ -261,24 +300,29 @@ async function main() {
 
     searchInput.addEventListener("pointerdown", (e) => e.stopPropagation());
     searchResults.addEventListener("pointerdown", (e) => e.stopPropagation());
+    searchTrigger.addEventListener("pointerdown", (e) => e.stopPropagation());
 
     window.addEventListener("pointerdown", (e) => {
-      if (!searchWrap.contains(e.target)) hideResults();
+      if (
+        searchWrap.contains(e.target) ||
+        searchTrigger.contains(e.target)
+      ) {
+        return;
+      }
+      if (!searchWrap.classList.contains("hidden")) closeSearch();
     });
 
     searchInput.addEventListener("keydown", (e) => {
-      if (searchResults.classList.contains("hidden")) {
-        if (e.code === "Escape") hideResults();
+      if (e.code === "Escape") {
+        e.preventDefault();
+        closeSearch();
         return;
       }
+
+      if (searchResults.classList.contains("hidden")) return;
 
       const items = [...searchResults.querySelectorAll(".system-search-item")];
       if (!items.length) return;
-
-      if (e.code === "Escape") {
-        hideResults();
-        return;
-      }
 
       if (e.code === "ArrowDown") {
         e.preventDefault();
@@ -290,8 +334,7 @@ async function main() {
         e.preventDefault();
         const chosen = currentMatches[activeIndex];
         if (chosen) {
-          hideResults();
-          searchInput.value = chosen.system.name;
+          closeSearch();
           selectSystem(chosen.system);
         }
         return;

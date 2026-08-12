@@ -34,17 +34,6 @@
       <span>Planets : <strong id="stat-planets">—</strong></span>
     </div>
 
-    <div id="system-search">
-      <input
-        id="system-search-input"
-        type="text"
-        placeholder="Search systems…"
-        autocomplete="off"
-        spellcheck="false"
-      />
-      <div id="system-search-results" class="hidden" role="listbox"></div>
-    </div>
-
     <aside id="info-panel" class="hidden" aria-live="polite">
       <button id="panel-close" type="button" aria-label="Close panel">&times;</button>
       <div id="panel-content"></div>
@@ -52,7 +41,35 @@
 
     <div id="hud">
       <div id="hud-title">PlanetViewer</div>
-      <div id="hud-selection">Sol — origin</div>
+      <div id="hud-selection-row">
+        <button id="hud-selection-trigger" type="button" title="Search star systems">
+          <span id="hud-selection">Sol — origin</span>
+          <svg
+            class="hud-search-icon"
+            width="14"
+            height="14"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2.25"
+            stroke-linecap="round"
+            aria-hidden="true"
+          >
+            <circle cx="11" cy="11" r="7" />
+            <path d="M20 20l-3.5-3.5" />
+          </svg>
+        </button>
+      </div>
+      <div id="system-search" class="hidden">
+        <input
+          id="system-search-input"
+          type="text"
+          placeholder="Search systems…"
+          autocomplete="off"
+          spellcheck="false"
+        />
+        <div id="system-search-results" class="hidden" role="listbox"></div>
+      </div>
       <div id="hud-distance"></div>
       <div id="hud-scale-note" class="hidden">Local orbits exaggerated (AU scale)</div>
       <div id="hud-time">
@@ -80,7 +97,7 @@
         />
       </div>
       <div id="hud-help">
-        WASD move · Drag star to orbit · Scroll zoom · Click star to focus · Esc close panel
+        WASD move · Drag star to orbit · Click system name to search · Esc close
       </div>
     </div>
 
