@@ -64,7 +64,16 @@ async function refreshCatalog() {
   console.log("Refreshing exoplanet catalog from NASA Exoplanet Archive…");
   await runNode(join(ROOT, "scripts", "fetch-exoplanets.mjs"));
   console.log("Refreshing nearby stars from Gaia DR3…");
-  await runNode(join(ROOT, "scripts", "fetch-nearby-stars.mjs"));
+  try {
+    await runNode(join(ROOT, "scripts", "fetch-nearby-stars.mjs"));
+  } catch (err) {
+    // Gaia TAP is often slow/flaky; keep the previous nearby-stars snapshot
+    // so a transient timeout does not block the whole static export.
+    console.warn(
+      "Nearby-stars refresh failed — keeping existing data/nearby-stars.json."
+    );
+    console.warn(String(err?.message || err));
+  }
 }
 
 /** Write source JSON as max-level gzip for production fetch + DecompressionStream. */

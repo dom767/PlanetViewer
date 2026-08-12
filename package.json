@@ -13,6 +13,7 @@
     "start": "npx --yes serve -p 8080"
   },
   "devDependencies": {
-    "esbuild": "^0.25.0"
+    "esbuild": "^0.25.0",
+    "undici": "^8.10.0"
   }
 }
