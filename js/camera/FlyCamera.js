@@ -156,10 +156,27 @@ export class FlyCamera {
 
   attach(canvas) {
     window.addEventListener("keydown", (e) => {
-      this._keys.add(e.code);
-      if (["KeyW", "KeyA", "KeyS", "KeyD", "KeyQ", "KeyE", "ShiftLeft", "Space"].includes(e.code)) {
+      const activeId = globalThis.document?.activeElement?.id;
+      const isSystemSearchFocused = activeId === "system-search-input";
+      const moveCodes = [
+        "KeyW",
+        "KeyA",
+        "KeyS",
+        "KeyD",
+        "KeyQ",
+        "KeyE",
+        "ShiftLeft",
+        "Space",
+      ];
+
+      // Prevent camera movement while typing in the system search UI.
+      if (isSystemSearchFocused && moveCodes.includes(e.code)) {
         e.preventDefault();
+        return;
       }
+
+      this._keys.add(e.code);
+      if (moveCodes.includes(e.code)) e.preventDefault();
     });
     window.addEventListener("keyup", (e) => this._keys.delete(e.code));
 
