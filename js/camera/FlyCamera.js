@@ -29,6 +29,14 @@ const MAX_ANGULAR_SPEED = 2.0;
 
 /** Every hop takes the same wall-clock time, regardless of distance. */
 const TRAVEL_DURATION = 6;
+/**
+ * Front-loads the hop so most ground is covered early and the last stretch is
+ * a slow glide. Endpoint rates stay exactly 1, so the curve's start and end
+ * velocities are untouched. Must stay below ~10 to keep time moving forward.
+ */
+const TRAVEL_EASE_BIAS = 6;
+/** Cap on each Hermite tangent, as a fraction of the hop, to curb overshoot. */
+const MAX_TANGENT_FRAC = 0.4;
 /** Reveal system orbits near the end of the hop. */
 const ARRIVE_REVEAL_U = 0.72;
 
@@ -275,11 +283,12 @@ export class FlyCamera {
     // tangent. A near-zero start tangent eases out of rest naturally.
     const v0 = { ...this._velocity };
     const v1 = orbitTangentVelocity(this._slot, this.autoOrbitSpeed);
+    const tangentLimit = MAX_TANGENT_FRAC * Math.max(length3(sub3(p3, p0)), 1e-3);
 
     this._travel = {
       p0,
-      p1: add3(p0, scale3(v0, TRAVEL_DURATION / 3)),
-      p2: sub3(p3, scale3(v1, TRAVEL_DURATION / 3)),
+      p1: add3(p0, clampLength(scale3(v0, TRAVEL_DURATION / 3), tangentLimit)),
+      p2: sub3(p3, clampLength(scale3(v1, TRAVEL_DURATION / 3), tangentLimit)),
       p3,
       vEnd: v1,
       duration: TRAVEL_DURATION,
@@ -557,16 +566,18 @@ export class FlyCamera {
     if (!tr) return;
 
     tr.elapsed = Math.min(tr.duration, tr.elapsed + dt);
-    const u = tr.elapsed / tr.duration;
+    const s = tr.elapsed / tr.duration;
+    const u = travelEase(s);
 
     if (u < 0.12) this._phase = "depart";
     else if (u < ARRIVE_REVEAL_U) this._phase = "cruise";
     else this._phase = "arrive";
 
     this.position = cubicBezier3(tr.p0, tr.p1, tr.p2, tr.p3, u);
+    // Chain rule: the eased clock stretches the curve's own tangent
     this._velocity = scale3(
       cubicBezierDerivative3(tr.p0, tr.p1, tr.p2, tr.p3, u),
-      1 / tr.duration
+      travelEaseRate(s) / tr.duration
     );
 
     // Face the destination star; roll toward its planetary plane on approach
@@ -576,7 +587,7 @@ export class FlyCamera {
     const targetUp = normalize3(lerp3(WORLD_UP, tr.arrivalUp, upMix));
     this._springAttitude(targetFwd, targetUp, dt);
 
-    if (u >= 1 - 1e-6) this._beginOrbit();
+    if (s >= 1 - 1e-6) this._beginOrbit();
   }
 
   /**
@@ -834,6 +845,27 @@ function rotateAroundAxis(v, axis, angle) {
     y: v.y * c + (axis.z * v.x - axis.x * v.z) * s + axis.y * d * (1 - c),
     z: v.z * c + (axis.x * v.y - axis.y * v.x) * s + axis.z * d * (1 - c),
   });
+}
+
+/**
+ * Time warp for the hop: u = s + (bias/2)·s²(1−s)².
+ * The added term vanishes with zero slope at both ends, so u′(0) = u′(1) = 1
+ * and the Bezier's endpoint velocities survive intact, while the interior is
+ * pushed forward — quick departure, unhurried arrival.
+ */
+function travelEase(s) {
+  const w = s * (1 - s);
+  return s + (TRAVEL_EASE_BIAS / 2) * w * w;
+}
+
+/** du/ds for {@link travelEase}. */
+function travelEaseRate(s) {
+  return 1 + TRAVEL_EASE_BIAS * s * (1 - s) * (1 - 2 * s);
+}
+
+function clampLength(v, maxLen) {
+  const l = length3(v);
+  return l > maxLen && l > 1e-9 ? scale3(v, maxLen / l) : v;
 }
 
 function cubicBezier3(p0, p1, p2, p3, u) {
