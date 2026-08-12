@@ -33,4 +33,5 @@ if "%KILLED%"=="0" (
   echo Done.
 )
 
+pause
 endlocal

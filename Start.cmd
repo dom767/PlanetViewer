@@ -12,6 +12,7 @@ if exist "%PIDFILE%" (
     echo Server already running ^(PID %OLDPID%^) on port %PORT%.
     echo Open http://localhost:%PORT%/
     start "" "http://localhost:%PORT%/"
+    pause
     exit /b 0
   )
   del "%PIDFILE%" >NUL 2>&1
@@ -20,6 +21,7 @@ if exist "%PIDFILE%" (
 where python >NUL 2>&1
 if errorlevel 1 (
   echo Python not found on PATH. Install Python or start manually with: npx serve -p %PORT%
+  pause
   exit /b 1
 )
 
@@ -40,4 +42,5 @@ goto :opened
 :opened
 start "" "http://localhost:%PORT%/"
 echo Press Ctrl+C in the server window, or run Stop.cmd, to shut down.
+pause
 endlocal
