@@ -31,8 +31,25 @@ const MAX_ANGULAR_SPEED = 2.0;
 const TRAVEL_DURATION = 6;
 /** Spool up to cruise over this long. */
 const DEPART_ACCEL_SECONDS = 1.4;
-/** Burn off cruise speed over this long, settling onto the orbit tangent. */
+/**
+ * Burn off cruise speed over this long, settling onto the orbit tangent. Far
+ * hops cruise faster and so need longer to shed it: the brake grows with the
+ * log of the path length, which keeps peak deceleration roughly in check
+ * without letting the brake eat the whole hop.
+ */
 const ARRIVAL_BRAKE_SECONDS = 1.5;
+const ARRIVAL_BRAKE_MAX_SECONDS = 3.2;
+const ARRIVAL_BRAKE_GROWTH = 0.45;
+const ARRIVAL_BRAKE_REFERENCE_PC = 12;
+/**
+ * Weights the brake towards its tail. Raising a ramp to this power sheds speed
+ * early and then creeps in, so the closing rate measured against the remaining
+ * distance stays roughly constant — what stops a far arrival from ballooning
+ * in the last moment. 1 would be a plain symmetric ramp.
+ */
+const BRAKE_TAIL_POWER = 2.6;
+/** Samples used to integrate the speed profile into a distance-vs-time table. */
+const TIMING_SAMPLES = 512;
 /**
  * Fallback clock warp, used only when a hop is too short to fit the
  * accelerate / cruise / brake schedule. Endpoint rates stay exactly 1, so the
@@ -926,77 +943,127 @@ function uAtDistance(arc, distance) {
 }
 
 /**
+ * Fraction of cruise speed still carried, `x` of the way through the brake.
+ * Falls to zero with zero slope and curvature at both ends, so the
+ * deceleration fades in and out instead of switching on.
+ */
+function brakeShape(x) {
+  // Guard the base: the quintic can round a hair above 1 near the end, and a
+  // negative base would make the fractional power NaN.
+  return Math.pow(Math.max(0, 1 - smootherstep(clamp(x, 0, 1))), BRAKE_TAIL_POWER);
+}
+
+/**
+ * The speed profile is affine in cruise speed: `base(t) + gain(t)·cruise`.
+ * Splitting it this way lets the cruise speed be solved exactly, rather than
+ * searched for, whatever shape the ramps take.
+ */
+function profileBase(sched, t) {
+  const { accelSeconds, brakeSeconds, duration } = sched;
+  if (t < accelSeconds) {
+    return sched.startSpeed * (1 - smootherstep(t / accelSeconds));
+  }
+  const brakeStart = duration - brakeSeconds;
+  if (t < brakeStart) return 0;
+  const x = clamp((t - brakeStart) / brakeSeconds, 0, 1);
+  return sched.endSpeed * (1 - brakeShape(x));
+}
+
+function profileGain(sched, t) {
+  const { accelSeconds, brakeSeconds, duration } = sched;
+  if (t < accelSeconds) return smootherstep(t / accelSeconds);
+  const brakeStart = duration - brakeSeconds;
+  if (t < brakeStart) return 1;
+  return brakeShape(clamp((t - brakeStart) / brakeSeconds, 0, 1));
+}
+
+/** Composite Simpson over [0, duration]. Exact for the cubics involved. */
+function integrateProfile(sched, f) {
+  const h = sched.duration / TIMING_SAMPLES;
+  let acc = 0;
+  for (let i = 0; i < TIMING_SAMPLES; i++) {
+    const t0 = i * h;
+    acc +=
+      (h / 6) *
+      (f(sched, t0) + 4 * f(sched, t0 + h / 2) + f(sched, t0 + h));
+  }
+  return acc;
+}
+
+/**
  * Accelerate → cruise → brake, with the cruise speed solved so the three
  * phases cover exactly `length` in exactly `duration`. Returns null when the
  * hop is too short to hold a cruise faster than the orbit it ends on.
  */
 function buildSpeedSchedule(length, startSpeed, endSpeed, duration) {
   const accelSeconds = DEPART_ACCEL_SECONDS;
-  const brakeSeconds = ARRIVAL_BRAKE_SECONDS;
+  const brakeSeconds = Math.min(
+    ARRIVAL_BRAKE_MAX_SECONDS,
+    ARRIVAL_BRAKE_SECONDS +
+      ARRIVAL_BRAKE_GROWTH * Math.log1p(Math.max(length, 0) / ARRIVAL_BRAKE_REFERENCE_PC)
+  );
   const cruiseSeconds = duration - accelSeconds - brakeSeconds;
   if (cruiseSeconds <= 0 || length <= 0) return null;
 
-  // length = ta(v0+vc)/2 + tc·vc + tb(vc+ve)/2  →  solve for vc
-  const denom = duration - (accelSeconds + brakeSeconds) / 2;
-  const cruiseSpeed =
-    (length - (accelSeconds * startSpeed + brakeSeconds * endSpeed) / 2) / denom;
-  if (!(cruiseSpeed > endSpeed) || !(cruiseSpeed > 1e-4)) return null;
-
-  const accelDistance = rampDistance(startSpeed, cruiseSpeed, accelSeconds, 1);
-  return {
+  const sched = {
     accelSeconds,
     brakeSeconds,
     cruiseSeconds,
     startSpeed,
-    cruiseSpeed,
     endSpeed,
-    accelDistance,
-    cruiseDistance: cruiseSeconds * cruiseSpeed,
+    cruiseSpeed: 0,
     duration,
+    table: null,
   };
+
+  const baseDistance = integrateProfile(sched, profileBase);
+  const gainDistance = integrateProfile(sched, profileGain);
+  if (!(gainDistance > 1e-9)) return null;
+
+  sched.cruiseSpeed = (length - baseDistance) / gainDistance;
+  if (!(sched.cruiseSpeed > endSpeed) || !(sched.cruiseSpeed > 1e-4)) return null;
+
+  // Built with the same quadrature, so the table ends on exactly `length`
+  sched.table = buildDistanceTable(sched);
+  return sched;
+}
+
+function buildDistanceTable(sched) {
+  const h = sched.duration / TIMING_SAMPLES;
+  const table = new Float64Array(TIMING_SAMPLES + 1);
+  let acc = 0;
+  for (let i = 0; i < TIMING_SAMPLES; i++) {
+    const t0 = i * h;
+    acc +=
+      (h / 6) *
+      (scheduledSpeed(sched, t0) +
+        4 * scheduledSpeed(sched, t0 + h / 2) +
+        scheduledSpeed(sched, t0 + h));
+    table[i + 1] = acc;
+  }
+  return table;
 }
 
 function scheduledSpeed(sched, t) {
-  const { accelSeconds, brakeSeconds, duration } = sched;
-  if (t < accelSeconds) {
-    return lerp(sched.startSpeed, sched.cruiseSpeed, smoothstep(t / accelSeconds));
-  }
-  const brakeStart = duration - brakeSeconds;
-  if (t < brakeStart) return sched.cruiseSpeed;
-  const x = clamp((t - brakeStart) / brakeSeconds, 0, 1);
-  return lerp(sched.cruiseSpeed, sched.endSpeed, smoothstep(x));
+  return profileBase(sched, t) + profileGain(sched, t) * sched.cruiseSpeed;
 }
 
+/** Distance covered by time `t`: tabulated whole cells plus an exact partial. */
 function scheduledDistance(sched, t) {
-  const { accelSeconds, brakeSeconds, duration } = sched;
-  if (t < accelSeconds) {
-    return rampDistance(
-      sched.startSpeed,
-      sched.cruiseSpeed,
-      accelSeconds,
-      t / accelSeconds
-    );
-  }
-  const brakeStart = duration - brakeSeconds;
-  if (t < brakeStart) {
-    return sched.accelDistance + sched.cruiseSpeed * (t - accelSeconds);
-  }
-  const x = clamp((t - brakeStart) / brakeSeconds, 0, 1);
+  const table = sched.table;
+  if (t <= 0) return 0;
+  if (t >= sched.duration) return table[TIMING_SAMPLES];
+  const h = sched.duration / TIMING_SAMPLES;
+  const i = Math.min(TIMING_SAMPLES - 1, Math.floor(t / h));
+  const t0 = i * h;
+  const dt = t - t0;
   return (
-    sched.accelDistance +
-    sched.cruiseDistance +
-    rampDistance(sched.cruiseSpeed, sched.endSpeed, brakeSeconds, x)
+    table[i] +
+    (dt / 6) *
+      (scheduledSpeed(sched, t0) +
+        4 * scheduledSpeed(sched, t0 + dt / 2) +
+        scheduledSpeed(sched, t))
   );
-}
-
-/** ∫ of a smoothstep ramp from `va` to `vb`, over the first `x` of `seconds`. */
-function rampDistance(va, vb, seconds, x) {
-  const x3 = x * x * x;
-  return seconds * (va * x + (vb - va) * (x3 - 0.5 * x3 * x));
-}
-
-function lerp(a, b, t) {
-  return a + (b - a) * t;
 }
 
 /**
@@ -1053,6 +1120,15 @@ function lerp3(a, b, t) {
 
 function smoothstep(t) {
   return t * t * (3 - 2 * t);
+}
+
+/**
+ * Quintic ease. Unlike {@link smoothstep} its second derivative also vanishes
+ * at both ends, so a speed ramp built on it starts and stops with no jerk —
+ * the deceleration fades in and out rather than switching on.
+ */
+function smootherstep(t) {
+  return t * t * t * (t * (t * 6 - 15) + 10);
 }
 
 function clamp(v, lo, hi) {
