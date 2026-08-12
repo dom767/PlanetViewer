@@ -35,6 +35,9 @@ const COLUMNS = [
   "pl_rade",
   "pl_radj",
   "pl_bmasse",
+  "discoverymethod",
+  "disc_year",
+  "disc_facility",
 ].join(",");
 
 const query = `select ${COLUMNS} from pscomppars where sy_dist is not null and ra is not null and dec is not null`;
@@ -125,6 +128,10 @@ for (const row of rows) {
     radiusEarth: num(row.pl_rade),
     radiusJupiter: num(row.pl_radj),
     massEarth: num(row.pl_bmasse),
+    // Discovery is per planet, not per host: one system can mix methods/years
+    discoveryMethod: str(row.discoverymethod),
+    discoveryYear: num(row.disc_year),
+    discoveryFacility: str(row.disc_facility),
   });
 }
 

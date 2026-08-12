@@ -45,6 +45,7 @@ function renderSystem(s) {
       const hz = p.habitableZone
         ? `<div class="hz-tag">Goldilocks zone</div>`
         : "";
+      const discovery = planetDiscovery(p);
       return `<li class="${p.habitableZone ? "planet-hz" : ""}">
         <div class="name">${escapeHtml(p.name)}</div>
         ${hz}
@@ -53,6 +54,7 @@ function renderSystem(s) {
           <div>${sizeMass}</div>
           <div>Period ${period}</div>
         </div>
+        ${discovery ? `<div class="discovery">${discovery}</div>` : ""}
       </li>`;
     })
     .join("");
@@ -68,6 +70,7 @@ function renderSystem(s) {
       <dt>Stellar mass</dt><dd>${fmt(s.mass, 2, "M☉")}</dd>
       ${s.isSol ? "" : `<dt>RA / Dec</dt><dd>${fmt(s.ra, 3)}° / ${fmt(s.dec, 3)}°</dd>`}
       <dt>Planets</dt><dd>${s.planets?.length ?? 0}${s.pnum != null && !s.isSol ? ` (archive: ${s.pnum})` : ""}</dd>
+      ${discoverySummary(s.planets)}
     </dl>
     <h3>Planets</h3>
     <ul class="planet-list">${planets || "<li><div class='meta'>No planets with usable parameters</div></li>"}</ul>
@@ -93,4 +96,37 @@ function planetSizeSols(p) {
 function planetMassSols(p) {
   if (p.massEarth != null) return fmt(p.massEarth, 2, "M⊕");
   return null;
+}
+
+/** "Transit · 2016 · La Silla Observatory", or null when the archive has nothing. */
+function planetDiscovery(p) {
+  const parts = [];
+  if (p.discoveryMethod) parts.push(escapeHtml(p.discoveryMethod));
+  if (p.discoveryYear != null) parts.push(String(p.discoveryYear));
+  if (p.discoveryFacility) parts.push(escapeHtml(p.discoveryFacility));
+  return parts.length ? parts.join(" · ") : null;
+}
+
+/**
+ * Systems can mix methods and span years, so collapse to a range plus method
+ * count rather than repeating every planet's entry.
+ */
+function discoverySummary(planets) {
+  const known = (planets || []).filter(
+    (p) => p.discoveryMethod || p.discoveryYear != null
+  );
+  if (!known.length) return "";
+
+  const years = known.map((p) => p.discoveryYear).filter((y) => y != null);
+  const methods = [...new Set(known.map((p) => p.discoveryMethod).filter(Boolean))];
+
+  const bits = [];
+  if (methods.length === 1) bits.push(escapeHtml(methods[0]));
+  else if (methods.length > 1) bits.push(`${methods.length} methods`);
+  if (years.length) {
+    const lo = Math.min(...years);
+    const hi = Math.max(...years);
+    bits.push(lo === hi ? `${lo}` : `${lo}–${hi}`);
+  }
+  return `<dt>Discovery</dt><dd>${bits.join(" · ")}</dd>`;
 }

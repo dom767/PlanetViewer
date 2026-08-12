@@ -134,6 +134,9 @@ function normalizePlanet(p, starMass, idx) {
     radiusEarth: p.radiusEarth ?? null,
     radiusJupiter: p.radiusJupiter ?? null,
     massEarth: p.massEarth ?? null,
+    discoveryMethod: p.discoveryMethod ?? null,
+    discoveryYear: p.discoveryYear ?? null,
+    discoveryFacility: p.discoveryFacility ?? null,
     color: palette[idx % palette.length],
   };
 }
