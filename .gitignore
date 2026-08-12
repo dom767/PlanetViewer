@@ -4,4 +4,6 @@ node_modules/
 .server.pid
 Export/
 Exports/
-.cursor/
+.cursor/*
+!.cursor/rules/
+!.cursor/rules/**

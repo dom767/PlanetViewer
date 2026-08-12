@@ -1,0 +1,26 @@
+---
+description: Automatically commit and push all changes to GitHub
+alwaysApply: true
+---
+
+# Auto Commit & Push
+
+After completing any code or file changes in this repository:
+
+1. Commit the relevant changes with a concise message focused on why.
+2. Push to the tracked remote branch (`git push`, or `git push -u origin HEAD` if needed).
+3. Do this without waiting to be asked — treat commit + push as part of finishing the task.
+
+## Commit guidance
+
+- Follow the repo's existing commit message style.
+- Never commit secrets (`.env`, credentials, tokens).
+- Never use `--force`, `--no-verify`, or rewrite history unless explicitly requested.
+- If there is nothing to commit, skip commit/push.
+
+## Order of operations
+
+1. Finish the requested work.
+2. `git status` / `git diff` / recent `git log` to draft the message.
+3. Stage, commit, then push.
+4. Confirm success with `git status`.
