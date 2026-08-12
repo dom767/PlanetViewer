@@ -131,9 +131,17 @@ export class FlyCamera {
     this._pointers = new Map();
     /** @type {'none'|'one'|'two'} */
     this._gesture = "none";
+    /**
+     * Two-finger mode is locked for the life of the gesture:
+     * undecided → first clear motion chooses pan or pinch until fingers lift.
+     * @type {null | 'undecided' | 'pan' | 'pinch'}
+     */
+    this._twoFingerMode = null;
     this._oneFingerPrev = null;
     this._twoFingerPrevMid = null;
     this._twoFingerPrevDist = 0;
+    this._twoFingerStartMid = null;
+    this._twoFingerStartDist = 0;
     this._suppressClick = false;
     this.touchOrbitSensitivity = 0.005;
     this.touchLookSensitivity = 0.005;
@@ -200,6 +208,9 @@ export class FlyCamera {
     window.addEventListener("keyup", (e) => this._keys.delete(e.code));
 
     const DRAG_SLOP_SQ = 16;
+    /** First clear two-finger motion that locks pan vs pinch for this gesture. */
+    const TWO_FINGER_PAN_LOCK_PX = 12;
+    const TWO_FINGER_PINCH_LOCK = 0.045;
     const pointerPos = (e) => ({ x: e.clientX, y: e.clientY });
     const pointerMid = (a, b) => ({ x: (a.x + b.x) / 2, y: (a.y + b.y) / 2 });
     const pointerDist = (a, b) => Math.hypot(a.x - b.x, a.y - b.y);
@@ -213,16 +224,32 @@ export class FlyCamera {
       this._pendingOrbitTarget = null;
     };
 
-    const beginTwoFinger = () => {
+    const clearTwoFingerState = () => {
+      this._twoFingerMode = null;
+      this._twoFingerPrevMid = null;
+      this._twoFingerPrevDist = 0;
+      this._twoFingerStartMid = null;
+      this._twoFingerStartDist = 0;
+    };
+
+    const beginTwoFinger = (resetMode = true) => {
       const pts = [...this._pointers.values()];
       if (pts.length < 2) return;
       this._gesture = "two";
       this._dragMoved = true;
       this._suppressClick = true;
       this._dragging = false;
+      this._oneFingerPrev = null;
       endOrbitDrag();
-      this._twoFingerPrevMid = pointerMid(pts[0], pts[1]);
-      this._twoFingerPrevDist = Math.max(pointerDist(pts[0], pts[1]), 1);
+      const mid = pointerMid(pts[0], pts[1]);
+      const dist = Math.max(pointerDist(pts[0], pts[1]), 1);
+      if (resetMode || this._twoFingerMode == null) {
+        this._twoFingerMode = "undecided";
+        this._twoFingerStartMid = { ...mid };
+        this._twoFingerStartDist = dist;
+      }
+      this._twoFingerPrevMid = mid;
+      this._twoFingerPrevDist = dist;
       if (this.isTravelling()) this.cancelTravel();
       if (this._slot) {
         this._reattachCooldown = this.autoOrbitResumeDelay;
@@ -232,6 +259,9 @@ export class FlyCamera {
     };
 
     const applyOneFingerMove = (e, prev) => {
+      // Hard gate: multi-touch must never orbit/look.
+      if (this._gesture === "two" || this._pointers.size >= 2) return;
+
       const dx = e.clientX - prev.x;
       const dy = e.clientY - prev.y;
       const sensOrbit =
@@ -291,42 +321,70 @@ export class FlyCamera {
 
     const applyTwoFingerMove = () => {
       const pts = [...this._pointers.values()];
-      if (pts.length < 2 || !this._twoFingerPrevMid) return;
+      if (pts.length < 2 || !this._twoFingerPrevMid || !this._twoFingerStartMid) {
+        return;
+      }
       if (this.isTravelling()) return;
 
       const mid = pointerMid(pts[0], pts[1]);
       const dist = Math.max(pointerDist(pts[0], pts[1]), 1);
+
+      // Lock pan vs pinch from the first clear motion; stays until fingers up.
+      if (this._twoFingerMode === "undecided") {
+        const panTravel = Math.hypot(
+          mid.x - this._twoFingerStartMid.x,
+          mid.y - this._twoFingerStartMid.y
+        );
+        const pinchTravel = Math.abs(dist / this._twoFingerStartDist - 1);
+        const panScore = panTravel / TWO_FINGER_PAN_LOCK_PX;
+        const pinchScore = pinchTravel / TWO_FINGER_PINCH_LOCK;
+        if (panScore < 1 && pinchScore < 1) {
+          this._twoFingerPrevMid = mid;
+          this._twoFingerPrevDist = dist;
+          return;
+        }
+        this._twoFingerMode = panScore >= pinchScore ? "pan" : "pinch";
+        // Avoid a jump from the deciding motion.
+        this._twoFingerPrevMid = mid;
+        this._twoFingerPrevDist = dist;
+        return;
+      }
+
       const dx = mid.x - this._twoFingerPrevMid.x;
       const dy = mid.y - this._twoFingerPrevMid.y;
       const ratio = dist / this._twoFingerPrevDist;
 
-      // Two-finger pan in the view plane: horizontal → right, vertical → up.
-      if (Math.abs(dx) > 0.5 || Math.abs(dy) > 0.5) {
-        const scale = this.touchPanSpeed * Math.max(this.moveSpeed * 0.15, 1);
-        let delta = { x: 0, y: 0, z: 0 };
-        if (Math.abs(dx) > 0.5) {
-          delta = add3(delta, scale3(this.right(), -dx * scale));
+      if (this._twoFingerMode === "pan") {
+        if (Math.abs(dx) > 0.5 || Math.abs(dy) > 0.5) {
+          const scale = this.touchPanSpeed * Math.max(this.moveSpeed * 0.15, 1);
+          let delta = { x: 0, y: 0, z: 0 };
+          if (Math.abs(dx) > 0.5) {
+            delta = add3(delta, scale3(this.right(), -dx * scale));
+          }
+          if (Math.abs(dy) > 0.5) {
+            delta = add3(delta, scale3(this._viewUp(), -dy * scale));
+          }
+          this.position = add3(this.position, delta);
+          if (this._slot) {
+            this._reattachCooldown = this.autoOrbitResumeDelay;
+            this._syncSlotFromCamera();
+          }
         }
-        if (Math.abs(dy) > 0.5) {
-          delta = add3(delta, scale3(this._viewUp(), -dy * scale));
-        }
-        this.position = add3(this.position, delta);
-        if (this._slot) {
-          this._reattachCooldown = this.autoOrbitResumeDelay;
-          this._syncSlotFromCamera();
-        }
-      }
-
-      // Pinch zoom (orbit distance or free-fly dolly).
-      if (Math.abs(ratio - 1) > 0.002) {
-        if (this._slot) {
-          this._slot.distance = clamp(this._slot.distance / ratio, 0.15, 2000);
-          this.applyOrbitPose();
-          this._reattachCooldown = this.autoOrbitResumeDelay;
-        } else {
-          const zoomIn = ratio > 1;
-          const step = this.moveSpeed * 0.08 * (zoomIn ? 1 : -1) * Math.min(Math.abs(ratio - 1) * 8, 3);
-          this.position = add3(this.position, scale3(this.forward(), step));
+      } else if (this._twoFingerMode === "pinch") {
+        if (Math.abs(ratio - 1) > 0.002) {
+          if (this._slot) {
+            this._slot.distance = clamp(this._slot.distance / ratio, 0.15, 2000);
+            this.applyOrbitPose();
+            this._reattachCooldown = this.autoOrbitResumeDelay;
+          } else {
+            const zoomIn = ratio > 1;
+            const step =
+              this.moveSpeed *
+              0.08 *
+              (zoomIn ? 1 : -1) *
+              Math.min(Math.abs(ratio - 1) * 8, 3);
+            this.position = add3(this.position, scale3(this.forward(), step));
+          }
         }
       }
 
@@ -341,27 +399,23 @@ export class FlyCamera {
         if (e.pointerType === "touch") e.preventDefault();
 
         this._pointers.set(e.pointerId, pointerPos(e));
+        try {
+          canvas.setPointerCapture?.(e.pointerId);
+        } catch {
+          /* ignore */
+        }
 
         if (this._pointers.size === 1) {
           this._gesture = "one";
           this._dragging = true;
           this._dragMoved = false;
           this._orbitDragging = false;
+          clearTwoFingerState();
           this._dragStart = pointerPos(e);
           this._oneFingerPrev = pointerPos(e);
           this._pendingOrbitTarget = this.resolveOrbitTarget?.() || null;
-          if (e.pointerType === "mouse") {
-            canvas.setPointerCapture?.(e.pointerId);
-          }
         } else if (this._pointers.size >= 2) {
-          if (e.pointerType === "mouse") {
-            try {
-              canvas.releasePointerCapture?.(e.pointerId);
-            } catch {
-              /* ignore */
-            }
-          }
-          beginTwoFinger();
+          beginTwoFinger(this._gesture !== "two");
         }
       },
       { passive: false }
@@ -371,12 +425,10 @@ export class FlyCamera {
       if (!this._pointers.has(e.pointerId)) return;
       this._pointers.delete(e.pointerId);
 
-      if (e.pointerType === "mouse") {
-        try {
-          canvas.releasePointerCapture?.(e.pointerId);
-        } catch {
-          /* already released */
-        }
+      try {
+        canvas.releasePointerCapture?.(e.pointerId);
+      } catch {
+        /* already released */
       }
 
       if (this._pointers.size === 0) {
@@ -384,22 +436,24 @@ export class FlyCamera {
         this._dragging = false;
         this._gesture = "none";
         this._oneFingerPrev = null;
-        this._twoFingerPrevMid = null;
+        clearTwoFingerState();
         this._dragStart = null;
       } else if (this._pointers.size === 1) {
-        // Demote from two-finger: remaining finger starts a fresh one-finger.
+        // Leaving a two-finger gesture: remaining finger must pass slop again
+        // before orbit/look — otherwise lifting one finger feels like rotation.
         endOrbitDrag();
+        clearTwoFingerState();
         this._gesture = "one";
         this._dragging = true;
-        this._dragMoved = true;
+        this._dragMoved = false;
         this._suppressClick = true;
         const remaining = [...this._pointers.values()][0];
         this._dragStart = { ...remaining };
         this._oneFingerPrev = { ...remaining };
         this._pendingOrbitTarget = this.resolveOrbitTarget?.() || this._slot;
-        this._twoFingerPrevMid = null;
       } else {
-        beginTwoFinger();
+        // Still multi-touch: keep locked pan/pinch mode, refresh sample points.
+        beginTwoFinger(false);
       }
     };
 
@@ -414,8 +468,11 @@ export class FlyCamera {
 
         this._pointers.set(e.pointerId, pointerPos(e));
 
-        if (this._gesture === "two" || this._pointers.size >= 2) {
-          if (this._gesture !== "two") beginTwoFinger();
+        // Two or more contacts: never run one-finger orbit/look.
+        if (this._pointers.size >= 2 || this._gesture === "two") {
+          if (this._gesture !== "two" || this._twoFingerMode == null) {
+            beginTwoFinger(true);
+          }
           applyTwoFingerMove();
           return;
         }
@@ -787,7 +844,10 @@ export class FlyCamera {
     }
 
     if (!this._slot) return;
-    if (this._orbitDragging) return;
+    // Pause auto-orbit while the user is manipulating (orbit drag or two-finger).
+    if (this._orbitDragging || this._gesture === "two" || this._pointers.size >= 2) {
+      return;
+    }
 
     if (this._flightMode === "orbit" && this._reattachCooldown <= 0) {
       this._updateOrbit(dtClamped);
