@@ -656,7 +656,7 @@ export class FlyCamera {
       u = travelEase(s);
     }
 
-    this.position = cubicBezier3(tr.p0, tr.p1, tr.p2, tr.p3, u);
+    const bezierPos = cubicBezier3(tr.p0, tr.p1, tr.p2, tr.p3, u);
     const tangent = cubicBezierDerivative3(tr.p0, tr.p1, tr.p2, tr.p3, u);
     if (speed !== null) {
       // Direction from the curve, magnitude straight from the schedule
@@ -666,6 +666,33 @@ export class FlyCamera {
           : { ...tr.vEnd };
     } else {
       this._velocity = scale3(tangent, travelEaseRate(s) / tr.duration);
+    }
+
+    // During the brake phase, ease onto the live overlook ring and advance
+    // azimuth so the look-at target is already rotating before orbit mode.
+    const slot = this._slot;
+    if (slot?.basis && this._phase === "arrive") {
+      slot.elevation = ARRIVAL_ELEVATION;
+      slot.azimuth += this.autoOrbitSpeed * dt;
+
+      let arriveBlend;
+      if (sched) {
+        const arriveStart = tr.duration - sched.brakeSeconds;
+        arriveBlend = smootherstep(
+          clamp((t - arriveStart) / Math.max(sched.brakeSeconds, 1e-6), 0, 1)
+        );
+      } else {
+        arriveBlend = smootherstep(clamp((u - 0.7) / 0.3, 0, 1));
+      }
+
+      const orbitPos = orbitPosition(slot);
+      this.position = lerp3(bezierPos, orbitPos, arriveBlend);
+      if (arriveBlend > 0) {
+        const orbitVel = orbitTangentVelocity(slot, this.autoOrbitSpeed);
+        this._velocity = lerp3(this._velocity, orbitVel, arriveBlend);
+      }
+    } else {
+      this.position = bezierPos;
     }
 
     // Face the destination star; roll toward its planetary plane on approach
