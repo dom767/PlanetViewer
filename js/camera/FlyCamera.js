@@ -127,12 +127,30 @@ export class FlyCamera {
     this._pendingOrbitTarget = null;
     this._dragMoved = false;
     this._dragStart = null;
+    /** @type {Map<number, {x:number,y:number}>} */
+    this._pointers = new Map();
+    /** @type {'none'|'one'|'two'} */
+    this._gesture = "none";
+    this._oneFingerPrev = null;
+    this._twoFingerPrevMid = null;
+    this._twoFingerPrevDist = 0;
+    this._suppressClick = false;
+    this.touchOrbitSensitivity = 0.005;
+    this.touchLookSensitivity = 0.005;
+    this.touchPanSpeed = 0.012;
     /** @type {null | (() => object|null)} */
     this.resolveOrbitTarget = null;
   }
 
   didDrag() {
-    return this._dragMoved;
+    return this._dragMoved || this._suppressClick;
+  }
+
+  /** Clear one-shot click suppression after a multi-touch gesture. */
+  consumeClickSuppress() {
+    const v = this._suppressClick;
+    this._suppressClick = false;
+    return v;
   }
 
   isFocused() {
@@ -181,53 +199,45 @@ export class FlyCamera {
     });
     window.addEventListener("keyup", (e) => this._keys.delete(e.code));
 
-    canvas.addEventListener("pointerdown", (e) => {
-      if (e.button !== 0) return;
-      this._dragging = true;
-      this._dragMoved = false;
-      this._orbitDragging = false;
-      this._dragStart = { x: e.clientX, y: e.clientY };
-      this._pendingOrbitTarget = this.resolveOrbitTarget?.() || null;
-      canvas.setPointerCapture?.(e.pointerId);
-    });
+    const DRAG_SLOP_SQ = 16;
+    const pointerPos = (e) => ({ x: e.clientX, y: e.clientY });
+    const pointerMid = (a, b) => ({ x: (a.x + b.x) / 2, y: (a.y + b.y) / 2 });
+    const pointerDist = (a, b) => Math.hypot(a.x - b.x, a.y - b.y);
 
-    const endDrag = (e) => {
-      if (e.button !== 0 && e.type !== "pointercancel") return;
+    const endOrbitDrag = () => {
       if (this._orbitDragging && this._slot) {
         this._reattachCooldown = this.autoOrbitResumeDelay;
         this._seedTangentFromSlot();
       }
-      this._dragging = false;
       this._orbitDragging = false;
       this._pendingOrbitTarget = null;
-      try {
-        canvas.releasePointerCapture?.(e.pointerId);
-      } catch {
-        /* already released */
+    };
+
+    const beginTwoFinger = () => {
+      const pts = [...this._pointers.values()];
+      if (pts.length < 2) return;
+      this._gesture = "two";
+      this._dragMoved = true;
+      this._suppressClick = true;
+      this._dragging = false;
+      endOrbitDrag();
+      this._twoFingerPrevMid = pointerMid(pts[0], pts[1]);
+      this._twoFingerPrevDist = Math.max(pointerDist(pts[0], pts[1]), 1);
+      if (this.isTravelling()) this.cancelTravel();
+      if (this._slot) {
+        this._reattachCooldown = this.autoOrbitResumeDelay;
+        this._flightMode = "orbit";
+        this._phase = "orbit";
       }
     };
 
-    canvas.addEventListener("pointerup", endDrag);
-    canvas.addEventListener("pointercancel", endDrag);
-    canvas.addEventListener("lostpointercapture", () => {
-      if (this._orbitDragging && this._slot) {
-        this._reattachCooldown = this.autoOrbitResumeDelay;
-        this._seedTangentFromSlot();
-      }
-      this._dragging = false;
-      this._orbitDragging = false;
-      this._pendingOrbitTarget = null;
-    });
-
-    canvas.addEventListener("pointermove", (e) => {
-      if (!this._dragging) return;
-
-      if (this._dragStart) {
-        const dx0 = e.clientX - this._dragStart.x;
-        const dy0 = e.clientY - this._dragStart.y;
-        if (dx0 * dx0 + dy0 * dy0 > 16) this._dragMoved = true;
-      }
-      if (!this._dragMoved) return;
+    const applyOneFingerMove = (e, prev) => {
+      const dx = e.clientX - prev.x;
+      const dy = e.clientY - prev.y;
+      const sensOrbit =
+        e.pointerType === "touch" ? this.touchOrbitSensitivity : this.orbitSensitivity;
+      const sensLook =
+        e.pointerType === "touch" ? this.touchLookSensitivity : this.lookSensitivity;
 
       if (this._pendingOrbitTarget && !this._orbitDragging) {
         this.cancelTravel();
@@ -239,8 +249,23 @@ export class FlyCamera {
       }
 
       if (this._orbitDragging && this._slot) {
-        this._slot.azimuth -= e.movementX * this.orbitSensitivity;
-        this._slot.elevation += e.movementY * this.orbitSensitivity;
+        this._slot.azimuth -= dx * sensOrbit;
+        this._slot.elevation += dy * sensOrbit;
+        const lim = Math.PI / 2 - 0.05;
+        this._slot.elevation = Math.max(-lim, Math.min(lim, this._slot.elevation));
+        this.applyOrbitPose();
+        return;
+      }
+
+      // Prefer orbiting the current focus when a slot already exists (touch).
+      if (this._slot && !this._orbitDragging) {
+        this.cancelTravel();
+        this._flightMode = "orbit";
+        this._phase = "orbit";
+        this._syncSlotFromCamera();
+        this._orbitDragging = true;
+        this._slot.azimuth -= dx * sensOrbit;
+        this._slot.elevation += dy * sensOrbit;
         const lim = Math.PI / 2 - 0.05;
         this._slot.elevation = Math.max(-lim, Math.min(lim, this._slot.elevation));
         this.applyOrbitPose();
@@ -255,14 +280,155 @@ export class FlyCamera {
       } else {
         this._flightMode = "free";
       }
-      this.yaw += e.movementX * this.lookSensitivity;
-      this.pitch -= e.movementY * this.lookSensitivity;
+      this.yaw += dx * sensLook;
+      this.pitch -= dy * sensLook;
       const lim = Math.PI / 2 - 0.05;
       this.pitch = Math.max(-lim, Math.min(lim, this.pitch));
       this._setBasisFromDir(this.forwardFromYawPitch(), WORLD_UP);
       this._angVel = { x: 0, y: 0, z: 0 };
       this._prevTargetBasis = null;
-    });
+    };
+
+    const applyTwoFingerMove = () => {
+      const pts = [...this._pointers.values()];
+      if (pts.length < 2 || !this._twoFingerPrevMid) return;
+      if (this.isTravelling()) return;
+
+      const mid = pointerMid(pts[0], pts[1]);
+      const dist = Math.max(pointerDist(pts[0], pts[1]), 1);
+      const dy = mid.y - this._twoFingerPrevMid.y;
+      const ratio = dist / this._twoFingerPrevDist;
+
+      // Vertical pan along current view up.
+      if (Math.abs(dy) > 0.5) {
+        const up = this._viewUp();
+        const step = -dy * this.touchPanSpeed * Math.max(this.moveSpeed * 0.15, 1);
+        this.position = add3(this.position, scale3(up, step));
+        if (this._slot) {
+          this._reattachCooldown = this.autoOrbitResumeDelay;
+          this._syncSlotFromCamera();
+        }
+      }
+
+      // Pinch zoom (orbit distance or free-fly dolly).
+      if (Math.abs(ratio - 1) > 0.002) {
+        if (this._slot) {
+          this._slot.distance = clamp(this._slot.distance / ratio, 0.15, 2000);
+          this.applyOrbitPose();
+          this._reattachCooldown = this.autoOrbitResumeDelay;
+        } else {
+          const zoomIn = ratio > 1;
+          const step = this.moveSpeed * 0.08 * (zoomIn ? 1 : -1) * Math.min(Math.abs(ratio - 1) * 8, 3);
+          this.position = add3(this.position, scale3(this.forward(), step));
+        }
+      }
+
+      this._twoFingerPrevMid = mid;
+      this._twoFingerPrevDist = dist;
+    };
+
+    canvas.addEventListener(
+      "pointerdown",
+      (e) => {
+        if (e.pointerType === "mouse" && e.button !== 0) return;
+        if (e.pointerType === "touch") e.preventDefault();
+
+        this._pointers.set(e.pointerId, pointerPos(e));
+
+        if (this._pointers.size === 1) {
+          this._gesture = "one";
+          this._dragging = true;
+          this._dragMoved = false;
+          this._orbitDragging = false;
+          this._dragStart = pointerPos(e);
+          this._oneFingerPrev = pointerPos(e);
+          this._pendingOrbitTarget = this.resolveOrbitTarget?.() || null;
+          if (e.pointerType === "mouse") {
+            canvas.setPointerCapture?.(e.pointerId);
+          }
+        } else if (this._pointers.size >= 2) {
+          if (e.pointerType === "mouse") {
+            try {
+              canvas.releasePointerCapture?.(e.pointerId);
+            } catch {
+              /* ignore */
+            }
+          }
+          beginTwoFinger();
+        }
+      },
+      { passive: false }
+    );
+
+    const onPointerEnd = (e) => {
+      if (!this._pointers.has(e.pointerId)) return;
+      this._pointers.delete(e.pointerId);
+
+      if (e.pointerType === "mouse") {
+        try {
+          canvas.releasePointerCapture?.(e.pointerId);
+        } catch {
+          /* already released */
+        }
+      }
+
+      if (this._pointers.size === 0) {
+        endOrbitDrag();
+        this._dragging = false;
+        this._gesture = "none";
+        this._oneFingerPrev = null;
+        this._twoFingerPrevMid = null;
+        this._dragStart = null;
+      } else if (this._pointers.size === 1) {
+        // Demote from two-finger: remaining finger starts a fresh one-finger.
+        endOrbitDrag();
+        this._gesture = "one";
+        this._dragging = true;
+        this._dragMoved = true;
+        this._suppressClick = true;
+        const remaining = [...this._pointers.values()][0];
+        this._dragStart = { ...remaining };
+        this._oneFingerPrev = { ...remaining };
+        this._pendingOrbitTarget = this.resolveOrbitTarget?.() || this._slot;
+        this._twoFingerPrevMid = null;
+      } else {
+        beginTwoFinger();
+      }
+    };
+
+    canvas.addEventListener("pointerup", onPointerEnd);
+    canvas.addEventListener("pointercancel", onPointerEnd);
+
+    canvas.addEventListener(
+      "pointermove",
+      (e) => {
+        if (!this._pointers.has(e.pointerId)) return;
+        if (e.pointerType === "touch") e.preventDefault();
+
+        this._pointers.set(e.pointerId, pointerPos(e));
+
+        if (this._gesture === "two" || this._pointers.size >= 2) {
+          if (this._gesture !== "two") beginTwoFinger();
+          applyTwoFingerMove();
+          return;
+        }
+
+        if (this._gesture !== "one" || !this._dragging) return;
+
+        if (this._dragStart && !this._dragMoved) {
+          const dx0 = e.clientX - this._dragStart.x;
+          const dy0 = e.clientY - this._dragStart.y;
+          if (dx0 * dx0 + dy0 * dy0 > DRAG_SLOP_SQ) this._dragMoved = true;
+        }
+        if (!this._dragMoved) return;
+
+        const prev = this._oneFingerPrev || this._dragStart;
+        if (!prev) return;
+        applyOneFingerMove(e, prev);
+        this._oneFingerPrev = pointerPos(e);
+      },
+      { passive: false }
+    );
 
     canvas.addEventListener(
       "wheel",
@@ -275,6 +441,7 @@ export class FlyCamera {
         if (this._slot) {
           this._slot.distance = clamp(this._slot.distance * factor, 0.15, 2000);
           this.applyOrbitPose();
+          this._reattachCooldown = this.autoOrbitResumeDelay;
           return;
         }
 

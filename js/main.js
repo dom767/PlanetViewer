@@ -216,12 +216,29 @@ async function main() {
   });
 
   canvas.addEventListener("click", (e) => {
-    if (camera.didDrag()) return;
+    if (camera.didDrag()) {
+      camera.consumeClickSuppress();
+      return;
+    }
 
     const rect = canvas.getBoundingClientRect();
     const sx = e.clientX - rect.left;
     const sy = e.clientY - rect.top;
-    const pick = pickAtCss(sx, sy);
+    const pickRadius =
+      e.pointerType === "touch" || (typeof window !== "undefined" && window.matchMedia("(pointer: coarse)").matches)
+        ? PICK_RADIUS_CSS * 1.6
+        : PICK_RADIUS_CSS;
+    // Temporary override via scaled pick — pickAtCss uses fixed constant, so inline:
+    const scaleX = canvas.width / rect.width;
+    const scaleY = canvas.height / rect.height;
+    const pick = catalog.pickNearest(
+      sx * scaleX,
+      sy * scaleY,
+      viewProj,
+      canvas.width,
+      canvas.height,
+      pickRadius * Math.max(scaleX, scaleY)
+    );
     if (pick) selectSystem(pick, { openInfo: true });
   });
 
