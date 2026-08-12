@@ -111,7 +111,11 @@ async function main() {
     scene.setFocusedSystem(system, camera.getOrbitBasis());
     hud.setSelection(system.name, system.distPc, true);
 
-    if (openInfo) {
+    // On mobile, map taps focus only; Info opens via the nav tab (or when
+    // already open, refresh contents for the newly focused system).
+    const showInfo =
+      openInfo || (chrome ? chrome.isInfoOpen() : panel.isOpen());
+    if (showInfo) {
       if (chrome) chrome.openInfo(system);
       else panel.open(system);
     }
@@ -239,7 +243,10 @@ async function main() {
       canvas.height,
       pickRadius * Math.max(scaleX, scaleY)
     );
-    if (pick) selectSystem(pick, { openInfo: true });
+    if (pick) {
+      // Desktop: open info with selection. Mobile: focus only (use Info tab).
+      selectSystem(pick, { openInfo: !!chrome?.isWide });
+    }
   });
 
   window.addEventListener("keydown", (e) => {

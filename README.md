@@ -28,7 +28,7 @@ Open [http://localhost:8080](http://localhost:8080).
 | Space | Slower |
 | Scroll | Zoom (orbit) / dolly |
 | Drag on star | Orbit around star |
-| Click near a star | Focus + info panel |
+| Click near a star | Focus (+ info panel on desktop; use Info on mobile) |
 | Esc | Close panel |
 | Minimap click | Jump toward that XY position |
 | Time dropdown | Orbit simulation speed |
