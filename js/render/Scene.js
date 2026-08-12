@@ -72,11 +72,16 @@ export class Scene {
   setFocusedSystem(system, orbitBasis = null) {
     this.focusedSystem = system || null;
     this.planetPass.setFocusedSystem(system, orbitBasis);
+    this._syncHighlight();
   }
 
   setHoverTarget(system) {
     this.hoverTarget = system || null;
-    this.highlightPass.setTarget(this.hoverTarget);
+    this._syncHighlight();
+  }
+
+  _syncHighlight() {
+    this.highlightPass.setTarget(this.hoverTarget || this.focusedSystem);
   }
 
   /** Call after canvas resize / teleports so trails don't spike. */

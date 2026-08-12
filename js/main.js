@@ -184,7 +184,7 @@ async function main() {
       infoPanelApi: panel,
       search,
       onHome: () => {
-        if (catalog.sol) selectSystem(catalog.sol, { openInfo: false });
+        if (catalog.sol) selectSystem(catalog.sol, { openInfo: true });
       },
       getFocusedSystem: () => focused,
     });

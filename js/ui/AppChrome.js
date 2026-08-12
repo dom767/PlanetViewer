@@ -67,9 +67,9 @@ export class AppChrome {
   onNavClick(navId) {
     switch (navId) {
       case "home":
+        this.closeSearch();
+        this.closeSettings();
         this.onHome();
-        this.closeAllSheets();
-        this.setNavActive(null);
         break;
       case "search":
         this.toggleSearch();
