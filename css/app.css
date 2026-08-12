@@ -23,7 +23,8 @@
   --radius-sm: 9px;
   --radius-pill: 999px;
 
-  --panel: rgba(38, 32, 25, 0.92);
+  --panel: rgba(28, 24, 18, 0.48);
+  --panel-blur: 20px;
   --shadow: 0 12px 40px rgba(0, 0, 0, 0.45);
   --transition: 0.15s ease;
   --bp-desktop: 768px;
@@ -70,7 +71,9 @@ body,
   width: 220px;
   height: 220px;
   border: 1px solid var(--border);
-  background: rgba(28, 24, 18, 0.82);
+  background: var(--panel);
+  backdrop-filter: blur(var(--panel-blur));
+  -webkit-backdrop-filter: blur(var(--panel-blur));
   border-radius: var(--radius);
   overflow: hidden;
   z-index: 5;
@@ -116,6 +119,8 @@ body,
   background: var(--panel);
   border: 1px solid var(--border);
   border-radius: var(--radius-pill);
+  backdrop-filter: blur(var(--panel-blur));
+  -webkit-backdrop-filter: blur(var(--panel-blur));
   font-family: var(--font-mono);
   font-size: 0.75rem;
   color: var(--text-muted);
@@ -159,7 +164,8 @@ body,
   border: 1px solid var(--border);
   border-radius: var(--radius);
   z-index: 6;
-  backdrop-filter: blur(10px);
+  backdrop-filter: blur(var(--panel-blur));
+  -webkit-backdrop-filter: blur(var(--panel-blur));
   box-shadow: var(--shadow);
   transition: border-color var(--transition);
 }
@@ -313,13 +319,14 @@ body,
   margin-bottom: 6px;
 }
 
-/* Scrim behind mobile sheets */
+/* Scrim behind mobile sheets — light dim so the starfield stays visible */
 #chrome-scrim {
   position: fixed;
   inset: 0;
   z-index: 6;
-  background: rgba(12, 10, 8, 0.55);
-  backdrop-filter: blur(2px);
+  background: rgba(12, 10, 8, 0.22);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
 }
 
 #chrome-scrim.hidden {
@@ -375,7 +382,8 @@ body,
     calc(6px + env(safe-area-inset-bottom, 0px));
   background: var(--panel);
   border-top: 1px solid var(--border);
-  backdrop-filter: blur(10px);
+  backdrop-filter: blur(var(--panel-blur));
+  -webkit-backdrop-filter: blur(var(--panel-blur));
   box-shadow: 0 -8px 32px rgba(0, 0, 0, 0.35);
 }
 
@@ -455,7 +463,8 @@ body,
   border: 1px solid var(--border);
   border-radius: var(--radius);
   box-shadow: var(--shadow);
-  backdrop-filter: blur(10px);
+  backdrop-filter: blur(var(--panel-blur));
+  -webkit-backdrop-filter: blur(var(--panel-blur));
   overflow: hidden;
 }
 
