@@ -16,37 +16,28 @@ import {
 
 /** Overlook elevation above the system plane (matches PlanetPass). */
 const ARRIVAL_ELEVATION = SYSTEM_VIEW_ELEVATION;
-
-/** Flight-sim tuning (parsecs / seconds, radians). */
-const THRUST_ACCEL = 28;
-const VMAX_MIN = 14;
-const VMAX_MAX = 160;
-const VMAX_FRAC = 0.38;
-const TURN_GAIN = 1.15;
-const MAX_TURN_RATE = 1.1;
-const MAX_BANK = 0.85;
-const BANK_RATE = 2.4;
-const AERO_ALIGN = 1.6;
-const CLIMB_OUT_PC = 8;
-const INSERT_START_FRAC = 0.22;
-const INSERT_START_MIN = 5;
-const SIDE_JET_ACCEL = 22;
-const INSERT_BRAKE = 32;
-const ATTITUDE_RATE = 2.2;
-const MATCH_POS_FRAC = 0.45;
-const MATCH_SPEED_ERR = 2.5;
-const MATCH_HEADING = 0.55;
-const MATCH_HOLD_SEC = 0.35;
-const ORBIT_RADIAL_GAIN = 4.5;
-const ORBIT_SIDE_GAIN = 8;
-const LEAVE_BOOST = 12;
 const WORLD_UP = { x: 0, y: 0, z: 1 };
 
+/** Rotation: max rate scales with misalignment via (1 − dot). */
+const ROT_RATE_MIN = 0.35;
+const ROT_RATE_MAX = 2.4;
+
+/** Bezier travel timing (parsecs / seconds). */
+const CRUISE_SPEED_MIN = 10;
+const CRUISE_SPEED_MAX = 120;
+const CRUISE_SPEED_FRAC = 0.32;
+const TRAVEL_T_MIN = 1.2;
+const TRAVEL_T_MAX = 28;
+/** Reveal system orbits near the end of the hop. */
+const ARRIVE_REVEAL_U = 0.72;
+
 /**
- * Free-fly camera with atmospheric flight-sim travel between systems.
+ * Free-fly camera with Bezier travel between systems.
  *
- * Guided hops use persistent velocity + banked orientation (aileron turns),
- * then side-jet into a 35° overlook orbit maintained by the same physics.
+ * Travel orientation uses an orthonormal basis (not yaw/pitch): shortest-arc
+ * rotation toward the destination, with angular speed limited by
+ * dot(currentFwd, targetFwd). Position follows a cubic Bezier that matches
+ * start/end velocity so arrival into overlook orbit has no snap.
  */
 export class FlyCamera {
   constructor() {
@@ -60,27 +51,21 @@ export class FlyCamera {
 
     /** @type {null | OrbitSlot} */
     this._slot = null;
-    /** @type {null | GuideState} */
-    this._guide = null;
-    /** @type {'free'|'guided'|'orbit'} */
+    /** @type {null | TravelState} */
+    this._travel = null;
+    /** @type {'free'|'travel'|'orbit'} */
     this._flightMode = "free";
-    /** Soft phase label for HUD / orbit reveal. */
-    /** @type {'depart'|'cruise'|'arrive'|'orbit'} */
+    /** @type {'free'|'depart'|'cruise'|'arrive'|'orbit'} */
     this._phase = "orbit";
 
-    /** Ship velocity (pc/s) — preserved across focus handoffs. */
-    this._velocity = { x: 0, y: 0, z: 0 };
-    /** Aircraft forward (nose). */
-    this._fwd = { x: 1, y: 0, z: 0 };
-    /** Aircraft up (banks with ailerons). */
+    /** Camera basis (travel / orbit). Free look uses yaw/pitch. */
+    this._fwd = this.forwardFromYawPitch();
     this._upBody = { ...WORLD_UP };
-    /** Current bank angle about forward (radians, signed). */
-    this._bank = 0;
+    this._velocity = { x: 0, y: 0, z: 0 };
 
     this.autoOrbitResumeDelay = 5.5;
     this._reattachCooldown = 0;
     this.autoOrbitSpeed = (Math.PI * 2) / 90;
-    this._orbitSpinBlend = 0;
 
     this._anchorStar = null;
 
@@ -103,10 +88,10 @@ export class FlyCamera {
   }
 
   isTravelling() {
-    return this._flightMode === "guided" && !!this._guide;
+    return this._flightMode === "travel" && !!this._travel;
   }
 
-  /** True once orbits should be shown (insert / physics orbit). */
+  /** True once orbits should be shown (late travel / overlook). */
   shouldRevealOrbits() {
     return this._phase === "arrive" || this._phase === "orbit";
   }
@@ -206,7 +191,6 @@ export class FlyCamera {
       this.pitch = Math.max(-lim, Math.min(lim, this.pitch));
       this._fwd = this.forwardFromYawPitch();
       this._upBody = { ...WORLD_UP };
-      this._bank = 0;
     });
 
     canvas.addEventListener(
@@ -241,32 +225,11 @@ export class FlyCamera {
    * @param {{x:number,y:number,z:number}|null} [fromStar]
    */
   focusOn(target, distance = 2.5, fromStar = null) {
-    const prevSlot = this._slot;
-    const prevFwd = { ...this._fwd };
-    const prevUp = { ...this._upBody };
-    const prevBank = this._bank;
-
-    // Seed from current overlook orbit tangent when leaving a host
-    if (prevSlot?.basis) {
-      this._velocity = orbitTangentVelocity(prevSlot, this.autoOrbitSpeed);
-      if (length3(this._velocity) > 0.05) {
-        this._fwd = normalize3(this._velocity);
-      }
-    } else if (length3(this._velocity) < 0.2) {
+    // Carry basis from free look or prior mode
+    if (this._flightMode === "free") {
       this._fwd = this.forwardFromYawPitch();
-      this._velocity = scale3(this._fwd, 2.5);
-    } else {
-      this._fwd = length3(this._velocity) > 0.05
-        ? normalize3(this._velocity)
-        : prevFwd;
+      this._upBody = { ...WORLD_UP };
     }
-
-    // Keep departure bank / up — no snap to destination plane
-    this._upBody = orthonormalizeUp(this._fwd, prevUp);
-    this._bank = prevBank;
-
-    this._guide = null;
-    this._flightMode = "free";
 
     const dest = { x: target.x, y: target.y, z: target.z };
     const basis =
@@ -285,31 +248,59 @@ export class FlyCamera {
       basis,
     };
     this._reattachCooldown = 0;
-    this._orbitSpinBlend = 0;
+    this._anchorStar = dest;
 
     const source = fromStar
       ? { x: fromStar.x, y: fromStar.y, z: fromStar.z }
-      : prevAnchor
-        ? prevAnchor
-        : null;
+      : prevAnchor;
 
-    this._anchorStar = dest;
+    const p0 = { ...this.position };
+    const p3 = orbitPosition(this._slot);
+    const hop = Math.max(length3(sub3(p3, p0)), 0.5);
+    const cruise = clamp(hop * CRUISE_SPEED_FRAC, CRUISE_SPEED_MIN, CRUISE_SPEED_MAX);
+    const duration = clamp(hop / cruise, TRAVEL_T_MIN, TRAVEL_T_MAX);
 
-    const end = orbitPosition(this._slot);
-    const hop = Math.max(length3(sub3(end, this.position)), 1);
-    const vmax = clamp(hop * VMAX_FRAC, VMAX_MIN, VMAX_MAX);
+    // Start velocity: keep motion if already moving, else leave host / nose
+    let v0 = { ...this._velocity };
+    if (length3(v0) < 0.5) {
+      let leave = this._fwd;
+      if (source && length3(sub3(p0, source)) > 1e-4) {
+        leave = normalize3(sub3(p0, source));
+      }
+      const toward = normalize3(sub3(p3, p0));
+      const startDir = normalize3(add3(scale3(leave, 0.45), scale3(toward, 0.55)));
+      v0 = scale3(startDir, hop / duration);
+    } else {
+      // Softly bias existing velocity toward the destination
+      const toward = normalize3(sub3(p3, p0));
+      const spd = length3(v0);
+      v0 = scale3(
+        normalize3(add3(normalize3(v0), scale3(toward, 0.35))),
+        Math.max(spd, hop / duration * 0.55)
+      );
+    }
 
-    this._guide = {
-      fromStar: source,
+    // End velocity matches overlook tangent — C1 handoff into orbit
+    const v1 = orbitTangentVelocity(this._slot, this.autoOrbitSpeed);
+
+    // Cubic Bezier with Hermite end velocities: B'(0)=3(P1−P0), B'(1)=3(P3−P2)
+    // Parameter u ∈ [0,1] over `duration` ⇒ world vel = (dB/du)/duration
+    const p1 = add3(p0, scale3(v0, duration / 3));
+    const p2 = sub3(p3, scale3(v1, duration / 3));
+
+    this._travel = {
+      p0,
+      p1,
+      p2,
+      p3,
+      vEnd: v1,
+      duration,
+      elapsed: 0,
       dest,
       arrivalUp: { ...basis.ey },
-      hopDist: hop,
-      vmax,
-      upBlend: 0,
-      matchHold: 0,
     };
 
-    this._flightMode = "guided";
+    this._flightMode = "travel";
     this._phase = source ? "depart" : "cruise";
     this._syncYawPitchFromDir(this._fwd);
   }
@@ -361,8 +352,8 @@ export class FlyCamera {
   }
 
   cancelTravel() {
-    if (this._flightMode === "guided") {
-      this._guide = null;
+    if (this._flightMode === "travel") {
+      this._travel = null;
       if (this._slot) {
         this._flightMode = "orbit";
         this._phase = "orbit";
@@ -374,35 +365,32 @@ export class FlyCamera {
 
   clearOrbit() {
     this._slot = null;
-    this._guide = null;
+    this._travel = null;
     this._reattachCooldown = 0;
-    this._orbitSpinBlend = 0;
     this._flightMode = "free";
     this._phase = "orbit";
-    this._bank = 0;
     this._upBody = { ...WORLD_UP };
     this._fwd = this.forwardFromYawPitch();
+    this._velocity = { x: 0, y: 0, z: 0 };
   }
 
-  /** Resume physics-maintained overlook orbit after drag / zoom pause. */
+  /** Resume overlook orbit after drag / zoom pause. */
   attachSpring() {
     if (!this._slot) return;
     this._slot.elevation = ARRIVAL_ELEVATION;
-    this._guide = null;
+    this._travel = null;
     this._flightMode = "orbit";
     this._phase = "orbit";
     this._reattachCooldown = 0;
-    this._orbitSpinBlend = 0;
     this._seedTangentFromSlot();
     const look = normalize3(sub3(this._slot.target, this.position));
     this._fwd = look;
     this._upBody = orthonormalizeUp(this._fwd, this._slot.basis.ey);
-    this._bank = 0;
     this._syncYawPitchFromDir(this._fwd);
   }
 
   detachSpring() {
-    this._guide = null;
+    this._travel = null;
     if (this._slot) {
       this._flightMode = "orbit";
       this._phase = "orbit";
@@ -414,11 +402,7 @@ export class FlyCamera {
     this.position = { ...orbitPosition(this._slot) };
     const dir = normalize3(sub3(this._slot.target, this.position));
     this._fwd = dir;
-    this._upBody = orthonormalizeUp(
-      dir,
-      this._slot.basis?.ey || WORLD_UP
-    );
-    this._bank = 0;
+    this._upBody = orthonormalizeUp(dir, this._slot.basis?.ey || WORLD_UP);
     this._seedTangentFromSlot();
     this._syncYawPitchFromDir(dir);
   }
@@ -441,7 +425,7 @@ export class FlyCamera {
   }
 
   forward() {
-    if (this._flightMode === "guided" || this._flightMode === "orbit") {
+    if (this._flightMode === "travel" || this._flightMode === "orbit") {
       return this._fwd;
     }
     return this.forwardFromYawPitch();
@@ -452,7 +436,7 @@ export class FlyCamera {
   }
 
   _viewUp() {
-    if (this._flightMode === "guided" || this._flightMode === "orbit") {
+    if (this._flightMode === "travel" || this._flightMode === "orbit") {
       return this._upBody;
     }
     return this.up;
@@ -491,8 +475,8 @@ export class FlyCamera {
       return;
     }
 
-    if (this._flightMode === "guided" && this._guide && this._slot) {
-      this._updateGuidedFlight(dtClamped);
+    if (this._flightMode === "travel" && this._travel && this._slot) {
+      this._updateTravel(dtClamped);
       return;
     }
 
@@ -500,7 +484,7 @@ export class FlyCamera {
     if (this._orbitDragging) return;
 
     if (this._flightMode === "orbit" && this._reattachCooldown <= 0) {
-      this._updatePhysicsOrbit(dtClamped);
+      this._updateOrbit(dtClamped);
       return;
     }
 
@@ -513,198 +497,85 @@ export class FlyCamera {
   }
 
   /**
-   * Continuous guided hop: climb-out → cruise (aileron turn + thrust) → insert.
+   * Bezier position + shortest-arc basis rotation toward the destination star.
+   * Angular speed is gated by dot(currentFwd, targetFwd).
    */
-  _updateGuidedFlight(dt) {
-    const g = this._guide;
+  _updateTravel(dt) {
+    const tr = this._travel;
     const slot = this._slot;
-    if (!g || !slot) return;
+    if (!tr || !slot) return;
 
-    const slotPos = orbitPosition(slot);
-    const toSlot = sub3(slotPos, this.position);
-    const distSlot = length3(toSlot);
-    const toSlotDir =
-      distSlot > 1e-5 ? scale3(toSlot, 1 / distSlot) : this._fwd;
+    tr.elapsed = Math.min(tr.duration, tr.elapsed + dt);
+    const u = tr.elapsed / tr.duration;
 
-    const insertDist = Math.max(INSERT_START_MIN, g.hopDist * INSERT_START_FRAC);
-    const insertMix = smoothstep(
-      clamp(1 - distSlot / insertDist, 0, 1)
+    if (u < 0.12) this._phase = "depart";
+    else if (u < ARRIVE_REVEAL_U) this._phase = "cruise";
+    else this._phase = "arrive";
+
+    this.position = cubicBezier3(tr.p0, tr.p1, tr.p2, tr.p3, u);
+    this._velocity = scale3(
+      cubicBezierDerivative3(tr.p0, tr.p1, tr.p2, tr.p3, u),
+      1 / tr.duration
     );
 
-    let climbMix = 0;
-    if (g.fromStar) {
-      const dHost = length3(sub3(this.position, g.fromStar));
-      climbMix = 1 - smoothstep(clamp(dHost / CLIMB_OUT_PC, 0, 1));
-    }
+    // Target facing: look at destination star (shortest arc on the sphere)
+    const toStar = sub3(tr.dest, this.position);
+    const targetFwd =
+      length3(toStar) > 1e-6 ? normalize3(toStar) : this._fwd;
 
-    if (insertMix > 0.55) this._phase = "arrive";
-    else if (climbMix > 0.35) this._phase = "depart";
-    else this._phase = "cruise";
-
-    g.upBlend = Math.min(1, g.upBlend + insertMix * dt * 0.9);
-
-    // --- Desired cruise heading (toward slot), blended through climb-out ---
-    let desiredCruise = toSlotDir;
-    if (climbMix > 0 && g.fromStar) {
-      let leave = sub3(this.position, g.fromStar);
-      if (length3(leave) < 1e-4) leave = this._fwd;
-      else leave = normalize3(leave);
-      desiredCruise = normalize3(lerp3(toSlotDir, leave, climbMix * 0.65));
-    }
-
-    // Insert: look at star; cruise: track desired cruise heading
-    const lookStar = normalize3(sub3(slot.target, this.position));
-    const desiredFwd = normalize3(
-      lerp3(desiredCruise, lookStar, insertMix)
-    );
-
-    // --- Aileron turn: rate ∝ heading error (tapers as we align) ---
-    const headingErr = angleBetween(this._fwd, desiredFwd);
-    const turnRate = Math.min(MAX_TURN_RATE, TURN_GAIN * headingErr);
-    // Signed bank from turn axis
-    const turnAxis = cross3(this._fwd, desiredFwd);
-    const axisLen = length3(turnAxis);
-    let signedErr = headingErr;
-    if (axisLen > 1e-6) {
-      signedErr = Math.sign(dot3(turnAxis, this._upBody)) * headingErr;
-      if (signedErr === 0) signedErr = headingErr;
-    }
-    const cruiseBankScale = 1 - insertMix;
-    const targetBank = clamp(
-      signedErr * 1.1 * cruiseBankScale,
-      -MAX_BANK,
-      MAX_BANK
-    );
-    this._bank = approach(this._bank, targetBank, BANK_RATE * dt);
-
-    this._fwd = rotateToward(this._fwd, desiredFwd, turnRate * dt);
-    // Apply bank relative to destination plane / world
-    const levelUp = orthonormalizeUp(
-      this._fwd,
-      lerp3(
-        WORLD_UP,
-        g.arrivalUp,
-        lerp(0, g.upBlend, insertMix)
-      )
-    );
-    this._upBody = applyBank(this._fwd, levelUp, this._bank);
-
-    // --- Forces ---
-    let accel = { x: 0, y: 0, z: 0 };
-
-    // Climb-out radial boost
-    if (climbMix > 0 && g.fromStar) {
-      let leave = sub3(this.position, g.fromStar);
-      if (length3(leave) > 1e-4) {
-        accel = add3(accel, scale3(normalize3(leave), LEAVE_BOOST * climbMix));
-      }
-    }
-
-    // Forward thrust toward vmax (cruise); brake in insert
-    const spd = length3(this._velocity);
-    const thrustScale = (1 - insertMix) * (spd < g.vmax ? 1 : 0);
-    accel = add3(accel, scale3(this._fwd, THRUST_ACCEL * thrustScale));
-
-    if (insertMix > 0.05) {
-      // Drag / reverse thrust as we enter the cone
-      if (spd > 0.1) {
-        accel = add3(
-          accel,
-          scale3(normalize3(this._velocity), -INSERT_BRAKE * insertMix)
-        );
-      }
-
-      // Side jet → circular overlook velocity at current azimuth
-      this._syncSlotAzimuthFromPos();
-      slot.elevation = ARRIVAL_ELEVATION;
-      const desiredOrbitVel = orbitTangentVelocity(slot, this.autoOrbitSpeed);
-      const desiredOrbitPos = orbitPosition(slot);
-      const velErr = sub3(desiredOrbitVel, this._velocity);
-      accel = add3(accel, scale3(velErr, SIDE_JET_ACCEL * insertMix));
-      const posErr = sub3(desiredOrbitPos, this.position);
-      accel = add3(
-        accel,
-        scale3(posErr, ORBIT_RADIAL_GAIN * insertMix)
-      );
-    }
-
-    this._velocity = add3(this._velocity, scale3(accel, dt));
-
-    // Mild aero alignment (atmosphere): bleed velocity toward nose
-    const aero = AERO_ALIGN * (1 - insertMix * 0.7) * dt;
-    if (aero > 0 && spd > 0.05) {
-      const along = scale3(this._fwd, spd);
-      this._velocity = lerp3(this._velocity, along, clamp(aero, 0, 1));
-    }
-
-    // Soft speed ceiling (no hard zeroing)
-    const softMax = lerp(g.vmax, length3(orbitTangentVelocity(slot, this.autoOrbitSpeed)) * 1.4, insertMix);
-    const spd2 = length3(this._velocity);
-    if (spd2 > softMax * 1.15) {
-      this._velocity = scale3(this._velocity, (softMax * 1.15) / spd2);
-    }
-
-    this.position = add3(this.position, scale3(this._velocity, dt));
+    this._fwd = rotateBasisToward(this._fwd, targetFwd, dt);
+    // Blend camera up toward the planetary plane normal along the hop
+    const upMix = smoothstep(clamp((u - 0.35) / 0.5, 0, 1));
+    const desiredUp = normalize3(lerp3(WORLD_UP, tr.arrivalUp, upMix));
+    this._upBody = orthonormalizeUp(this._fwd, desiredUp);
     this._syncYawPitchFromDir(this._fwd);
 
-    // Match → physics orbit
-    this._syncSlotAzimuthFromPos();
-    const matchPos = Math.max(slot.distance * MATCH_POS_FRAC, 0.4);
-    const lookErr = angleBetween(this._fwd, lookStar);
-    const orbitVel = orbitTangentVelocity(slot, this.autoOrbitSpeed);
-    const velMatch = length3(sub3(this._velocity, orbitVel));
-    const near =
-      insertMix > 0.7 &&
-      distSlot < matchPos &&
-      lookErr < MATCH_HEADING &&
-      velMatch < MATCH_SPEED_ERR;
-    if (near) {
-      g.matchHold += dt;
-      if (g.matchHold >= MATCH_HOLD_SEC) this._beginPhysicsOrbit();
-    } else {
-      g.matchHold = Math.max(0, g.matchHold - dt * 0.5);
+    if (u >= 1 - 1e-6) {
+      this._beginOrbit();
     }
   }
 
-  _beginPhysicsOrbit() {
-    this._guide = null;
+  _beginOrbit() {
+    const tr = this._travel;
+    const slot = this._slot;
+    if (slot) {
+      slot.elevation = ARRIVAL_ELEVATION;
+      this.position = { ...orbitPosition(slot) };
+      this._syncSlotAzimuthFromPos();
+      if (tr) {
+        this._velocity = { ...tr.vEnd };
+      } else {
+        this._seedTangentFromSlot();
+      }
+      const look = normalize3(sub3(slot.target, this.position));
+      this._fwd = look;
+      this._upBody = orthonormalizeUp(look, slot.basis.ey);
+      this._syncYawPitchFromDir(look);
+    }
+    this._travel = null;
     this._flightMode = "orbit";
     this._phase = "orbit";
-    this._orbitSpinBlend = 0;
-    if (this._slot) {
-      this._slot.elevation = ARRIVAL_ELEVATION;
-      this._syncSlotAzimuthFromPos();
-    }
-    this._bank = approach(this._bank, 0, 1);
   }
 
-  /** Side-jet circular overlook; nose at star; up = plane normal. */
-  _updatePhysicsOrbit(dt) {
+  /** Continuous overlook: advance azimuth, keep nose on star, up = plane normal. */
+  _updateOrbit(dt) {
     const slot = this._slot;
     if (!slot?.basis) return;
 
-    this._orbitSpinBlend = Math.min(1, this._orbitSpinBlend + dt * 0.4);
     slot.elevation = ARRIVAL_ELEVATION;
-
-    // Advance nominal azimuth; physics tracks it
-    slot.azimuth += this.autoOrbitSpeed * dt * this._orbitSpinBlend;
+    slot.azimuth += this.autoOrbitSpeed * dt;
 
     const desiredPos = orbitPosition(slot);
     const desiredVel = orbitTangentVelocity(slot, this.autoOrbitSpeed);
+
+    // Soft track so Bezier handoff never pops even if numerical drift
+    this.position = lerp3(this.position, desiredPos, clamp(6 * dt, 0, 1));
+    this._velocity = lerp3(this._velocity, desiredVel, clamp(6 * dt, 0, 1));
+
     const lookStar = normalize3(sub3(slot.target, this.position));
-
-    let accel = scale3(sub3(desiredVel, this._velocity), ORBIT_SIDE_GAIN);
-    accel = add3(accel, scale3(sub3(desiredPos, this.position), ORBIT_RADIAL_GAIN));
-
-    this._velocity = add3(this._velocity, scale3(accel, dt));
-    this.position = add3(this.position, scale3(this._velocity, dt));
-
-    this._fwd = rotateToward(this._fwd, lookStar, ATTITUDE_RATE * dt);
-    this._bank = approach(this._bank, 0, BANK_RATE * dt);
-    const levelUp = orthonormalizeUp(this._fwd, slot.basis.ey);
-    this._upBody = applyBank(this._fwd, levelUp, this._bank);
+    this._fwd = rotateBasisToward(this._fwd, lookStar, dt);
+    this._upBody = orthonormalizeUp(this._fwd, slot.basis.ey);
     this._syncYawPitchFromDir(this._fwd);
-    this._syncSlotAzimuthFromPos();
   }
 
   _syncSlotAzimuthFromPos() {
@@ -716,12 +587,11 @@ export class FlyCamera {
     );
     if (s.distance > 1e-4) {
       this._slot.azimuth = s.azimuth;
-      // Keep commanded focus distance / elevation for guidance targets
     }
   }
 
   viewMatrix() {
-    if (this._flightMode === "guided" || this._flightMode === "orbit") {
+    if (this._flightMode === "travel" || this._flightMode === "orbit") {
       const look = add3(this.position, this._fwd);
       let up = this._upBody;
       const back = normalize3(sub3(this.position, look));
@@ -729,7 +599,6 @@ export class FlyCamera {
       return lookAt(this.position, look, up);
     }
     if (this._slot && !this._orbitDragging && this._reattachCooldown > 0) {
-      // Manual look while waiting to reattach
       const target = add3(this.position, this.forwardFromYawPitch());
       return lookAt(this.position, target, WORLD_UP);
     }
@@ -761,14 +630,16 @@ export class FlyCamera {
  */
 
 /**
- * @typedef {object} GuideState
- * @property {{x:number,y:number,z:number}|null} fromStar
+ * @typedef {object} TravelState
+ * @property {{x:number,y:number,z:number}} p0
+ * @property {{x:number,y:number,z:number}} p1
+ * @property {{x:number,y:number,z:number}} p2
+ * @property {{x:number,y:number,z:number}} p3
+ * @property {{x:number,y:number,z:number}} vEnd
+ * @property {number} duration
+ * @property {number} elapsed
  * @property {{x:number,y:number,z:number}} dest
  * @property {{x:number,y:number,z:number}} arrivalUp
- * @property {number} hopDist
- * @property {number} vmax
- * @property {number} upBlend
- * @property {number} matchHold
  */
 
 function orbitPosition(slot) {
@@ -787,14 +658,10 @@ function orbitPosition(slot) {
   };
 }
 
-/**
- * Tangential velocity on the overlook cone: ω × r_hat * distance.
- * Direction: ∂orbitPosition/∂azimuth * ω.
- */
+/** Tangential velocity on the overlook cone: ∂orbitPosition/∂azimuth · ω. */
 function orbitTangentVelocity(slot, omega) {
   const { distance, azimuth, elevation, basis } = slot;
   const cp = Math.cos(elevation);
-  // d(ca,sa)/d(az) = (-sa, ca)
   const dca = -Math.sin(azimuth);
   const dsa = Math.cos(azimuth);
   const drx = basis.ex.x * dca + basis.ez.x * dsa;
@@ -857,61 +724,67 @@ function orthonormalizeUp(forward, approxUp) {
   return normalize3(cross3(r, f));
 }
 
-/** Roll `levelUp` around `forward` by `bank` radians. */
-function applyBank(forward, levelUp, bank) {
-  if (Math.abs(bank) < 1e-5) return levelUp;
-  const f = normalize3(forward);
-  const right = normalize3(cross3(f, levelUp));
-  const up = normalize3(cross3(right, f));
-  const c = Math.cos(bank);
-  const s = Math.sin(bank);
-  return normalize3({
-    x: up.x * c + right.x * s,
-    y: up.y * c + right.y * s,
-    z: up.z * c + right.z * s,
-  });
-}
-
-function angleBetween(a, b) {
-  return Math.acos(clamp(dot3(normalize3(a), normalize3(b)), -1, 1));
-}
-
-function rotateToward(from, to, maxRadians) {
+/**
+ * Shortest-arc rotate `from` toward `to`. Rate is limited by
+ * dot(from, to): opposite directions turn fastest, aligned slowest.
+ */
+function rotateBasisToward(from, to, dt) {
   const a = normalize3(from);
   const b = normalize3(to);
-  const ang = angleBetween(a, b);
-  if (ang < 1e-6 || maxRadians <= 0) return a;
-  if (ang <= maxRadians) return b;
-  return slerpDir(a, b, maxRadians / ang);
+  const d = clamp(dot3(a, b), -1, 1);
+  if (d > 0.999999) return b;
+
+  // Remaining angle and shortest axis (basis-matrix style, no yaw/pitch)
+  const ang = Math.acos(d);
+  const misalign = 0.5 * (1 - d); // 0 aligned → 1 opposite
+  const rate = ROT_RATE_MIN + (ROT_RATE_MAX - ROT_RATE_MIN) * misalign;
+  const step = Math.min(ang, rate * dt);
+  if (step < 1e-8) return a;
+
+  let axis = cross3(a, b);
+  if (length3(axis) < 1e-8) {
+    // 180°: pick any perpendicular axis
+    axis = cross3(a, WORLD_UP);
+    if (length3(axis) < 1e-8) axis = cross3(a, { x: 1, y: 0, z: 0 });
+  }
+  axis = normalize3(axis);
+  return rotateAroundAxis(a, axis, step);
 }
 
-function slerpDir(a, b, t) {
-  const cosA = clamp(dot3(a, b), -1, 1);
-  if (cosA < -0.999) {
-    let axis = cross3(a, { x: 0, y: 0, z: 1 });
-    if (length3(axis) < 1e-5) axis = cross3(a, { x: 1, y: 0, z: 0 });
-    axis = normalize3(axis);
-    const ang = Math.PI * t;
-    const s = Math.sin(ang);
-    const c = Math.cos(ang);
-    return normalize3({
-      x: a.x * c + axis.x * s,
-      y: a.y * c + axis.y * s,
-      z: a.z * c + axis.z * s,
-    });
-  }
-  if (cosA > 0.9995) {
-    return normalize3(lerp3(a, b, t));
-  }
-  const ang = Math.acos(cosA);
-  const s0 = Math.sin((1 - t) * ang);
-  const s1 = Math.sin(t * ang);
-  const inv = 1 / Math.sin(ang);
+function rotateAroundAxis(v, axis, angle) {
+  const c = Math.cos(angle);
+  const s = Math.sin(angle);
+  const d = dot3(axis, v);
   return normalize3({
-    x: (a.x * s0 + b.x * s1) * inv,
-    y: (a.y * s0 + b.y * s1) * inv,
-    z: (a.z * s0 + b.z * s1) * inv,
+    x: v.x * c + (axis.y * v.z - axis.z * v.y) * s + axis.x * d * (1 - c),
+    y: v.y * c + (axis.z * v.x - axis.x * v.z) * s + axis.y * d * (1 - c),
+    z: v.z * c + (axis.x * v.y - axis.y * v.x) * s + axis.z * d * (1 - c),
   });
+}
+
+function cubicBezier3(p0, p1, p2, p3, u) {
+  const t = clamp(u, 0, 1);
+  const o = 1 - t;
+  const o2 = o * o;
+  const o3 = o2 * o;
+  const t2 = t * t;
+  const t3 = t2 * t;
+  return {
+    x: o3 * p0.x + 3 * o2 * t * p1.x + 3 * o * t2 * p2.x + t3 * p3.x,
+    y: o3 * p0.y + 3 * o2 * t * p1.y + 3 * o * t2 * p2.y + t3 * p3.y,
+    z: o3 * p0.z + 3 * o2 * t * p1.z + 3 * o * t2 * p2.z + t3 * p3.z,
+  };
+}
+
+/** dB/du for a cubic Bezier (scale by 1/duration for world velocity). */
+function cubicBezierDerivative3(p0, p1, p2, p3, u) {
+  const t = clamp(u, 0, 1);
+  const o = 1 - t;
+  return {
+    x: 3 * o * o * (p1.x - p0.x) + 6 * o * t * (p2.x - p1.x) + 3 * t * t * (p3.x - p2.x),
+    y: 3 * o * o * (p1.y - p0.y) + 6 * o * t * (p2.y - p1.y) + 3 * t * t * (p3.y - p2.y),
+    z: 3 * o * o * (p1.z - p0.z) + 6 * o * t * (p2.z - p1.z) + 3 * t * t * (p3.z - p2.z),
+  };
 }
 
 function lerp3(a, b, t) {
@@ -920,16 +793,6 @@ function lerp3(a, b, t) {
     y: a.y + (b.y - a.y) * t,
     z: a.z + (b.z - a.z) * t,
   };
-}
-
-function lerp(a, b, t) {
-  return a + (b - a) * t;
-}
-
-function approach(current, target, maxDelta) {
-  const d = target - current;
-  if (Math.abs(d) <= maxDelta) return target;
-  return current + Math.sign(d) * maxDelta;
 }
 
 function smoothstep(t) {
