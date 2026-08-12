@@ -29,16 +29,20 @@ const MAX_ANGULAR_SPEED = 2.0;
 
 /** Every hop takes the same wall-clock time, regardless of distance. */
 const TRAVEL_DURATION = 6;
+/** Spool up to cruise over this long. */
+const DEPART_ACCEL_SECONDS = 1.4;
+/** Burn off cruise speed over this long, settling onto the orbit tangent. */
+const ARRIVAL_BRAKE_SECONDS = 1.5;
 /**
- * Front-loads the hop so most ground is covered early and the last stretch is
- * a slow glide. Endpoint rates stay exactly 1, so the curve's start and end
- * velocities are untouched. Must stay below ~10 to keep time moving forward.
+ * Fallback clock warp, used only when a hop is too short to fit the
+ * accelerate / cruise / brake schedule. Endpoint rates stay exactly 1, so the
+ * curve's start and end velocities are untouched.
  */
 const TRAVEL_EASE_BIAS = 6;
 /** Cap on each Hermite tangent, as a fraction of the hop, to curb overshoot. */
 const MAX_TANGENT_FRAC = 0.4;
-/** Reveal system orbits near the end of the hop. */
-const ARRIVE_REVEAL_U = 0.72;
+/** Arc-length samples used to convert distance travelled into a curve param. */
+const ARC_SAMPLES = 128;
 
 /**
  * Free-fly camera with fixed-duration Bezier travel between systems.
@@ -284,12 +288,26 @@ export class FlyCamera {
     const v0 = { ...this._velocity };
     const v1 = orbitTangentVelocity(this._slot, this.autoOrbitSpeed);
     const tangentLimit = MAX_TANGENT_FRAC * Math.max(length3(sub3(p3, p0)), 1e-3);
+    const p1 = add3(p0, clampLength(scale3(v0, TRAVEL_DURATION / 3), tangentLimit));
+    const p2 = sub3(p3, clampLength(scale3(v1, TRAVEL_DURATION / 3), tangentLimit));
+
+    // Timing is driven along the path itself, so the brake lasts a set number
+    // of seconds no matter how the curve is shaped.
+    const arc = buildArcTable(p0, p1, p2, p3);
+    const schedule = buildSpeedSchedule(
+      arc.length,
+      length3(v0),
+      length3(v1),
+      TRAVEL_DURATION
+    );
 
     this._travel = {
       p0,
-      p1: add3(p0, clampLength(scale3(v0, TRAVEL_DURATION / 3), tangentLimit)),
-      p2: sub3(p3, clampLength(scale3(v1, TRAVEL_DURATION / 3), tangentLimit)),
+      p1,
+      p2,
       p3,
+      arc,
+      schedule,
       vEnd: v1,
       duration: TRAVEL_DURATION,
       elapsed: 0,
@@ -566,19 +584,41 @@ export class FlyCamera {
     if (!tr) return;
 
     tr.elapsed = Math.min(tr.duration, tr.elapsed + dt);
-    const s = tr.elapsed / tr.duration;
-    const u = travelEase(s);
+    const t = tr.elapsed;
+    const s = t / tr.duration;
+    const sched = tr.schedule;
 
-    if (u < 0.12) this._phase = "depart";
-    else if (u < ARRIVE_REVEAL_U) this._phase = "cruise";
-    else this._phase = "arrive";
+    if (sched) {
+      this._phase =
+        t < sched.accelSeconds
+          ? "depart"
+          : t < tr.duration - sched.brakeSeconds
+            ? "cruise"
+            : "arrive";
+    } else {
+      this._phase = s < 0.15 ? "depart" : s < 0.7 ? "cruise" : "arrive";
+    }
+
+    let u;
+    let speed = null;
+    if (sched) {
+      u = uAtDistance(tr.arc, scheduledDistance(sched, t));
+      speed = scheduledSpeed(sched, t);
+    } else {
+      u = travelEase(s);
+    }
 
     this.position = cubicBezier3(tr.p0, tr.p1, tr.p2, tr.p3, u);
-    // Chain rule: the eased clock stretches the curve's own tangent
-    this._velocity = scale3(
-      cubicBezierDerivative3(tr.p0, tr.p1, tr.p2, tr.p3, u),
-      travelEaseRate(s) / tr.duration
-    );
+    const tangent = cubicBezierDerivative3(tr.p0, tr.p1, tr.p2, tr.p3, u);
+    if (speed !== null) {
+      // Direction from the curve, magnitude straight from the schedule
+      this._velocity =
+        length3(tangent) > 1e-9
+          ? scale3(normalize3(tangent), speed)
+          : { ...tr.vEnd };
+    } else {
+      this._velocity = scale3(tangent, travelEaseRate(s) / tr.duration);
+    }
 
     // Face the destination star; roll toward its planetary plane on approach
     const toStar = sub3(tr.dest, this.position);
@@ -845,6 +885,118 @@ function rotateAroundAxis(v, axis, angle) {
     y: v.y * c + (axis.z * v.x - axis.x * v.z) * s + axis.y * d * (1 - c),
     z: v.z * c + (axis.x * v.y - axis.y * v.x) * s + axis.z * d * (1 - c),
   });
+}
+
+/**
+ * Sample the curve into a distance → parameter table. Driving the hop by
+ * distance (rather than by the raw Bezier parameter) is what lets the brake
+ * last a fixed number of seconds instead of a fixed slice of the curve.
+ */
+function buildArcTable(p0, p1, p2, p3) {
+  const us = new Float64Array(ARC_SAMPLES + 1);
+  const ds = new Float64Array(ARC_SAMPLES + 1);
+  let prev = p0;
+  let acc = 0;
+  for (let i = 1; i <= ARC_SAMPLES; i++) {
+    const u = i / ARC_SAMPLES;
+    const pt = cubicBezier3(p0, p1, p2, p3, u);
+    acc += length3(sub3(pt, prev));
+    prev = pt;
+    us[i] = u;
+    ds[i] = acc;
+  }
+  return { us, ds, length: acc };
+}
+
+function uAtDistance(arc, distance) {
+  const { us, ds } = arc;
+  const n = ds.length - 1;
+  if (distance <= 0) return 0;
+  if (distance >= ds[n]) return 1;
+  let lo = 0;
+  let hi = n;
+  while (lo + 1 < hi) {
+    const mid = (lo + hi) >> 1;
+    if (ds[mid] <= distance) lo = mid;
+    else hi = mid;
+  }
+  const span = ds[hi] - ds[lo];
+  const f = span > 1e-12 ? (distance - ds[lo]) / span : 0;
+  return us[lo] + (us[hi] - us[lo]) * f;
+}
+
+/**
+ * Accelerate → cruise → brake, with the cruise speed solved so the three
+ * phases cover exactly `length` in exactly `duration`. Returns null when the
+ * hop is too short to hold a cruise faster than the orbit it ends on.
+ */
+function buildSpeedSchedule(length, startSpeed, endSpeed, duration) {
+  const accelSeconds = DEPART_ACCEL_SECONDS;
+  const brakeSeconds = ARRIVAL_BRAKE_SECONDS;
+  const cruiseSeconds = duration - accelSeconds - brakeSeconds;
+  if (cruiseSeconds <= 0 || length <= 0) return null;
+
+  // length = ta(v0+vc)/2 + tc·vc + tb(vc+ve)/2  →  solve for vc
+  const denom = duration - (accelSeconds + brakeSeconds) / 2;
+  const cruiseSpeed =
+    (length - (accelSeconds * startSpeed + brakeSeconds * endSpeed) / 2) / denom;
+  if (!(cruiseSpeed > endSpeed) || !(cruiseSpeed > 1e-4)) return null;
+
+  const accelDistance = rampDistance(startSpeed, cruiseSpeed, accelSeconds, 1);
+  return {
+    accelSeconds,
+    brakeSeconds,
+    cruiseSeconds,
+    startSpeed,
+    cruiseSpeed,
+    endSpeed,
+    accelDistance,
+    cruiseDistance: cruiseSeconds * cruiseSpeed,
+    duration,
+  };
+}
+
+function scheduledSpeed(sched, t) {
+  const { accelSeconds, brakeSeconds, duration } = sched;
+  if (t < accelSeconds) {
+    return lerp(sched.startSpeed, sched.cruiseSpeed, smoothstep(t / accelSeconds));
+  }
+  const brakeStart = duration - brakeSeconds;
+  if (t < brakeStart) return sched.cruiseSpeed;
+  const x = clamp((t - brakeStart) / brakeSeconds, 0, 1);
+  return lerp(sched.cruiseSpeed, sched.endSpeed, smoothstep(x));
+}
+
+function scheduledDistance(sched, t) {
+  const { accelSeconds, brakeSeconds, duration } = sched;
+  if (t < accelSeconds) {
+    return rampDistance(
+      sched.startSpeed,
+      sched.cruiseSpeed,
+      accelSeconds,
+      t / accelSeconds
+    );
+  }
+  const brakeStart = duration - brakeSeconds;
+  if (t < brakeStart) {
+    return sched.accelDistance + sched.cruiseSpeed * (t - accelSeconds);
+  }
+  const x = clamp((t - brakeStart) / brakeSeconds, 0, 1);
+  return (
+    sched.accelDistance +
+    sched.cruiseDistance +
+    rampDistance(sched.cruiseSpeed, sched.endSpeed, brakeSeconds, x)
+  );
+}
+
+/** ∫ of a smoothstep ramp from `va` to `vb`, over the first `x` of `seconds`. */
+function rampDistance(va, vb, seconds, x) {
+  const x3 = x * x * x;
+  return seconds * (va * x + (vb - va) * (x3 - 0.5 * x3 * x));
+}
+
+function lerp(a, b, t) {
+  return a + (b - a) * t;
 }
 
 /**
