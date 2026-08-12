@@ -172,11 +172,9 @@ export class FlyCamera {
         "Space",
       ];
 
-      // Prevent camera movement while typing in search or settings sheets.
-      if (inSheet && moveCodes.includes(e.code)) {
-        e.preventDefault();
-        return;
-      }
+      // Don't steal keys while typing in search/settings/info — and do not
+      // preventDefault, or letters like E (camera-up) never reach the input.
+      if (inSheet) return;
 
       this._keys.add(e.code);
       if (moveCodes.includes(e.code)) e.preventDefault();
