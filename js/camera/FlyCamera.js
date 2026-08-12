@@ -363,6 +363,7 @@ export class FlyCamera {
       duration,
       elapsed: 0,
       dest,
+      departUp: { ...this._upBody },
       arrivalUp: { ...basis.ey },
     };
 
@@ -698,11 +699,14 @@ export class FlyCamera {
       this.position = bezierPos;
     }
 
-    // Face the destination star; roll toward its planetary plane on approach
+    // Face the destination star; roll from the hop's starting up toward the
+    // planetary plane. Starting from current up (not world-up) avoids a
+    // 180° there-and-back when already parked in the opposite hemisphere.
     const toStar = sub3(tr.dest, this.position);
     const targetFwd = length3(toStar) > 1e-6 ? normalize3(toStar) : this._fwd;
     const upMix = smoothstep(clamp((u - 0.25) / 0.55, 0, 1));
-    const targetUp = normalize3(lerp3(WORLD_UP, tr.arrivalUp, upMix));
+    const fromUp = tr.departUp || WORLD_UP;
+    const targetUp = normalize3(lerp3(fromUp, tr.arrivalUp, upMix));
     this._springAttitude(targetFwd, targetUp, dt);
 
     if (s >= 1 - 1e-6) this._beginOrbit();
@@ -798,6 +802,7 @@ export class FlyCamera {
  * @property {number} duration
  * @property {number} elapsed
  * @property {{x:number,y:number,z:number}} dest
+ * @property {{x:number,y:number,z:number}} departUp
  * @property {{x:number,y:number,z:number}} arrivalUp
  */
 
