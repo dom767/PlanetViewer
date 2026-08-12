@@ -188,7 +188,9 @@ async function main() {
       infoPanelApi: panel,
       search,
       onHome: () => {
-        if (catalog.sol) selectSystem(catalog.sol, { openInfo: true });
+        if (catalog.sol) {
+          selectSystem(catalog.sol, { openInfo: !!chrome?.isWide });
+        }
       },
       getFocusedSystem: () => focused,
     });
