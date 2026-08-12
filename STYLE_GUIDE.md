@@ -1,6 +1,6 @@
 # Baffled Cat — Style Guide
 
-Design conventions used across `index.html` and the rest of the site. Source of truth is `styles.css` (the `:root` custom properties); this doc explains the intent behind those values so new pages/components stay consistent.
+Design conventions used across `index.html` and the rest of the site. Source of truth is `css/app.css` (the `:root` custom properties); this doc explains the intent behind those values so new pages/components stay consistent.
 
 ## Colour
 

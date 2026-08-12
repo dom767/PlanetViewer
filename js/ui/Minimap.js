@@ -89,17 +89,17 @@ export class Minimap {
     const scale = size / 2 / this.rangePc;
 
     ctx.clearRect(0, 0, width, height);
-    ctx.fillStyle = "rgba(4, 8, 16, 0.2)";
+    ctx.fillStyle = "rgba(28, 24, 18, 0.25)";
     ctx.fillRect(0, 0, width, height);
 
     // Middle 75% guide
     const framePx = size * 0.5 * this.cameraFrame;
-    ctx.strokeStyle = "rgba(110, 182, 255, 0.12)";
+    ctx.strokeStyle = "rgba(111, 184, 174, 0.16)";
     ctx.lineWidth = 1;
     ctx.strokeRect(cx - framePx, cy - framePx, framePx * 2, framePx * 2);
 
     // Grid
-    ctx.strokeStyle = "rgba(100, 130, 180, 0.15)";
+    ctx.strokeStyle = "rgba(246, 239, 226, 0.08)";
     ctx.lineWidth = 1;
     const step = niceStep(this.rangePc);
     for (let v = -this.rangePc; v <= this.rangePc; v += step) {
@@ -127,19 +127,19 @@ export class Minimap {
       ctx.fill();
     }
 
-    // Sol
-    ctx.fillStyle = "#ffe08a";
+    // Sol — primary amber accent
+    ctx.fillStyle = "#f2a544";
     ctx.beginPath();
     ctx.arc(cx, cy, 3.5, 0, Math.PI * 2);
     ctx.fill();
 
-    // Camera
+    // Camera — secondary teal accent
     if (camera) {
       const px = cx + camera.position.x * scale;
       const py = cy - camera.position.y * scale;
       const f = camera.forward();
-      ctx.strokeStyle = "rgba(110, 182, 255, 0.95)";
-      ctx.fillStyle = "rgba(110, 182, 255, 0.95)";
+      ctx.strokeStyle = "rgba(111, 184, 174, 0.95)";
+      ctx.fillStyle = "rgba(111, 184, 174, 0.95)";
       ctx.beginPath();
       ctx.arc(px, py, 3, 0, Math.PI * 2);
       ctx.fill();
@@ -149,8 +149,8 @@ export class Minimap {
       ctx.stroke();
     }
 
-    ctx.fillStyle = "rgba(138, 155, 181, 0.9)";
-    ctx.font = "10px Segoe UI, sans-serif";
+    ctx.fillStyle = "rgba(179, 166, 142, 0.9)";
+    ctx.font = "10px 'JetBrains Mono', ui-monospace, monospace";
     ctx.fillText(`±${Math.round(this.rangePc)} pc`, 8, 14);
   }
 }
