@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>PlanetViewer — Exoplanet Map (WebGPU)</title>
+  <link rel="stylesheet" href="css/app.css" />
+</head>
+<body>
+  <div id="app">
+    <canvas id="gl-canvas"></canvas>
+
+    <div id="minimap-wrap" title="Plan view (click to jump)">
+      <canvas id="minimap" width="220" height="220"></canvas>
+      <div class="minimap-label">Plan view</div>
+    </div>
+
+    <button id="btn-sol" type="button" title="Return to Sol and the eight planets">SOL</button>
+
+    <label id="toggle-field-stars-wrap" title="Gaia stars within 30 pc of Sol that have no known exoplanets">
+      <input type="checkbox" id="toggle-field-stars" />
+      <span>Nearby stars (≤30 pc)</span>
+    </label>
+
+    <div id="stats-bar" aria-live="polite">
+      <span>Stars : <strong id="stat-stars">—</strong></span>
+      <span class="stats-sep">·</span>
+      <span>Planets : <strong id="stat-planets">—</strong></span>
+    </div>
+
+    <aside id="info-panel" class="hidden" aria-live="polite">
+      <button id="panel-close" type="button" aria-label="Close panel">&times;</button>
+      <div id="panel-content"></div>
+    </aside>
+
+    <div id="hud">
+      <div id="hud-title">PlanetViewer</div>
+      <div id="hud-selection">Sol — origin</div>
+      <div id="hud-distance"></div>
+      <div id="hud-scale-note" class="hidden">Local orbits exaggerated (AU scale)</div>
+      <div id="hud-time">
+        <label for="time-speed">Orbit time</label>
+        <select id="time-speed" title="How fast orbital time advances relative to real time">
+          <option value="0">Paused</option>
+          <option value="1" selected>1× — 1 day / second</option>
+          <option value="30">30× — 30 days / second</option>
+          <option value="365">365× — 1 year / second</option>
+          <option value="3650">3650× — 10 years / second</option>
+        </select>
+        <div id="hud-sim-clock" class="hud-hint">—</div>
+        <div class="hud-hint">Sim date (J2000 ephemeris for Sol). Speeds orbital motion.</div>
+      </div>
+      <div id="hud-exposure">
+        <label for="exposure">Exposure <span id="exposure-value">1.00×</span></label>
+        <input
+          type="range"
+          id="exposure"
+          min="0.2"
+          max="4"
+          step="0.05"
+          value="1"
+          title="Scene exposure after HDR tonemap"
+        />
+      </div>
+      <div id="hud-help">
+        WASD move · Drag star to orbit · Scroll zoom · Click star to focus · Esc close panel
+      </div>
+    </div>
+
+    <div id="loading">Loading catalog…</div>
+  </div>
+
+  <script type="module" src="js/main.js"></script>
+</body>
+</html>
