@@ -83,7 +83,7 @@ Source tree
 1. Choose next VersionN under Export/
     │
     ▼
-2. Refresh catalogs (NASA TAP + Gaia; abort on failure)
+2. Refresh catalogs when needed (Fetch-Data.cmd / npm run fetch-data)
     │
     ▼
 3. Bundle js/main.js → app.bundle.min.js (esbuild/Rollup)
@@ -158,11 +158,11 @@ Useful for diffing releases, re-uploading an older folder, and avoiding clobber 
 
 | Action | Notes |
 | --- | --- |
-| **Required on every build** | Run `scripts/fetch-exoplanets.mjs` and `scripts/fetch-nearby-stars.mjs` so both JSON snapshots are fresh |
+| **Catalog import (separate)** | Run `npm run fetch-data` / `Fetch-Data.cmd` when you want fresh NASA + Gaia snapshots |
 | Then compress | Gzip each snapshot into `Export/VersionN/data/*.json.gz` (level 9). Do **not** ship the uncompressed JSON in the export |
-| Offline escape hatch | `node export-static.mjs --skip-fetch` (or `Export-Static.ps1 -SkipFetch`) only when TAP is unreachable — still requires existing snapshots |
+| Packaging | `node export-static.mjs` / `Export-Static.cmd` uses whatever is already in `data/` — no network required |
 
-**Build fails if catalog refresh fails** (unless `--skip-fetch`). Do not ship stale catalogs by accident.
+**Export does not refresh catalogs.** Keep import and package as separate steps so a flaky TAP call cannot block a release build.
 
 Typical sizes after gzip: exoplanets ~370 KB, nearby-stars ~330 KB (vs ~1.9 MB / ~1 MB raw).
 
@@ -271,7 +271,7 @@ Suggested sync pattern:
 Source tree
     │
     ▼
-1. Refresh catalogs (NASA + Gaia) — fail hard unless --skip-fetch
+1. Refresh catalogs when needed (NASA + Gaia) via `npm run fetch-data` / `Fetch-Data.cmd`
     │
     ▼
 2. Choose next Export/VersionN
@@ -324,7 +324,7 @@ Do **not** use esbuild’s JSON loader to inline the entire catalog into the JS 
 2. **No worker emit** — unlike Vulcan, there is nothing to place beside the bundle for `new Worker(...)`.
 3. **Catalog stays external** — production fetches `data/*.json.gz` (local dev uses plain `.json`); paths must resolve relative to the page URL.
 4. **Subpath hosting** — use relative URLs only (`data/...`, `app.bundle.min.js`), never root-absolute `/data/...`, unless you also set a base href strategy.
-5. **No NASA TAP in the browser** — production only serves the snapshot baked at export time. Refresh happens **during build** (`export-static.mjs` → `fetch-exoplanets.mjs`).
+5. **No NASA TAP in the browser** — production only serves the snapshot baked into the export. Refresh catalogs separately with `Fetch-Data.cmd` / `npm run fetch-data` before packaging.
 
 ---
 
@@ -345,20 +345,23 @@ Print the exact `aws s3 sync` / `aws s3 cp` commands at the end of a local expor
 Scripts are in the repo:
 
 ```text
-export-static.mjs       # Node packager: refresh catalog → esbuild + copy + rewrite HTML
+export-static.mjs       # Node packager: esbuild + gzip data/ + rewrite HTML
+Fetch-Data.ps1/.cmd     # Catalog import (NASA + Gaia) — run when you want fresh data
 Export-Static.ps1       # Windows wrapper: export + optional S3 upload
 Export-Static.cmd       # double-click / CLI entry that calls the .ps1
 ```
 
 ```powershell
 npm install
-npm run build              # same as export-static; refreshes catalog then packages
+npm run fetch-data         # optional; refresh data/ snapshots
+npm run build              # same as export-static; packages existing data/
 npm run export-static
+.\Fetch-Data.cmd
 .\Export-Static.ps1 -SkipUpload
 .\Export-Static.cmd        # export + upload to s3://baffledcat.com/planetviewer/
 ```
 
-Catalog refresh is **on by default**. Use `--skip-fetch` / `-SkipFetch` only when offline.
+Catalog import is **separate** from export. Run `fetch-data` / `Fetch-Data.cmd` when TAP is reachable and you want newer snapshots.
 
 ### Smoke-test checklist (local `Export/VersionN`)
 
@@ -384,12 +387,12 @@ Catalog refresh is **on by default**. Use `--skip-fetch` / `-SkipFetch` only whe
 | `data/exoplanets.json` | `data/exoplanets.json.gz` |
 | `data/nearby-stars.json` | `data/nearby-stars.json.gz` |
 | `Start.cmd` / `Stop.cmd` / `npm start` | Omitted |
-| `scripts/fetch-*.mjs` | Omitted (run during export) |
+| `scripts/fetch-*.mjs` / `Fetch-Data.*` | Omitted (run separately before export when refreshing data) |
 | Working tree as edited | Frozen snapshot for that version number |
 
 ## Checklist for a healthy export
 
-- [ ] Catalog was refreshed during build (or `--skip-fetch` was explicit)
+- [ ] Catalog snapshots in `data/` are the ones you intend to ship (refresh via `Fetch-Data.cmd` if needed)
 - [ ] New `Export/VersionN` created (number incremented)
 - [ ] No `Start.cmd` / `Stop.cmd` / fetch script / `js/` sources in the version folder
 - [ ] `index.html` references production bundle + CSS (not `js/main.js` / `css/app.css`)
@@ -404,6 +407,6 @@ Catalog refresh is **on by default**. Use `--skip-fetch` / `-SkipFetch` only whe
 - **Module bundler required.** PlanetViewer already uses ES modules; keep versioned `Export/VersionN` and upload stages, bundle with esbuild (not script concatenation).
 - **Catalog is the bulky asset.** Export gzipped `data/*.json.gz`, long-cache, version-query via HTML stamp; client decompresses with `DecompressionStream`.
 - **Version folders are the artefact of record.** Publish a folder, not a floating overwritten `dist/`.
-- **Fail hard on catalog refresh / missing bundle; keep upload optional.** A failed NASA TAP fetch (unless `--skip-fetch`), failed esbuild, or missing catalog should abort the export. `-SkipUpload` must still produce a complete local folder.
+- **Fail hard on missing snapshots / missing bundle; keep upload optional.** Missing `data/*.json`, failed esbuild, or a failed gzip step should abort the export. Catalog TAP import is a separate command. `-SkipUpload` must still produce a complete local folder.
 - **Keep the wrapper thin.** The packager owns packaging logic; the shell script owns environment checks and upload.
 - **Dev workflow stays.** `Start.cmd` / `npm start` remain daily development. Export is a release step.

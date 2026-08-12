@@ -38,16 +38,24 @@ Open [http://localhost:8080](http://localhost:8080).
 
 Catalog snapshot: [`data/exoplanets.json`](data/exoplanets.json) from the [NASA Exoplanet Archive](https://exoplanetarchive.ipac.caltech.edu/) **PSCompPars** table (TAP).
 
-Refresh the snapshots (requires network):
+Refresh the snapshots (requires network; separate from packaging):
 
 ```bash
 npm run fetch-data
 # or separately:
 node scripts/fetch-exoplanets.mjs
 node scripts/fetch-nearby-stars.mjs
+# Windows: Fetch-Data.cmd
 ```
 
-**Nearby stars toggle:** Gaia DR3 stars within **30 pc** of Sol (60 pc diameter) that are not near a known exoplanet host. Off by default; enable with “Nearby stars (≤30 pc)” under the SOL button.
+Then package a release from the existing snapshots:
+
+```bash
+npm run export-static
+# Windows: Export-Static.cmd
+```
+
+**Nearby stars toggle:** Gaia DR3 stars within **30 pc** of Sol (60 pc diameter) that are not near a known exoplanet host. Off by default; enable with “Nearby stars (≤30 pc)” under Settings.
 
 ## Dual scale
 

@@ -1,6 +1,5 @@
 param(
   [switch]$SkipUpload,
-  [switch]$SkipFetch,
   [string]$S3Bucket = "baffledcat.com",
   [string]$S3Prefix = "planetviewer/"
 )
@@ -22,11 +21,9 @@ $script:ExportExitCode = 0
 
 try {
   Write-Host "PlanetViewer static export" -ForegroundColor Cyan
+  Write-Host "Note: catalog import is separate (Fetch-Data.cmd / npm run fetch-data)." -ForegroundColor DarkGray
 
-  $nodeArgs = @("export-static.mjs")
-  if ($SkipFetch) { $nodeArgs += "--skip-fetch" }
-
-  & node @nodeArgs
+  & node "export-static.mjs"
   if ($LASTEXITCODE -ne 0) {
     throw "node export-static.mjs failed with exit code $LASTEXITCODE"
   }

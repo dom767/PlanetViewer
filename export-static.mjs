@@ -1,16 +1,19 @@
 /**
  * PlanetViewer static export packager.
  *
- * Always refreshes catalog snapshots, then writes Export/VersionN/ with
- * bundled JS/CSS + gzipped data + rewritten index.html.
+ * Packages existing data/ snapshots into Export/VersionN/ with bundled JS/CSS,
+ * gzipped catalogs, and rewritten index.html.
+ *
+ * Catalog refresh is intentional and separate:
+ *   npm run fetch-data
+ *   Fetch-Data.cmd
  *
  * Usage:
  *   node export-static.mjs
- *   node export-static.mjs --skip-fetch   # emergency offline only
  */
 
-import { spawn } from "node:child_process";
 import {
+  access,
   mkdir,
   readdir,
   readFile,
@@ -24,7 +27,20 @@ import * as esbuild from "esbuild";
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const ROOT = __dirname;
 const EXPORT_ROOT = join(ROOT, "Export");
-const skipFetch = process.argv.includes("--skip-fetch");
+const EXOPLANETS = join(ROOT, "data", "exoplanets.json");
+const NEARBY = join(ROOT, "data", "nearby-stars.json");
+
+async function requireSnapshot(path) {
+  try {
+    await access(path);
+  } catch {
+    throw new Error(
+      `Missing ${basename(path)}. Run catalog import first:\n` +
+        `  npm run fetch-data\n` +
+        `  or Fetch-Data.cmd`
+    );
+  }
+}
 
 async function nextVersionDir() {
   await mkdir(EXPORT_ROOT, { recursive: true });
@@ -40,40 +56,6 @@ async function nextVersionDir() {
   await mkdir(dir, { recursive: true });
   await mkdir(join(dir, "data"), { recursive: true });
   return { n, dir };
-}
-
-function runNode(scriptPath) {
-  return new Promise((resolve, reject) => {
-    const child = spawn(process.execPath, [scriptPath], {
-      cwd: ROOT,
-      stdio: "inherit",
-    });
-    child.on("error", reject);
-    child.on("exit", (code) => {
-      if (code === 0) resolve();
-      else reject(new Error(`${scriptPath} exited with code ${code}`));
-    });
-  });
-}
-
-async function refreshCatalog() {
-  if (skipFetch) {
-    console.warn("Skipping data refresh (--skip-fetch). Using existing data/ snapshots.");
-    return;
-  }
-  console.log("Refreshing exoplanet catalog from NASA Exoplanet Archive…");
-  await runNode(join(ROOT, "scripts", "fetch-exoplanets.mjs"));
-  console.log("Refreshing nearby stars from Gaia DR3…");
-  try {
-    await runNode(join(ROOT, "scripts", "fetch-nearby-stars.mjs"));
-  } catch (err) {
-    // Gaia TAP is often slow/flaky; keep the previous nearby-stars snapshot
-    // so a transient timeout does not block the whole static export.
-    console.warn(
-      "Nearby-stars refresh failed — keeping existing data/nearby-stars.json."
-    );
-    console.warn(String(err?.message || err));
-  }
 }
 
 /** Write source JSON as max-level gzip for production fetch + DecompressionStream. */
@@ -111,14 +93,8 @@ async function build(outDir, version) {
   await writeFile(cssOut, cssResult.code);
 
   console.log("Compressing catalog data (gzip)…");
-  await writeGzippedJson(
-    join(ROOT, "data", "exoplanets.json"),
-    join(outDir, "data", "exoplanets.json.gz")
-  );
-  await writeGzippedJson(
-    join(ROOT, "data", "nearby-stars.json"),
-    join(outDir, "data", "nearby-stars.json.gz")
-  );
+  await writeGzippedJson(EXOPLANETS, join(outDir, "data", "exoplanets.json.gz"));
+  await writeGzippedJson(NEARBY, join(outDir, "data", "nearby-stars.json.gz"));
 
   console.log("Writing index.html…");
   let html = await readFile(join(ROOT, "index.html"), "utf8");
@@ -134,8 +110,11 @@ async function build(outDir, version) {
 }
 
 async function main() {
-  await refreshCatalog();
+  await requireSnapshot(EXOPLANETS);
+  await requireSnapshot(NEARBY);
+
   const { n, dir } = await nextVersionDir();
+  console.log(`Using existing data/ snapshots (run npm run fetch-data to refresh).`);
   console.log(`Exporting to Export/Version${n}/`);
   await build(dir, n);
   console.log(`Done → ${dir}`);
