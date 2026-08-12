@@ -37,6 +37,8 @@ export class Hud {
       this.distance.textContent = "Origin — Earth's solar system";
     } else if (distPc != null) {
       this.distance.textContent = `${distPc.toFixed(2)} pc from Sol`;
+    } else if (name === "Free flight") {
+      this.distance.textContent = distPc != null ? `${distPc.toFixed(2)} pc from origin` : "";
     } else {
       this.distance.textContent = "";
     }

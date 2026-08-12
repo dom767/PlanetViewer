@@ -156,8 +156,11 @@ export class FlyCamera {
 
   attach(canvas) {
     window.addEventListener("keydown", (e) => {
-      const activeId = globalThis.document?.activeElement?.id;
-      const isSystemSearchFocused = activeId === "system-search-input";
+      const active = globalThis.document?.activeElement;
+      const inSheet =
+        active instanceof HTMLElement &&
+        (active.closest(".app-sheet") != null ||
+          active.closest("#info-panel") != null);
       const moveCodes = [
         "KeyW",
         "KeyA",
@@ -169,8 +172,8 @@ export class FlyCamera {
         "Space",
       ];
 
-      // Prevent camera movement while typing in the system search UI.
-      if (isSystemSearchFocused && moveCodes.includes(e.code)) {
+      // Prevent camera movement while typing in search or settings sheets.
+      if (inSheet && moveCodes.includes(e.code)) {
         e.preventDefault();
         return;
       }

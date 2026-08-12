@@ -3,6 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="app-version" content="1.0.0" />
   <title>PlanetViewer — Exoplanet Map (WebGPU)</title>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
@@ -16,19 +17,14 @@
   <div id="app">
     <canvas id="gl-canvas"></canvas>
 
-    <div id="minimap-wrap" title="Plan view (click to jump)">
+    <div id="chrome-scrim" class="hidden" aria-hidden="true"></div>
+
+    <div id="minimap-wrap" class="desktop-chrome" title="Plan view (click to jump)">
       <canvas id="minimap" width="220" height="220"></canvas>
       <div class="minimap-label">Plan view</div>
     </div>
 
-    <button id="btn-sol" type="button" title="Return to Sol and the eight planets">Sol</button>
-
-    <label id="toggle-field-stars-wrap" title="Gaia stars within 30 pc of Sol that have no known exoplanets">
-      <input type="checkbox" id="toggle-field-stars" checked />
-      <span>Nearby stars (≤30 pc)</span>
-    </label>
-
-    <div id="stats-bar" aria-live="polite">
+    <div id="stats-bar" class="desktop-chrome" aria-live="polite">
       <span>Stars : <strong id="stat-stars">—</strong></span>
       <span class="stats-sep">·</span>
       <span>Planets : <strong id="stat-planets">—</strong></span>
@@ -39,67 +35,99 @@
       <div id="panel-content"></div>
     </aside>
 
-    <div id="hud">
-      <div id="hud-title">PlanetViewer</div>
-      <div id="hud-selection-row">
-        <button id="hud-selection-trigger" type="button" title="Search star systems">
-          <span id="hud-selection">Sol — origin</span>
-          <svg
-            class="hud-search-icon"
-            width="14"
-            height="14"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            stroke-width="2.25"
-            stroke-linecap="round"
-            aria-hidden="true"
-          >
-            <circle cx="11" cy="11" r="7" />
-            <path d="M20 20l-3.5-3.5" />
-          </svg>
-        </button>
+    <div id="search-sheet" class="app-sheet hidden" role="dialog" aria-label="Search systems">
+      <div class="sheet-header">
+        <h2 class="sheet-title">Search systems</h2>
       </div>
-      <div id="system-search" class="hidden">
+      <div class="sheet-body">
         <input
           id="system-search-input"
           type="text"
-          placeholder="Search systems…"
+          placeholder="Type at least 2 letters…"
           autocomplete="off"
           spellcheck="false"
         />
         <div id="system-search-results" class="hidden" role="listbox"></div>
       </div>
-      <div id="hud-distance"></div>
-      <div id="hud-scale-note" class="hidden">Local orbits exaggerated (AU scale)</div>
-      <div id="hud-time">
-        <label for="time-speed">Orbit time</label>
-        <select id="time-speed" title="How fast orbital time advances relative to real time">
-          <option value="0">Paused</option>
-          <option value="1" selected>1× — 1 day / second</option>
-          <option value="30">30× — 30 days / second</option>
-          <option value="365">365× — 1 year / second</option>
-          <option value="3650">3650× — 10 years / second</option>
-        </select>
-        <div id="hud-sim-clock" class="hud-hint">—</div>
-        <div class="hud-hint">Sim date (J2000 ephemeris for Sol). Speeds orbital motion.</div>
+    </div>
+
+    <div id="settings-sheet" class="app-sheet hidden" role="dialog" aria-label="Settings">
+      <div class="sheet-header">
+        <h2 class="sheet-title">Settings</h2>
       </div>
-      <div id="hud-exposure">
-        <label for="exposure">Exposure <span id="exposure-value">1.00×</span></label>
-        <input
-          type="range"
-          id="exposure"
-          min="0.2"
-          max="4"
-          step="0.05"
-          value="1"
-          title="Scene exposure after HDR tonemap"
-        />
-      </div>
-      <div id="hud-help">
-        WASD move · Drag star to orbit · Click system name to search · Esc close
+      <div class="sheet-body">
+        <div id="hud-time" class="settings-group">
+          <label for="time-speed">Orbit time</label>
+          <select id="time-speed" title="How fast orbital time advances relative to real time">
+            <option value="0">Paused</option>
+            <option value="1" selected>1× — 1 day / second</option>
+            <option value="30">30× — 30 days / second</option>
+            <option value="365">365× — 1 year / second</option>
+            <option value="3650">3650× — 10 years / second</option>
+          </select>
+          <div id="hud-sim-clock" class="hud-hint">—</div>
+          <div class="hud-hint">Sim date (J2000 ephemeris for Sol). Speeds orbital motion.</div>
+        </div>
+        <div id="hud-exposure" class="settings-group">
+          <label for="exposure">Exposure <span id="exposure-value">1.00×</span></label>
+          <input
+            type="range"
+            id="exposure"
+            min="0.2"
+            max="4"
+            step="0.05"
+            value="1"
+            title="Scene exposure after HDR tonemap"
+          />
+        </div>
+        <label id="toggle-field-stars-wrap" class="settings-toggle" title="Gaia stars within 30 pc of Sol that have no known exoplanets">
+          <input type="checkbox" id="toggle-field-stars" checked />
+          <span>Nearby stars (≤30 pc)</span>
+        </label>
+        <div id="hud-help" class="settings-help">
+          WASD move · Drag star to orbit · Click star to focus · Esc close panel
+        </div>
+        <div id="app-version" class="settings-version">Version 1.0.0</div>
       </div>
     </div>
+
+    <div id="scene-status">
+      <span id="hud-selection">Free flight</span>
+      <span id="hud-distance"></span>
+      <span id="hud-scale-note" class="hidden">Local orbits exaggerated (AU scale)</span>
+    </div>
+
+    <nav id="app-nav" aria-label="Main">
+      <button type="button" class="nav-btn" data-nav="home" aria-label="Home — return to Sol">
+        <svg class="nav-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <path d="M3 10.5L12 3l9 7.5" />
+          <path d="M5 9.5V20h14V9.5" />
+        </svg>
+        <span class="nav-label">Home</span>
+      </button>
+      <button type="button" class="nav-btn" data-nav="search" aria-label="Search systems">
+        <svg class="nav-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.25" stroke-linecap="round" aria-hidden="true">
+          <circle cx="11" cy="11" r="7" />
+          <path d="M20 20l-3.5-3.5" />
+        </svg>
+        <span class="nav-label">Search</span>
+      </button>
+      <button type="button" class="nav-btn" data-nav="info" aria-label="System information">
+        <svg class="nav-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <circle cx="12" cy="12" r="9" />
+          <path d="M12 11v6" />
+          <circle cx="12" cy="8" r="0.5" fill="currentColor" stroke="none" />
+        </svg>
+        <span class="nav-label">Info</span>
+      </button>
+      <button type="button" class="nav-btn" data-nav="settings" aria-label="Settings">
+        <svg class="nav-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <circle cx="12" cy="12" r="3" />
+          <path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M4.93 19.07l1.41-1.41M17.66 6.34l1.41-1.41" />
+        </svg>
+        <span class="nav-label">Settings</span>
+      </button>
+    </nav>
 
     <div id="loading">Loading catalog…</div>
   </div>

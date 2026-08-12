@@ -8,23 +8,59 @@ export class InfoPanel {
   constructor(root, contentEl, closeBtn) {
     this.root = root;
     this.content = contentEl;
+    /** @type {object|null} */
+    this._system = null;
+    /** Called only on explicit close (reset), not on dismiss/toggle. */
     this.onClose = null;
-    closeBtn.addEventListener("click", () => this.close());
+    /** Called when panel is hidden via dismiss (X button, nav toggle). */
+    this.onDismiss = null;
+    closeBtn.addEventListener("click", () => {
+      this.dismiss();
+      this.onDismiss?.();
+    });
   }
 
   open(system) {
+    this._system = system;
     this.root.classList.remove("hidden");
     this.content.innerHTML = renderSystem(system);
   }
 
-  close() {
+  /** Hide panel without clearing camera focus. */
+  dismiss() {
     this.root.classList.add("hidden");
+  }
+
+  toggle(system) {
+    if (this.isOpen()) {
+      this.dismiss();
+      return false;
+    }
+    if (system) {
+      this.open(system);
+      return true;
+    }
+    if (this._system) {
+      this.open(this._system);
+      return true;
+    }
+    return false;
+  }
+
+  /** Full close: clear content and fire onClose if set. */
+  close() {
+    this.dismiss();
     this.content.innerHTML = "";
+    this._system = null;
     this.onClose?.();
   }
 
   isOpen() {
     return !this.root.classList.contains("hidden");
+  }
+
+  getSystem() {
+    return this._system;
   }
 }
 
