@@ -296,14 +296,21 @@ export class FlyCamera {
 
       const mid = pointerMid(pts[0], pts[1]);
       const dist = Math.max(pointerDist(pts[0], pts[1]), 1);
+      const dx = mid.x - this._twoFingerPrevMid.x;
       const dy = mid.y - this._twoFingerPrevMid.y;
       const ratio = dist / this._twoFingerPrevDist;
 
-      // Vertical pan along current view up.
-      if (Math.abs(dy) > 0.5) {
-        const up = this._viewUp();
-        const step = -dy * this.touchPanSpeed * Math.max(this.moveSpeed * 0.15, 1);
-        this.position = add3(this.position, scale3(up, step));
+      // Two-finger pan in the view plane: horizontal → right, vertical → up.
+      if (Math.abs(dx) > 0.5 || Math.abs(dy) > 0.5) {
+        const scale = this.touchPanSpeed * Math.max(this.moveSpeed * 0.15, 1);
+        let delta = { x: 0, y: 0, z: 0 };
+        if (Math.abs(dx) > 0.5) {
+          delta = add3(delta, scale3(this.right(), -dx * scale));
+        }
+        if (Math.abs(dy) > 0.5) {
+          delta = add3(delta, scale3(this._viewUp(), -dy * scale));
+        }
+        this.position = add3(this.position, delta);
         if (this._slot) {
           this._reattachCooldown = this.autoOrbitResumeDelay;
           this._syncSlotFromCamera();
