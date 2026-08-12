@@ -49,6 +49,8 @@ async function main() {
   scene.setExposure(hud.exposure);
 
   let focused = null;
+  /** @type {{ system: any, normName: string }[]} */
+  let systemSearchIndex = [];
   let viewProj = new Float32Array(16);
   let pointerCss = null;
   const PICK_RADIUS_CSS = 22;
@@ -100,6 +102,13 @@ async function main() {
     scene.uploadStars(catalog);
     minimap.setSystems(catalog.systems);
     minimap.fitToCatalog(catalog.systems);
+
+    // Index only host systems that actually have exoplanet data (Sol included).
+    const normalizeName = (name) =>
+      String(name).toUpperCase().replace(/\s+/g, "");
+    systemSearchIndex = catalog.systems
+      .filter((s) => s.isSol || (s.planets?.length ?? 0) > 0)
+      .map((s) => ({ system: s, normName: normalizeName(s.name) }));
 
     let fieldStars = [];
     try {
@@ -178,6 +187,124 @@ async function main() {
     scene.setFocusedSystem(system, camera.getOrbitBasis());
     panel.open(system);
     hud.setSelection(system.name, system.distPc, true);
+  }
+
+  // System name search: prefix-only, case-insensitive (and ignores spaces).
+  const searchInput = document.getElementById("system-search-input");
+  const searchResults = document.getElementById("system-search-results");
+  const searchWrap = document.getElementById("system-search");
+  if (searchInput && searchResults && searchWrap && systemSearchIndex.length) {
+    const normalizeQuery = (q) =>
+      String(q).toUpperCase().trim().replace(/\s+/g, "");
+
+    let activeIndex = -1;
+    let currentMatches = [];
+
+    function hideResults() {
+      searchResults.classList.add("hidden");
+      searchResults.innerHTML = "";
+      activeIndex = -1;
+      currentMatches = [];
+    }
+
+    function renderResults(matches) {
+      searchResults.innerHTML = "";
+      currentMatches = matches;
+      activeIndex = matches.length ? 0 : -1;
+
+      if (!matches.length) {
+        searchResults.classList.add("hidden");
+        return;
+      }
+      searchResults.classList.remove("hidden");
+
+      for (let i = 0; i < matches.length; i++) {
+        const { system } = matches[i];
+        const btn = document.createElement("button");
+        btn.type = "button";
+        btn.className = "system-search-item";
+        if (i === 0) btn.classList.add("active");
+        btn.textContent = system.name;
+        btn.addEventListener("click", (e) => {
+          e.stopPropagation();
+          hideResults();
+          searchInput.value = system.name;
+          selectSystem(system);
+        });
+        searchResults.appendChild(btn);
+      }
+    }
+
+    function updateMatches() {
+      const q = normalizeQuery(searchInput.value);
+      if (q.length < 2) {
+        hideResults();
+        return;
+      }
+
+      const matches = systemSearchIndex
+        .filter((it) => it.normName.startsWith(q))
+        .sort(
+          (a, b) =>
+            (a.system.distPc ?? Infinity) - (b.system.distPc ?? Infinity) ||
+            a.system.name.localeCompare(b.system.name)
+        )
+        .slice(0, 12);
+
+      renderResults(matches);
+    }
+
+    searchInput.addEventListener("input", (e) => {
+      e.stopPropagation();
+      updateMatches();
+    });
+
+    searchInput.addEventListener("pointerdown", (e) => e.stopPropagation());
+    searchResults.addEventListener("pointerdown", (e) => e.stopPropagation());
+
+    window.addEventListener("pointerdown", (e) => {
+      if (!searchWrap.contains(e.target)) hideResults();
+    });
+
+    searchInput.addEventListener("keydown", (e) => {
+      if (searchResults.classList.contains("hidden")) {
+        if (e.code === "Escape") hideResults();
+        return;
+      }
+
+      const items = [...searchResults.querySelectorAll(".system-search-item")];
+      if (!items.length) return;
+
+      if (e.code === "Escape") {
+        hideResults();
+        return;
+      }
+
+      if (e.code === "ArrowDown") {
+        e.preventDefault();
+        activeIndex = Math.min(items.length - 1, activeIndex + 1);
+      } else if (e.code === "ArrowUp") {
+        e.preventDefault();
+        activeIndex = Math.max(0, activeIndex - 1);
+      } else if (e.code === "Enter") {
+        e.preventDefault();
+        const chosen = currentMatches[activeIndex];
+        if (chosen) {
+          hideResults();
+          searchInput.value = chosen.system.name;
+          selectSystem(chosen.system);
+        }
+        return;
+      } else {
+        return;
+      }
+
+      // Update active styling
+      for (let i = 0; i < items.length; i++) {
+        items[i].classList.toggle("active", i === activeIndex);
+      }
+      items[activeIndex]?.scrollIntoView({ block: "nearest" });
+    });
   }
 
   document.getElementById("btn-sol").addEventListener("click", (e) => {
