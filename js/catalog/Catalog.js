@@ -4,6 +4,11 @@ import { estimateSemiMajorAxis } from "../astro/orbits.js";
 import { createSolSystem } from "../astro/sol.js";
 import { applyGoldilocksColors } from "../astro/habitable.js";
 import { STAR_NOTES, getStarNote } from "../content/starNotes.js";
+import {
+  notableBookmarkSize,
+  notableBookmarkHitbox,
+  distanceToBookmark,
+} from "../render/bookmarkLayout.js";
 
 /**
  * In-memory catalog of host systems.
@@ -105,8 +110,15 @@ export class Catalog {
       if (!ndc || ndc.z < -1 || ndc.z > 1) continue;
       if (ndc.x < -1.2 || ndc.x > 1.2 || ndc.y < -1.2 || ndc.y > 1.2) continue;
       const scr = ndcToScreen(ndc, width, height);
-      const d = Math.hypot(scr.x - screenX, scr.y - screenY);
-      const score = s.isSol ? d * 0.85 : d;
+      let d = Math.hypot(scr.x - screenX, scr.y - screenY);
+      if (s.notable) {
+        const clipW =
+          viewProj[3] * s.x + viewProj[7] * s.y + viewProj[11] * s.z + viewProj[15];
+        const box = notableBookmarkHitbox(scr, notableBookmarkSize(clipW, width));
+        d = Math.min(d, distanceToBookmark(screenX, screenY, box));
+      }
+      // Prefer notables (and slightly Sol) so bookmarks are easy to land on.
+      const score = s.notable ? d * 0.55 : s.isSol ? d * 0.85 : d;
       if (score < bestScore) {
         bestScore = score;
         best = s;

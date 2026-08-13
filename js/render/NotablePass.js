@@ -6,6 +6,7 @@ import {
   packInstances,
   writeInstanceBuffer,
 } from "./gpu.js";
+import { notableBookmarkSize } from "./bookmarkLayout.js";
 
 /** Amber bookmark — matches --accent-amber, distinct from cyan focus/hover. */
 const NOTABLE_COLOR = [1.0, 0.72, 0.3];
@@ -62,8 +63,7 @@ export class NotablePass {
       const ndcY = clipY / clipW;
       if (ndcX < -1.35 || ndcX > 1.35 || ndcY < -1.35 || ndcY > 1.35) continue;
 
-      const dist = Math.max(clipW, 0.05);
-      const size = Math.min(40, Math.max(16, (24 * (width / 1280)) * (8 / dist)));
+      const size = notableBookmarkSize(clipW, width);
       instances.push({
         x: t.x,
         y: t.y,
