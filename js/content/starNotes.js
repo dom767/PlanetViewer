@@ -1,6 +1,7 @@
 /**
  * Curated blurbs for notable hosts (NASA names, plus a few injected landmarks).
  * Keys must match system.name exactly.
+ * Key order is the Next-tour order.
  *
  * To add a fact: look up the host in Search, then add an entry here.
  *
@@ -9,7 +10,7 @@
  */
 export const STAR_NOTES = {
   "Sol": {
-    text: "Sol, our home star — eight planets, with Earth and Mars in the Goldilocks zone.",
+    text: "Sol, our home star. Eight planets, with Earth and Mars in the Goldilocks zone.",
   },
   "51 Peg": {
     text: "Host of 51 Pegasi b (1995), the first confirmed exoplanet around a Sun-like star.",
@@ -54,10 +55,10 @@ export const STAR_NOTES = {
     text: "Host of Kepler-22 b, the first Kepler planet found in a habitable zone — and the colony world in Ridley Scott's Raised by Wolves.",
   },
   "40 Eri A": {
-    text: "Rocky’s home star in Project Hail Mary, and Vulcan in Star Trek. No exoplanet is confirmed — a 2018 candidate was stellar activity, not a world.",
+    text: "Rocky’s home star in Project Hail Mary, and Vulcan in Star Trek. No exoplanet is confirmed, a 2018 candidate was stellar activity, not a world.",
   },
   "zet 2 Ret": {
-    text: "Zeta 2 Reticuli, the real star behind Alien’s LV-426. There are no confirmed exoplanets here; the xenomorph moon is fiction.",
+    text: "Zeta 2 Reticuli, the real star behind Alien’s LV-426. There are no confirmed exoplanets here,.",
   },
 };
 

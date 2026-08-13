@@ -51,7 +51,10 @@ export class Catalog {
       ingestRawSystem(this, raw);
     }
 
-    this.notableSystems = this.systems.filter((s) => s.notable);
+    // Tour order follows STAR_NOTES key order (not catalog distance).
+    this.notableSystems = Object.keys(STAR_NOTES)
+      .map((name) => this.byName.get(name))
+      .filter((s) => s?.notable);
     warnUnmatchedStarNotes(this.byName);
 
     return this;
