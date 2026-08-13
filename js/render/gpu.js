@@ -605,11 +605,11 @@ fn vs_main(
   var out : VSOut;
   let clip = frame.viewProj * vec4f(worldPos, 1.0);
   let px = clamp(sizeBright.x, 14.0, 48.0);
-  let halfW = px * 0.38;
-  let halfH = px * 0.72;
+  let halfW = px * 1.14;
+  let halfH = px * 1.44;
   let phase = fract(sin(dot(worldPos.xz, vec2f(12.9898, 78.233))) * 43758.5453);
   let bob = sin(frame.time * 2.3 + phase * 6.28318) * (px * 0.08);
-  let lift = px * 1.12 + bob;
+  let lift = px * 1.84 + bob;
   var positioned = clip;
   positioned.x += corner.x * (halfW / frame.resolution.x) * clip.w;
   positioned.y += (corner.y * halfH + lift) / frame.resolution.y * clip.w;
