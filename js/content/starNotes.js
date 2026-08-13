@@ -8,6 +8,9 @@
  * @type {Record<string, StarNote>}
  */
 export const STAR_NOTES = {
+  "Sol": {
+    text: "Origin — Earth's solar system.",
+  },
   "51 Peg": {
     text: "Host of 51 Pegasi b (1995), the first confirmed exoplanet around a Sun-like star.",
   },
