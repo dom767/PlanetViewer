@@ -9,7 +9,7 @@
  */
 export const STAR_NOTES = {
   "Sol": {
-    text: "Origin — Earth's solar system.",
+    text: "Sol, our home star — eight planets, with Earth and Mars in the Goldilocks zone.",
   },
   "51 Peg": {
     text: "Host of 51 Pegasi b (1995), the first confirmed exoplanet around a Sun-like star.",
