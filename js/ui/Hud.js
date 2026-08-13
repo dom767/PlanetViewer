@@ -48,9 +48,9 @@ export class Hud {
    */
   setSelection(name, distPc, focused, noteText = null) {
     this.selection.textContent = name;
-    if (name === "Sol" || distPc === 0) {
-      this.distance.textContent = "Origin — Earth's solar system";
-    } else if (distPc != null) {
+    if (name === "Sol") {
+      this.distance.textContent = "";
+    } else if (distPc != null && name !== "Free flight") {
       this.distance.textContent = `${distPc.toFixed(2)} pc from Sol`;
     } else if (name === "Free flight") {
       this.distance.textContent = distPc != null ? `${distPc.toFixed(2)} pc from origin` : "";
