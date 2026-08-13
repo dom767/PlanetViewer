@@ -14,18 +14,9 @@ export class InfoPanel {
     this.onClose = null;
     /** Called when panel is hidden via dismiss (X button, nav toggle). */
     this.onDismiss = null;
-    /** @type {(() => void) | null} */
-    this.onNextNotable = null;
     closeBtn.addEventListener("click", () => {
       this.dismiss();
       this.onDismiss?.();
-    });
-    this.content.addEventListener("click", (e) => {
-      const btn = e.target.closest("[data-notable-next]");
-      if (!btn) return;
-      e.preventDefault();
-      e.stopPropagation();
-      this.onNextNotable?.();
     });
   }
 
@@ -107,11 +98,6 @@ function renderSystem(s) {
   return `
     <h2>${escapeHtml(s.name)}</h2>
     <div class="subtitle">${subtitle}</div>
-    ${
-      s.note?.text
-        ? `<p class="info-note">${escapeHtml(s.note.text)} <button type="button" class="note-next" data-notable-next aria-label="Next bookmarked star">Next</button></p>`
-        : ""
-    }
     <dl>
       <dt>Effective temperature</dt><dd>${fmt(s.teff, 0, "K")}</dd>
       <dt>Radius</dt><dd>${fmt(s.radius, 2, "R☉")}</dd>

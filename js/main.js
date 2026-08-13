@@ -67,7 +67,6 @@ async function main() {
     if (next) selectSystem(next, { openInfo: !!chrome?.isWide });
   }
   hud.onNextNotable = goNextNotable;
-  panel.onNextNotable = goNextNotable;
 
   let focused = null;
   /** @type {{ system: object, normName: string }[]} */
