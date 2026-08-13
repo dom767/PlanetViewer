@@ -390,16 +390,11 @@ body,
   color: var(--accent-amber);
 }
 
-#hud-distance,
-#hud-scale-note {
+#hud-distance {
   display: block;
   font-size: 0.8rem;
   color: var(--text-muted);
   margin-top: 2px;
-}
-
-#hud-scale-note.hidden {
-  display: none;
 }
 
 #hud-note-block {

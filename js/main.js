@@ -51,7 +51,6 @@ async function main() {
   const hud = new Hud({
     selection: document.getElementById("hud-selection"),
     distance: document.getElementById("hud-distance"),
-    scaleNote: document.getElementById("hud-scale-note"),
     note: document.getElementById("hud-note"),
     noteBlock: document.getElementById("hud-note-block"),
     noteNext: document.getElementById("hud-note-next"),

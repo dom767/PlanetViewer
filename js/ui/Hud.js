@@ -4,7 +4,6 @@ export class Hud {
   constructor(els) {
     this.selection = els.selection;
     this.distance = els.distance;
-    this.scaleNote = els.scaleNote;
     this.note = els.note;
     this.noteBlock = els.noteBlock;
     this.noteNext = els.noteNext;
@@ -58,7 +57,6 @@ export class Hud {
     } else {
       this.distance.textContent = "";
     }
-    this.scaleNote.classList.toggle("hidden", !focused);
     this.setNote(focused ? noteText : null);
   }
 
