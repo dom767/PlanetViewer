@@ -64,7 +64,7 @@ async function main() {
 
   function goNextNotable() {
     const next = catalog.nextNotable(focused);
-    if (next) selectSystem(next, { openInfo: false });
+    if (next) selectSystem(next, { openInfo: !!chrome?.isWide });
   }
   hud.onNextNotable = goNextNotable;
   panel.onNextNotable = goNextNotable;
