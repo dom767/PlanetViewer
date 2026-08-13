@@ -98,6 +98,11 @@ function renderSystem(s) {
   return `
     <h2>${escapeHtml(s.name)}</h2>
     <div class="subtitle">${subtitle}</div>
+    ${
+      s.note?.text
+        ? `<p class="info-note">${escapeHtml(s.note.text)}</p>`
+        : ""
+    }
     <dl>
       <dt>Effective temperature</dt><dd>${fmt(s.teff, 0, "K")}</dd>
       <dt>Radius</dt><dd>${fmt(s.radius, 2, "R☉")}</dd>

@@ -5,6 +5,7 @@ export class Hud {
     this.selection = els.selection;
     this.distance = els.distance;
     this.scaleNote = els.scaleNote;
+    this.note = els.note;
     this.timeSpeed = els.timeSpeed;
     this.simClock = els.simClock;
     this.exposureInput = els.exposure;
@@ -31,7 +32,13 @@ export class Hud {
     syncExposure();
   }
 
-  setSelection(name, distPc, focused) {
+  /**
+   * @param {string} name
+   * @param {number|null|undefined} distPc
+   * @param {boolean} focused
+   * @param {string|null|undefined} [noteText]
+   */
+  setSelection(name, distPc, focused, noteText = null) {
     this.selection.textContent = name;
     if (name === "Sol" || distPc === 0) {
       this.distance.textContent = "Origin — Earth's solar system";
@@ -43,6 +50,20 @@ export class Hud {
       this.distance.textContent = "";
     }
     this.scaleNote.classList.toggle("hidden", !focused);
+    this.setNote(focused ? noteText : null);
+  }
+
+  /** @param {string|null|undefined} text */
+  setNote(text) {
+    if (!this.note) return;
+    const body = text && String(text).trim();
+    if (body) {
+      this.note.textContent = body;
+      this.note.classList.remove("hidden");
+    } else {
+      this.note.textContent = "";
+      this.note.classList.add("hidden");
+    }
   }
 
   tick(dtSec) {

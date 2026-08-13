@@ -3,6 +3,7 @@ import { starBrightness, starColor, starPointSize } from "../astro/spectrum.js";
 import { estimateSemiMajorAxis } from "../astro/orbits.js";
 import { createSolSystem } from "../astro/sol.js";
 import { applyGoldilocksColors } from "../astro/habitable.js";
+import { STAR_NOTES, getStarNote } from "../content/starNotes.js";
 
 /**
  * In-memory catalog of host systems.
@@ -15,12 +16,15 @@ export class Catalog {
     this.byName = new Map();
     /** @type {SystemRecord|null} */
     this.sol = null;
+    /** @type {SystemRecord[]} */
+    this.notableSystems = [];
   }
 
   /** @param {object[]} rawSystems from loader */
   load(rawSystems) {
     this.systems = [];
     this.byName.clear();
+    this.notableSystems = [];
 
     // Older snapshots stored NASA st_lum as log10(L/L☉). Convert if needed.
     const systemsIn = convertLogLuminositiesIfNeeded(rawSystems);
@@ -28,6 +32,7 @@ export class Catalog {
     this.sol = createSolSystem();
     this.sol.id = 0;
     applyGoldilocksColors(this.sol);
+    attachStarNote(this.sol);
     this.systems.push(this.sol);
     this.byName.set(this.sol.name, this.sol);
 
@@ -76,10 +81,14 @@ export class Catalog {
       };
 
       applyGoldilocksColors(system);
+      attachStarNote(system);
 
       this.systems.push(system);
       this.byName.set(system.name, system);
     }
+
+    this.notableSystems = this.systems.filter((s) => s.notable);
+    warnUnmatchedStarNotes(this.byName);
 
     return this;
   }
@@ -173,6 +182,31 @@ function convertLogLuminositiesIfNeeded(systems) {
 }
 
 /**
+ * @param {SystemRecord} system
+ */
+function attachStarNote(system) {
+  const note = getStarNote(system.name);
+  if (note) {
+    system.note = note;
+    system.notable = true;
+  } else {
+    system.note = null;
+    system.notable = false;
+  }
+}
+
+/**
+ * @param {Map<string, SystemRecord>} byName
+ */
+function warnUnmatchedStarNotes(byName) {
+  for (const key of Object.keys(STAR_NOTES)) {
+    if (!byName.has(key)) {
+      console.warn(`[starNotes] No catalog system matched hostname "${key}"`);
+    }
+  }
+}
+
+/**
  * @typedef {object} SystemRecord
  * @property {number} id
  * @property {string} name
@@ -184,4 +218,6 @@ function convertLogLuminositiesIfNeeded(systems) {
  * @property {number} pointSize
  * @property {number} brightness
  * @property {object[]} planets
+ * @property {{text: string}|null} [note]
+ * @property {boolean} [notable]
  */

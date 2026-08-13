@@ -225,6 +225,16 @@ body,
   margin-bottom: 16px;
 }
 
+#panel-content .info-note {
+  margin: -8px 0 16px;
+  padding: 10px 12px;
+  border-left: 2px solid var(--accent-amber);
+  background: var(--accent-amber-soft);
+  font-size: 0.85rem;
+  line-height: 1.4;
+  color: var(--text);
+}
+
 #panel-content dl {
   display: grid;
   grid-template-columns: 1fr auto;
@@ -365,6 +375,23 @@ body,
 }
 
 #hud-scale-note.hidden {
+  display: none;
+}
+
+#hud-note {
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 4;
+  line-clamp: 4;
+  overflow: hidden;
+  margin: 6px 0 0;
+  max-width: min(320px, calc(100vw - 40px));
+  font-size: 0.78rem;
+  line-height: 1.35;
+  color: var(--text-muted);
+}
+
+#hud-note.hidden {
   display: none;
 }
 

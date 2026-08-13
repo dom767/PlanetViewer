@@ -52,6 +52,7 @@ async function main() {
     selection: document.getElementById("hud-selection"),
     distance: document.getElementById("hud-distance"),
     scaleNote: document.getElementById("hud-scale-note"),
+    note: document.getElementById("hud-note"),
     timeSpeed: document.getElementById("time-speed"),
     simClock: document.getElementById("hud-sim-clock"),
     exposure: document.getElementById("exposure"),
@@ -109,7 +110,7 @@ async function main() {
       : Math.max(FOCUS_ORBIT_RADIUS_PC * 2.2, 1.5);
     camera.focusOn(system, focusDist, fromStar);
     scene.setFocusedSystem(system, camera.getOrbitBasis());
-    hud.setSelection(system.name, system.distPc, true);
+    hud.setSelection(system.name, system.distPc, true, system.note?.text);
 
     // On mobile, map taps focus only; Info opens via the nav tab (or when
     // already open, refresh contents for the newly focused system).

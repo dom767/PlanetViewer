@@ -516,6 +516,8 @@ ${FRAME_WGSL}
 struct VSOut {
   @builtin(position) position : vec4f,
   @location(0) uv : vec2f,
+  @location(1) color : vec3f,
+  @location(2) brightness : f32,
 }
 
 @vertex
@@ -528,12 +530,14 @@ fn vs_main(
   var out : VSOut;
   let clip = frame.viewProj * vec4f(worldPos, 1.0);
   let dist = max(clip.w, 0.05);
-  let px = clamp(sizeBright.x, 28.0, 120.0);
+  let px = clamp(sizeBright.x, 22.0, 120.0);
   var positioned = clip;
   positioned.x += corner.x * (px / frame.resolution.x) * clip.w;
   positioned.y += corner.y * (px / frame.resolution.y) * clip.w;
   out.position = positioned;
   out.uv = corner;
+  out.color = color;
+  out.brightness = sizeBright.y;
   return out;
 }
 
@@ -542,11 +546,11 @@ fn fs_main(in : VSOut) -> @location(0) vec4f {
   let r = length(in.uv);
   let ring = smoothstep(0.55, 0.68, r) * (1.0 - smoothstep(0.82, 0.98, r));
   let pulse = 0.75 + 0.25 * sin(frame.time * 4.0);
-  let a = ring * pulse;
+  let a = ring * pulse * clamp(in.brightness, 0.0, 1.5);
   if (a < 0.02) {
     discard;
   }
-  let rgb = vec3f(0.55, 0.85, 1.0) * a;
+  let rgb = in.color * a;
   return vec4f(rgb, a);
 }
 `;

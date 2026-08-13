@@ -4,6 +4,7 @@ import { StarPass } from "./StarPass.js";
 import { PlanetPass } from "./PlanetPass.js";
 import { MapPlanetsPass } from "./MapPlanetsPass.js";
 import { HighlightPass } from "./HighlightPass.js";
+import { NotablePass } from "./NotablePass.js";
 import { ToneMapPass } from "./ToneMapPass.js";
 
 /**
@@ -21,6 +22,7 @@ export class Scene {
     this.fieldStarPass = new StarPass(sceneGpu, this.frameUniforms.buffer);
     this.planetPass = new PlanetPass(sceneGpu, this.frameUniforms.buffer);
     this.mapPlanetsPass = new MapPlanetsPass(sceneGpu, this.frameUniforms.buffer);
+    this.notablePass = new NotablePass(sceneGpu, this.frameUniforms.buffer);
     this.highlightPass = new HighlightPass(sceneGpu, this.frameUniforms.buffer);
     this.toneMapPass = new ToneMapPass(gpu);
     this.viewProj = new Float32Array(16);
@@ -54,6 +56,7 @@ export class Scene {
     }));
     this.starPass.upload(stars);
     this.mapPlanetsPass.upload(catalog);
+    this.notablePass.setSystems(catalog.notableSystems || []);
   }
 
   /** @param {Array<{x:number,y:number,z:number,color:number[],size:number,brightness:number}>} stars */
@@ -115,6 +118,7 @@ export class Scene {
       dt: frame.dt ?? 1 / 60,
     });
     this.highlightPass.prepare(this.viewProj, frame.width);
+    this.notablePass.prepare(this.viewProj, frame.width);
 
     this.frameUniforms.write(
       device.queue,
@@ -151,6 +155,7 @@ export class Scene {
     this.starPass.draw(pass);
     this.mapPlanetsPass.draw(pass);
     this.planetPass.draw(pass);
+    this.notablePass.draw(pass);
     this.highlightPass.draw(pass);
 
     pass.end();
