@@ -4,6 +4,7 @@ import { estimateSemiMajorAxis } from "../astro/orbits.js";
 import { createSolSystem } from "../astro/sol.js";
 import { applyGoldilocksColors } from "../astro/habitable.js";
 import { STAR_NOTES, getStarNote } from "../content/starNotes.js";
+import { LANDMARK_STARS } from "../content/landmarkStars.js";
 import {
   notableBookmarkSize,
   notableBookmarkHitbox,
@@ -42,54 +43,12 @@ export class Catalog {
     this.byName.set(this.sol.name, this.sol);
 
     for (const raw of systemsIn) {
-      if (raw.distPc == null || !(raw.distPc > 0)) continue;
-      if (raw.ra == null || raw.dec == null) continue;
+      ingestRawSystem(this, raw);
+    }
 
-      const pos = equatorialToCartesian(raw.ra, raw.dec, raw.distPc);
-      const starMeta = {
-        teff: raw.teff,
-        spectype: raw.spectype,
-        radius: raw.radius,
-        luminosity: raw.luminosity,
-        vmag: raw.vmag,
-        distPc: raw.distPc,
-      };
-
-      const planets = (raw.planets || []).map((p, idx) => normalizePlanet(p, raw.mass, idx));
-      // PSCompPars has no Ω; share a stable per-host node so coplanarity is system-local.
-      const hostNode = hashAngleDeg(raw.name || "Unknown");
-      for (const p of planets) {
-        if (p.nodeDeg == null) p.nodeDeg = hostNode;
-      }
-
-      const system = {
-        id: this.systems.length,
-        name: raw.name || "Unknown",
-        ra: raw.ra,
-        dec: raw.dec,
-        distPc: raw.distPc,
-        spectype: raw.spectype || null,
-        teff: raw.teff ?? null,
-        radius: raw.radius ?? null,
-        luminosity: raw.luminosity ?? null,
-        vmag: raw.vmag ?? null,
-        mass: raw.mass ?? null,
-        snum: raw.snum ?? null,
-        pnum: raw.pnum ?? planets.length,
-        x: pos.x,
-        y: pos.y,
-        z: pos.z,
-        color: starColor(starMeta),
-        pointSize: starPointSize(starMeta),
-        brightness: starBrightness(starMeta),
-        planets,
-      };
-
-      applyGoldilocksColors(system);
-      attachStarNote(system);
-
-      this.systems.push(system);
-      this.byName.set(system.name, system);
+    for (const raw of LANDMARK_STARS) {
+      if (this.byName.has(raw.name)) continue;
+      ingestRawSystem(this, raw);
     }
 
     this.notableSystems = this.systems.filter((s) => s.notable);
@@ -139,6 +98,58 @@ export class Catalog {
     }
     return best;
   }
+}
+
+function ingestRawSystem(catalog, raw) {
+  if (raw.distPc == null || !(raw.distPc > 0)) return;
+  if (raw.ra == null || raw.dec == null) return;
+
+  const pos = equatorialToCartesian(raw.ra, raw.dec, raw.distPc);
+  const starMeta = {
+    teff: raw.teff,
+    spectype: raw.spectype,
+    radius: raw.radius,
+    luminosity: raw.luminosity,
+    vmag: raw.vmag,
+    distPc: raw.distPc,
+  };
+
+  const planets = (raw.planets || []).map((p, idx) => normalizePlanet(p, raw.mass, idx));
+  // PSCompPars has no Ω; share a stable per-host node so coplanarity is system-local.
+  const hostNode = hashAngleDeg(raw.name || "Unknown");
+  for (const p of planets) {
+    if (p.nodeDeg == null) p.nodeDeg = hostNode;
+  }
+
+  const system = {
+    id: catalog.systems.length,
+    name: raw.name || "Unknown",
+    ra: raw.ra,
+    dec: raw.dec,
+    distPc: raw.distPc,
+    spectype: raw.spectype || null,
+    teff: raw.teff ?? null,
+    radius: raw.radius ?? null,
+    luminosity: raw.luminosity ?? null,
+    vmag: raw.vmag ?? null,
+    mass: raw.mass ?? null,
+    snum: raw.snum ?? null,
+    pnum: raw.pnum ?? planets.length,
+    x: pos.x,
+    y: pos.y,
+    z: pos.z,
+    color: starColor(starMeta),
+    pointSize: starPointSize(starMeta),
+    brightness: starBrightness(starMeta),
+    planets,
+    aliases: Array.isArray(raw.aliases) ? raw.aliases : [],
+  };
+
+  applyGoldilocksColors(system);
+  attachStarNote(system);
+
+  catalog.systems.push(system);
+  catalog.byName.set(system.name, system);
 }
 
 function normalizePlanet(p, starMass, idx) {
@@ -243,6 +254,7 @@ function warnUnmatchedStarNotes(byName) {
  * @property {number} pointSize
  * @property {number} brightness
  * @property {object[]} planets
+ * @property {string[]} [aliases]
  * @property {{text: string}|null} [note]
  * @property {boolean} [notable]
  */

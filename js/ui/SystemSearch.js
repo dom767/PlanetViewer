@@ -67,16 +67,20 @@ export class SystemSearch {
       return;
     }
 
-    const matches = this.index
-      .filter((it) => it.normName.startsWith(q))
-      .sort(
-        (a, b) =>
-          (a.system.distPc ?? Infinity) - (b.system.distPc ?? Infinity) ||
-          a.system.name.localeCompare(b.system.name)
-      )
-      .slice(0, 12);
-
-    this.renderResults(matches);
+    const matches = [];
+    const seen = new Set();
+    for (const it of this.index) {
+      if (!it.normName.startsWith(q)) continue;
+      if (seen.has(it.system.id)) continue;
+      seen.add(it.system.id);
+      matches.push(it);
+    }
+    matches.sort(
+      (a, b) =>
+        (a.system.distPc ?? Infinity) - (b.system.distPc ?? Infinity) ||
+        a.system.name.localeCompare(b.system.name)
+    );
+    this.renderResults(matches.slice(0, 12));
   }
 
   renderResults(matches) {

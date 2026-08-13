@@ -1,6 +1,6 @@
 /**
- * Curated blurbs for historically notable exoplanet hosts.
- * Keys must match NASA PSCompPars hostname exactly (system.name).
+ * Curated blurbs for notable hosts (NASA names, plus a few injected landmarks).
+ * Keys must match system.name exactly.
  *
  * To add a fact: look up the host in Search, then add an entry here.
  *
@@ -49,6 +49,12 @@ export const STAR_NOTES = {
   },
   "Kepler-22": {
     text: "Host of Kepler-22 b, the first Kepler planet found in a habitable zone — and the colony world in Ridley Scott's Raised by Wolves.",
+  },
+  "40 Eri A": {
+    text: "Rocky’s home star in Project Hail Mary, and Vulcan in Star Trek. No exoplanet is confirmed — a 2018 candidate was stellar activity, not a world.",
+  },
+  "zet 2 Ret": {
+    text: "Zeta 2 Reticuli, the real star behind Alien’s LV-426. There are no confirmed exoplanets here; the xenomorph moon is fiction.",
   },
 };
 

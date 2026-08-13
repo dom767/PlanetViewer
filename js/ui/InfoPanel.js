@@ -119,11 +119,11 @@ function renderSystem(s) {
       <dt>V magnitude</dt><dd>${fmt(s.vmag, 2)}</dd>
       <dt>Stellar mass</dt><dd>${fmt(s.mass, 2, "M☉")}</dd>
       ${s.isSol ? "" : `<dt>RA / Dec</dt><dd>${fmt(s.ra, 3)}° / ${fmt(s.dec, 3)}°</dd>`}
-      <dt>Planets</dt><dd>${s.planets?.length ?? 0}${s.pnum != null && !s.isSol ? ` (archive: ${s.pnum})` : ""}</dd>
+      <dt>Planets</dt><dd>${s.planets?.length ?? 0}${s.pnum != null && !s.isSol && s.pnum > 0 ? ` (archive: ${s.pnum})` : ""}</dd>
       ${discoverySummary(s.planets)}
     </dl>
     <h3>Planets</h3>
-    <ul class="planet-list">${planets || "<li><div class='meta'>No planets with usable parameters</div></li>"}</ul>
+    <ul class="planet-list">${planets || "<li><div class='meta'>No confirmed exoplanets</div></li>"}</ul>
   `;
 }
 

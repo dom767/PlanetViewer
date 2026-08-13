@@ -135,7 +135,7 @@ async function main() {
     loading.textContent = "Loading catalog…";
     const raw = await loadExoplanetCatalog();
     catalog.load(raw);
-    const starCount = catalog.systems.length;
+    const starCount = catalog.systems.filter((s) => (s.planets?.length ?? 0) > 0).length;
     const planetCount = catalog.systems.reduce((n, s) => n + (s.planets?.length || 0), 0);
     document.getElementById("stat-stars").textContent = starCount.toLocaleString();
     document.getElementById("stat-planets").textContent = planetCount.toLocaleString();
@@ -146,8 +146,11 @@ async function main() {
     const normalizeName = (name) =>
       String(name).toUpperCase().replace(/\s+/g, "");
     systemSearchIndex = catalog.systems
-      .filter((s) => s.isSol || (s.planets?.length ?? 0) > 0)
-      .map((s) => ({ system: s, normName: normalizeName(s.name) }));
+      .filter((s) => s.isSol || (s.planets?.length ?? 0) > 0 || s.notable)
+      .flatMap((s) => {
+        const names = [s.name, ...(s.aliases || [])];
+        return names.map((name) => ({ system: s, normName: normalizeName(name) }));
+      });
 
     let fieldStars = [];
     try {
