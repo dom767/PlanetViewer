@@ -53,6 +53,8 @@ async function main() {
     distance: document.getElementById("hud-distance"),
     scaleNote: document.getElementById("hud-scale-note"),
     note: document.getElementById("hud-note"),
+    noteBlock: document.getElementById("hud-note-block"),
+    noteNext: document.getElementById("hud-note-next"),
     timeSpeed: document.getElementById("time-speed"),
     simClock: document.getElementById("hud-sim-clock"),
     exposure: document.getElementById("exposure"),
@@ -60,6 +62,13 @@ async function main() {
   });
   hud.onExposureChange = (v) => scene.setExposure(v);
   scene.setExposure(hud.exposure);
+
+  function goNextNotable() {
+    const next = catalog.nextNotable(focused);
+    if (next) selectSystem(next, { openInfo: false });
+  }
+  hud.onNextNotable = goNextNotable;
+  panel.onNextNotable = goNextNotable;
 
   let focused = null;
   /** @type {{ system: object, normName: string }[]} */

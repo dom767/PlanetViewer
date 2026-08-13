@@ -14,9 +14,18 @@ export class InfoPanel {
     this.onClose = null;
     /** Called when panel is hidden via dismiss (X button, nav toggle). */
     this.onDismiss = null;
+    /** @type {(() => void) | null} */
+    this.onNextNotable = null;
     closeBtn.addEventListener("click", () => {
       this.dismiss();
       this.onDismiss?.();
+    });
+    this.content.addEventListener("click", (e) => {
+      const btn = e.target.closest("[data-notable-next]");
+      if (!btn) return;
+      e.preventDefault();
+      e.stopPropagation();
+      this.onNextNotable?.();
     });
   }
 
@@ -100,7 +109,7 @@ function renderSystem(s) {
     <div class="subtitle">${subtitle}</div>
     ${
       s.note?.text
-        ? `<p class="info-note">${escapeHtml(s.note.text)}</p>`
+        ? `<p class="info-note">${escapeHtml(s.note.text)} <button type="button" class="note-next" data-notable-next aria-label="Next bookmarked star">Next</button></p>`
         : ""
     }
     <dl>

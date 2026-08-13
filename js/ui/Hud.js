@@ -6,6 +6,8 @@ export class Hud {
     this.distance = els.distance;
     this.scaleNote = els.scaleNote;
     this.note = els.note;
+    this.noteBlock = els.noteBlock;
+    this.noteNext = els.noteNext;
     this.timeSpeed = els.timeSpeed;
     this.simClock = els.simClock;
     this.exposureInput = els.exposure;
@@ -16,9 +18,16 @@ export class Hud {
     this.exposure = Number(this.exposureInput?.value ?? 1);
     /** @type {((v: number) => void) | null} */
     this.onExposureChange = null;
+    /** @type {(() => void) | null} */
+    this.onNextNotable = null;
 
     this.timeSpeed.addEventListener("change", () => {
       this.speed = Number(this.timeSpeed.value);
+    });
+    this.noteNext?.addEventListener("click", (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      this.onNextNotable?.();
     });
 
     const syncExposure = () => {
@@ -55,15 +64,9 @@ export class Hud {
 
   /** @param {string|null|undefined} text */
   setNote(text) {
-    if (!this.note) return;
     const body = text && String(text).trim();
-    if (body) {
-      this.note.textContent = body;
-      this.note.classList.remove("hidden");
-    } else {
-      this.note.textContent = "";
-      this.note.classList.add("hidden");
-    }
+    if (this.note) this.note.textContent = body || "";
+    this.noteBlock?.classList.toggle("hidden", !body);
   }
 
   tick(dtSec) {

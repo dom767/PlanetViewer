@@ -99,6 +99,19 @@ export class Catalog {
   }
 
   /**
+   * Next curated notable after `current`, wrapping around.
+   * @param {SystemRecord|null|undefined} current
+   * @returns {SystemRecord|null}
+   */
+  nextNotable(current) {
+    const list = this.notableSystems;
+    if (!list.length) return null;
+    const i = list.findIndex((s) => s === current || s.name === current?.name);
+    if (i < 0) return list[0];
+    return list[(i + 1) % list.length];
+  }
+
+  /**
    * Nearest system to a screen click (buffer pixels).
    */
   pickNearest(screenX, screenY, viewProj, width, height, maxPx = 18) {

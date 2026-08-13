@@ -235,6 +235,30 @@ body,
   color: var(--text);
 }
 
+.note-next {
+  appearance: none;
+  margin-left: 0.35em;
+  padding: 0;
+  border: none;
+  background: none;
+  font-family: var(--font-display);
+  font-size: inherit;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  color: var(--accent-amber);
+  cursor: pointer;
+}
+
+.note-next:hover,
+.note-next:focus-visible {
+  text-decoration: underline;
+}
+
+.note-next:focus-visible {
+  outline: 2px solid var(--accent-amber);
+  outline-offset: 2px;
+}
+
 #panel-content dl {
   display: grid;
   grid-template-columns: 1fr auto;
@@ -378,21 +402,50 @@ body,
   display: none;
 }
 
+#hud-note-block {
+  margin-top: 6px;
+  max-width: min(320px, calc(100vw - 40px));
+}
+
+#hud-note-block.hidden {
+  display: none;
+}
+
 #hud-note {
   display: -webkit-box;
   -webkit-box-orient: vertical;
   -webkit-line-clamp: 4;
   line-clamp: 4;
   overflow: hidden;
-  margin: 6px 0 0;
-  max-width: min(320px, calc(100vw - 40px));
+  margin: 0;
   font-size: 0.78rem;
   line-height: 1.35;
   color: var(--text-muted);
 }
 
-#hud-note.hidden {
-  display: none;
+#hud-note-next {
+  pointer-events: auto;
+  appearance: none;
+  margin-top: 4px;
+  padding: 0;
+  border: none;
+  background: none;
+  font-family: var(--font-display);
+  font-size: 0.78rem;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  color: var(--accent-amber);
+  cursor: pointer;
+}
+
+#hud-note-next:hover,
+#hud-note-next:focus-visible {
+  text-decoration: underline;
+}
+
+#hud-note-next:focus-visible {
+  outline: 2px solid var(--accent-amber);
+  outline-offset: 2px;
 }
 
 /* Bottom navigation */
