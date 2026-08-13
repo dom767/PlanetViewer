@@ -555,6 +555,97 @@ fn fs_main(in : VSOut) -> @location(0) vec4f {
 }
 `;
 
+/**
+ * Screen-space bookmark ribbon hovering above a notable host.
+ * Quad is lifted above the star; the V-notch points down at it.
+ */
+export const BOOKMARK_WGSL = /* wgsl */ `
+${FRAME_WGSL}
+
+struct VSOut {
+  @builtin(position) position : vec4f,
+  @location(0) uv : vec2f,
+  @location(1) color : vec3f,
+  @location(2) brightness : f32,
+}
+
+fn sdBox(p: vec2f, b: vec2f) -> f32 {
+  let d = abs(p) - b;
+  return length(max(d, vec2f(0.0))) + min(max(d.x, d.y), 0.0);
+}
+
+fn sdTriangle(p: vec2f, a: vec2f, b: vec2f, c: vec2f) -> f32 {
+  let e0 = b - a;
+  let e1 = c - b;
+  let e2 = a - c;
+  let v0 = p - a;
+  let v1 = p - b;
+  let v2 = p - c;
+  let pq0 = v0 - e0 * clamp(dot(v0, e0) / dot(e0, e0), 0.0, 1.0);
+  let pq1 = v1 - e1 * clamp(dot(v1, e1) / dot(e1, e1), 0.0, 1.0);
+  let pq2 = v2 - e2 * clamp(dot(v2, e2) / dot(e2, e2), 0.0, 1.0);
+  let s = sign(e0.x * e2.y - e0.y * e2.x);
+  let d = min(
+    min(
+      vec2f(dot(pq0, pq0), s * (v0.x * e0.y - v0.y * e0.x)),
+      vec2f(dot(pq1, pq1), s * (v1.x * e1.y - v1.y * e1.x))
+    ),
+    vec2f(dot(pq2, pq2), s * (v2.x * e2.y - v2.y * e2.x))
+  );
+  return -sqrt(d.x) * sign(d.y);
+}
+
+@vertex
+fn vs_main(
+  @location(0) corner : vec2f,
+  @location(1) worldPos : vec3f,
+  @location(2) color : vec3f,
+  @location(3) sizeBright : vec2f,
+) -> VSOut {
+  var out : VSOut;
+  let clip = frame.viewProj * vec4f(worldPos, 1.0);
+  let px = clamp(sizeBright.x, 14.0, 48.0);
+  let halfW = px * 0.38;
+  let halfH = px * 0.72;
+  let phase = fract(sin(dot(worldPos.xz, vec2f(12.9898, 78.233))) * 43758.5453);
+  let bob = sin(frame.time * 2.3 + phase * 6.28318) * (px * 0.08);
+  let lift = px * 1.12 + bob;
+  var positioned = clip;
+  positioned.x += corner.x * (halfW / frame.resolution.x) * clip.w;
+  positioned.y += (corner.y * halfH + lift) / frame.resolution.y * clip.w;
+  out.position = positioned;
+  out.uv = corner;
+  out.color = color;
+  out.brightness = sizeBright.y;
+  return out;
+}
+
+@fragment
+fn fs_main(in : VSOut) -> @location(0) vec4f {
+  let p = in.uv;
+  // Ribbon body + downward V — a hanging bookmark pointing at the star.
+  let body = sdBox(p - vec2f(0.0, 0.32), vec2f(0.58, 0.54));
+  let tip = sdTriangle(
+    p,
+    vec2f(-0.58, -0.22),
+    vec2f(0.58, -0.22),
+    vec2f(0.0, -0.96)
+  );
+  let d = min(body, tip);
+
+  let fill = 1.0 - smoothstep(-0.02, 0.04, d);
+  let glow = exp(-5.0 * max(d, 0.0)) * 0.32;
+  if (fill + glow < 0.04) {
+    discard;
+  }
+
+  let shade = mix(1.16, 0.74, smoothstep(-0.55, 0.62, p.x));
+  let a = clamp(fill + glow, 0.0, 1.0) * clamp(in.brightness, 0.0, 1.5);
+  let rgb = in.color * shade * a;
+  return vec4f(rgb, a);
+}
+`;
+
 export const LINE_WGSL = /* wgsl */ `
 ${FRAME_WGSL}
 

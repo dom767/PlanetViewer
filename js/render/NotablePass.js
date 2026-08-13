@@ -1,17 +1,17 @@
 import {
   createQuadBuffer,
   createSoftParticlePipeline,
-  HIGHLIGHT_WGSL,
+  BOOKMARK_WGSL,
   BLEND_PREMULTIPLIED,
   packInstances,
   writeInstanceBuffer,
 } from "./gpu.js";
 
-/** Amber halo — matches --accent-amber, distinct from cyan focus/hover. */
+/** Amber bookmark — matches --accent-amber, distinct from cyan focus/hover. */
 const NOTABLE_COLOR = [1.0, 0.72, 0.3];
 
 /**
- * Screen-space amber rings marking curated “notable” host stars.
+ * Screen-space bookmark ribbons hovering above curated “notable” host stars.
  */
 export class NotablePass {
   /**
@@ -24,7 +24,7 @@ export class NotablePass {
     this.pipeline = createSoftParticlePipeline(
       gpu.device,
       gpu.format,
-      HIGHLIGHT_WGSL,
+      BOOKMARK_WGSL,
       BLEND_PREMULTIPLIED
     );
     this.bindGroup = gpu.device.createBindGroup({
@@ -54,7 +54,6 @@ export class NotablePass {
       const clipW =
         viewProj[3] * t.x + viewProj[7] * t.y + viewProj[11] * t.z + viewProj[15];
       if (clipW <= 0.02) continue;
-      // Rough frustum cull in clip space before packing.
       const clipX =
         viewProj[0] * t.x + viewProj[4] * t.y + viewProj[8] * t.z + viewProj[12];
       const clipY =
@@ -64,14 +63,14 @@ export class NotablePass {
       if (ndcX < -1.35 || ndcX > 1.35 || ndcY < -1.35 || ndcY > 1.35) continue;
 
       const dist = Math.max(clipW, 0.05);
-      const size = Math.min(72, Math.max(22, (36 * (width / 1280)) * (8 / dist)));
+      const size = Math.min(40, Math.max(16, (24 * (width / 1280)) * (8 / dist)));
       instances.push({
         x: t.x,
         y: t.y,
         z: t.z,
         color: NOTABLE_COLOR,
         size,
-        brightness: 0.85,
+        brightness: 0.95,
       });
     }
 
