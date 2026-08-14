@@ -10,7 +10,7 @@ import { Hud } from "./ui/Hud.js";
 import { SystemSearch } from "./ui/SystemSearch.js";
 import { AppChrome } from "./ui/AppChrome.js";
 import { FOCUS_ORBIT_RADIUS_PC } from "./render/PlanetPass.js";
-import { length3 } from "./astro/coords.js";
+import { length3, projectToNdc, ndcToScreen } from "./astro/coords.js";
 
 function appVersionLabel() {
   const build = globalThis.__PLANETVIEWER_ASSET_VERSION__;
@@ -23,6 +23,7 @@ async function main() {
   const appRoot = document.getElementById("app");
   const canvas = document.getElementById("gl-canvas");
   const loading = document.getElementById("loading");
+  const hoverLabel = document.getElementById("star-hover-label");
   const versionEl = document.getElementById("app-version");
   if (versionEl) versionEl.textContent = appVersionLabel();
 
@@ -107,6 +108,46 @@ async function main() {
     const hit = pickAtCss(pointerCss.x, pointerCss.y);
     scene.setHoverTarget(hit);
     canvas.style.cursor = hit || focused ? "grab" : "crosshair";
+  }
+
+  /** Name tag beside the cyan hover ring (CSS px relative to #app / canvas). */
+  function updateHoverLabel() {
+    if (!hoverLabel) return;
+    const hit = scene.hoverTarget;
+    if (!hit || !pointerCss) {
+      hoverLabel.classList.add("hidden");
+      return;
+    }
+    const ndc = projectToNdc(hit, viewProj);
+    if (!ndc || ndc.z < -1 || ndc.z > 1) {
+      hoverLabel.classList.add("hidden");
+      return;
+    }
+
+    const rect = canvas.getBoundingClientRect();
+    const scaleX = canvas.width / Math.max(rect.width, 1);
+    const scaleY = canvas.height / Math.max(rect.height, 1);
+    const scr = ndcToScreen(ndc, canvas.width, canvas.height);
+    const clipW =
+      viewProj[3] * hit.x +
+      viewProj[7] * hit.y +
+      viewProj[11] * hit.z +
+      viewProj[15];
+    const dist = Math.max(clipW, 0.05);
+    const ringBuf = Math.min(
+      96,
+      Math.max(28, (48 * (canvas.width / 1280)) * (8 / dist))
+    );
+    const cssX = scr.x / scaleX;
+    const cssY = scr.y / scaleY;
+    const gap = ringBuf / scaleX * 0.55 + 10;
+    const placeLeft = cssX + gap + 160 > rect.width;
+
+    hoverLabel.textContent = hit.name;
+    hoverLabel.classList.toggle("is-left", placeLeft);
+    hoverLabel.style.left = `${placeLeft ? cssX - gap : cssX + gap}px`;
+    hoverLabel.style.top = `${cssY}px`;
+    hoverLabel.classList.remove("hidden");
   }
 
   function selectSystem(system, { openInfo = true } = {}) {
@@ -230,6 +271,7 @@ async function main() {
   canvas.addEventListener("pointerleave", () => {
     pointerCss = null;
     scene.setHoverTarget(null);
+    hoverLabel?.classList.add("hidden");
   });
 
   canvas.addEventListener("click", (e) => {
@@ -291,6 +333,8 @@ async function main() {
       revealOrbits: camera.shouldRevealOrbits(),
       focusHighlightOpacity: camera.focusHighlightOpacity(),
     });
+
+    updateHoverLabel();
 
     minimap.draw(camera);
 
