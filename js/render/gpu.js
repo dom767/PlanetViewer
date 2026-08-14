@@ -530,7 +530,7 @@ fn vs_main(
   var out : VSOut;
   let clip = frame.viewProj * vec4f(worldPos, 1.0);
   let dist = max(clip.w, 0.08);
-  let px = clamp(sizeBright.x * 6.5 / dist, 2.5, 36.0);
+  let px = clamp(sizeBright.x * 3.2 / dist, 1.5, 22.0);
   var positioned = clip;
   positioned.x += corner.x * (px / frame.resolution.x) * clip.w;
   positioned.y += corner.y * (px / frame.resolution.y) * clip.w;

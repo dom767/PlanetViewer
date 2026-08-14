@@ -23,8 +23,8 @@ export const FOCUS_ORBIT_RADIUS_PC = 0.85;
  * Focused-planet billboard size from R / R⊕ on a log curve so gas giants
  * read larger than terrestrials without dominating the default overlook.
  */
-const PLANET_SIZE_BASE = 4.2;
-const PLANET_SIZE_LOG = 3.2;
+const PLANET_SIZE_BASE = 1.0;
+const PLANET_SIZE_LOG = 5.0;
 const RJUP_TO_REARTH = 11.209;
 
 /** @param {{ radiusEarth?: number|null, radiusJupiter?: number|null }} planet */
