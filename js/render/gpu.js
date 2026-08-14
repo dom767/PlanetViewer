@@ -510,6 +510,49 @@ fn fs_main(in : VSOut) -> @location(0) vec4f {
 }
 `;
 
+/** Focused-system planets: sizeBright.x = base × (R / R⊕). Wider clamp than map dots. */
+export const FOCUS_PLANET_PARTICLE_WGSL = /* wgsl */ `
+${FRAME_WGSL}
+
+struct VSOut {
+  @builtin(position) position : vec4f,
+  @location(0) color : vec3f,
+  @location(1) uv : vec2f,
+}
+
+@vertex
+fn vs_main(
+  @location(0) corner : vec2f,
+  @location(1) worldPos : vec3f,
+  @location(2) color : vec3f,
+  @location(3) sizeBright : vec2f,
+) -> VSOut {
+  var out : VSOut;
+  let clip = frame.viewProj * vec4f(worldPos, 1.0);
+  let dist = max(clip.w, 0.08);
+  let px = clamp(sizeBright.x * 6.5 / dist, 2.5, 88.0);
+  var positioned = clip;
+  positioned.x += corner.x * (px / frame.resolution.x) * clip.w;
+  positioned.y += corner.y * (px / frame.resolution.y) * clip.w;
+  out.position = positioned;
+  out.color = color;
+  out.uv = corner;
+  return out;
+}
+
+@fragment
+fn fs_main(in : VSOut) -> @location(0) vec4f {
+  let r = length(in.uv);
+  let a = 1.0 - smoothstep(0.82, 0.98, r);
+  if (a < 0.01) {
+    discard;
+  }
+  let shade = 0.88 + 0.12 * (1.0 - smoothstep(0.0, 0.85, r));
+  let rgb = in.color * shade * a;
+  return vec4f(rgb, a);
+}
+`;
+
 export const HIGHLIGHT_WGSL = /* wgsl */ `
 ${FRAME_WGSL}
 

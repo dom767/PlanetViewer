@@ -1,7 +1,7 @@
 import {
   createQuadBuffer,
   createSoftParticlePipeline,
-  PLANET_PARTICLE_WGSL,
+  FOCUS_PLANET_PARTICLE_WGSL,
   LINE_WGSL,
   BLEND_PREMULTIPLIED,
   packInstances,
@@ -18,6 +18,20 @@ import { cross3, length3, normalize3, sub3 } from "../astro/coords.js";
 
 /** Dual-scale: AU orbits mapped into a local focus radius around the star (parsecs). */
 export const FOCUS_ORBIT_RADIUS_PC = 0.85;
+
+/** Billboard size for 1 R⊕; scaled by planet radius / Earth radius. */
+const PLANET_SIZE_EARTH = 5.5;
+const RJUP_TO_REARTH = 11.209;
+
+/** @param {{ radiusEarth?: number|null, radiusJupiter?: number|null }} planet */
+function planetSizeFromRadius(planet) {
+  const rEarth =
+    planet.radiusEarth ??
+    (planet.radiusJupiter != null
+      ? planet.radiusJupiter * RJUP_TO_REARTH
+      : 1);
+  return PLANET_SIZE_EARTH * Math.max(rEarth, 0.15);
+}
 
 /** Arrival overlook elevation above the system's mean planetary plane. */
 export const SYSTEM_VIEW_ELEVATION = (35 * Math.PI) / 180;
@@ -45,7 +59,7 @@ export class PlanetPass {
     this.planetPipeline = createSoftParticlePipeline(
       gpu.device,
       gpu.format,
-      PLANET_PARTICLE_WGSL,
+      FOCUS_PLANET_PARTICLE_WGSL,
       BLEND_PREMULTIPLIED
     );
     this.planetBindGroup = gpu.device.createBindGroup({
@@ -280,7 +294,7 @@ export class PlanetPass {
         y: system.y + w.y,
         z: system.z + w.z,
         color: planet.color || [0.55, 0.75, 1.0],
-        size: 5.5,
+        size: planetSizeFromRadius(planet),
         brightness: bright,
       });
     }
