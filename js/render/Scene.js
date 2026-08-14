@@ -116,6 +116,7 @@ export class Scene {
         ? !!frame.revealOrbits
         : !!frame.orbitSettled,
       dt: frame.dt ?? 1 / 60,
+      viewMatrix: frame.viewMatrix,
     });
     const highlightTarget = this.hoverTarget || this.focusedSystem;
     const highlightingFocus =

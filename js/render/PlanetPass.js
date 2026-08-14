@@ -1,10 +1,10 @@
 import {
   createQuadBuffer,
-  createSoftParticlePipeline,
+  createFocusPlanetPipeline,
   FOCUS_PLANET_PARTICLE_WGSL,
   LINE_WGSL,
   BLEND_PREMULTIPLIED,
-  packInstances,
+  packLitPlanetInstances,
   writeInstanceBuffer,
 } from "./gpu.js";
 import {
@@ -62,7 +62,7 @@ export class PlanetPass {
     this.device = gpu.device;
     this.frameBuffer = frameBuffer;
     this.quad = createQuadBuffer(gpu.device);
-    this.planetPipeline = createSoftParticlePipeline(
+    this.planetPipeline = createFocusPlanetPipeline(
       gpu.device,
       gpu.format,
       FOCUS_PLANET_PARTICLE_WGSL,
@@ -222,7 +222,7 @@ export class PlanetPass {
   /**
    * @param {number} tDays
    * @param {{x:number,y:number,z:number}} _cameraPos
-   * @param {{ orbitSettled?: boolean, revealOrbits?: boolean, dt?: number }} [opts]
+   * @param {{ orbitSettled?: boolean, revealOrbits?: boolean, dt?: number, viewMatrix?: Float32Array }} [opts]
    */
   update(tDays, _cameraPos, opts = {}) {
     const dt = Math.min(opts.dt ?? 1 / 60, 0.05);
@@ -285,6 +285,18 @@ export class PlanetPass {
       this.device.queue.writeBuffer(orbit.buffer, 0, world);
     }
 
+    // Camera axes from view matrix (see lookAt): right, up, toward-camera.
+    const vm = opts.viewMatrix;
+    const camRight = vm
+      ? { x: vm[0], y: vm[4], z: vm[8] }
+      : { x: 1, y: 0, z: 0 };
+    const camUp = vm
+      ? { x: vm[1], y: vm[5], z: vm[9] }
+      : { x: 0, y: 1, z: 0 };
+    const camToward = vm
+      ? { x: vm[2], y: vm[6], z: vm[10] }
+      : { x: 0, y: 0, z: 1 };
+
     const items = [];
     const bright = this._opacity;
     for (const planet of system.planets) {
@@ -295,19 +307,35 @@ export class PlanetPass {
         y: off.y * this.auToPc,
         z: off.z * this.auToPc,
       });
+      const px = system.x + w.x;
+      const py = system.y + w.y;
+      const pz = system.z + w.z;
+      // Light direction toward the host star, in billboard/view space.
+      let lx = system.x - px;
+      let ly = system.y - py;
+      let lz = system.z - pz;
+      const llen = Math.hypot(lx, ly, lz) || 1;
+      lx /= llen;
+      ly /= llen;
+      lz /= llen;
       items.push({
-        x: system.x + w.x,
-        y: system.y + w.y,
-        z: system.z + w.z,
+        x: px,
+        y: py,
+        z: pz,
         color: planet.color || [0.55, 0.75, 1.0],
         size: planetSizeFromRadius(planet),
         brightness: bright,
+        lightDir: {
+          x: lx * camRight.x + ly * camRight.y + lz * camRight.z,
+          y: lx * camUp.x + ly * camUp.y + lz * camUp.z,
+          z: lx * camToward.x + ly * camToward.y + lz * camToward.z,
+        },
       });
     }
 
     this.planetCount = items.length;
     if (!this.planetCount) return;
-    const data = packInstances(items);
+    const data = packLitPlanetInstances(items);
     this.instanceBuffer = writeInstanceBuffer(
       this.device,
       this.instanceBuffer,

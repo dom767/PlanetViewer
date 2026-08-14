@@ -510,7 +510,7 @@ fn fs_main(in : VSOut) -> @location(0) vec4f {
 }
 `;
 
-/** Focused-system planets: sizeBright.x = base × (R / R⊕). Wider clamp than map dots. */
+/** Focused-system planets: sizeBright.x ∝ (R/R⊕)^n; lit from host star. */
 export const FOCUS_PLANET_PARTICLE_WGSL = /* wgsl */ `
 ${FRAME_WGSL}
 
@@ -518,6 +518,8 @@ struct VSOut {
   @builtin(position) position : vec4f,
   @location(0) color : vec3f,
   @location(1) uv : vec2f,
+  @location(2) lightDir : vec3f,
+  @location(3) bright : f32,
 }
 
 @vertex
@@ -526,6 +528,7 @@ fn vs_main(
   @location(1) worldPos : vec3f,
   @location(2) color : vec3f,
   @location(3) sizeBright : vec2f,
+  @location(4) lightDir : vec3f,
 ) -> VSOut {
   var out : VSOut;
   let clip = frame.viewProj * vec4f(worldPos, 1.0);
@@ -537,6 +540,8 @@ fn vs_main(
   out.position = positioned;
   out.color = color;
   out.uv = corner;
+  out.lightDir = lightDir;
+  out.bright = sizeBright.y;
   return out;
 }
 
@@ -547,9 +552,16 @@ fn fs_main(in : VSOut) -> @location(0) vec4f {
   if (a < 0.01) {
     discard;
   }
-  let shade = 0.88 + 0.12 * (1.0 - smoothstep(0.0, 0.85, r));
-  let rgb = in.color * shade * a;
-  return vec4f(rgb, a);
+  // Disc → unit sphere; +Z faces the camera (billboard).
+  let nz = sqrt(max(1e-4, 1.0 - r * r));
+  let n = normalize(vec3f(in.uv.x, in.uv.y, nz));
+  let L = normalize(in.lightDir);
+  let ndotl = max(dot(n, L), 0.0);
+  // Soft terminator + small ambient so the night side stays readable
+  let lit = 0.1 + 0.9 * smoothstep(0.0, 0.12, ndotl) * ndotl;
+  let limb = 0.82 + 0.18 * nz;
+  let rgb = in.color * lit * limb * a * clamp(in.bright, 0.0, 1.0);
+  return vec4f(rgb, a * clamp(in.bright, 0.0, 1.0));
 }
 `;
 
@@ -764,6 +776,52 @@ export function createSoftParticlePipeline(device, format, shaderCode, blend) {
   });
 }
 
+/** Focused planets: pos, color, sizeBright, lightDir (billboard space). */
+export function createFocusPlanetPipeline(device, format, shaderCode, blend) {
+  const module = device.createShaderModule({ code: shaderCode });
+  return device.createRenderPipeline({
+    layout: "auto",
+    vertex: {
+      module,
+      entryPoint: "vs_main",
+      buffers: [
+        {
+          arrayStride: 8,
+          stepMode: "vertex",
+          attributes: [{ shaderLocation: 0, offset: 0, format: "float32x2" }],
+        },
+        {
+          arrayStride: 48,
+          stepMode: "instance",
+          attributes: [
+            { shaderLocation: 1, offset: 0, format: "float32x3" },
+            { shaderLocation: 2, offset: 12, format: "float32x3" },
+            { shaderLocation: 3, offset: 24, format: "float32x2" },
+            { shaderLocation: 4, offset: 32, format: "float32x3" },
+          ],
+        },
+      ],
+    },
+    fragment: {
+      module,
+      entryPoint: "fs_main",
+      targets: [
+        {
+          format,
+          blend,
+          writeMask: 0xf,
+        },
+      ],
+    },
+    primitive: { topology: "triangle-list" },
+    depthStencil: {
+      format: "depth24plus",
+      depthWriteEnabled: false,
+      depthCompare: "less-equal",
+    },
+  });
+}
+
 /** Trail ribbon: instance data only; segment quads from vertex_index. */
 export function createTrailParticlePipeline(device, format, shaderCode, blend) {
   const module = device.createShaderModule({ code: shaderCode });
@@ -849,6 +907,31 @@ export function packInstances(items) {
     data[o + 5] = s.color[2];
     data[o + 6] = s.size;
     data[o + 7] = s.brightness ?? 1;
+  }
+  return data;
+}
+
+/**
+ * Focused planets: pos, color, sizeBright, lightDir (+ pad) = 12 floats.
+ * @param {Array<{x:number,y:number,z:number,color:number[],size:number,brightness?:number,lightDir:{x:number,y:number,z:number}}>} items
+ */
+export function packLitPlanetInstances(items) {
+  const n = items.length;
+  const data = new Float32Array(n * 12);
+  for (let i = 0; i < n; i++) {
+    const s = items[i];
+    const o = i * 12;
+    data[o] = s.x;
+    data[o + 1] = s.y;
+    data[o + 2] = s.z;
+    data[o + 3] = s.color[0];
+    data[o + 4] = s.color[1];
+    data[o + 5] = s.color[2];
+    data[o + 6] = s.size;
+    data[o + 7] = s.brightness ?? 1;
+    data[o + 8] = s.lightDir.x;
+    data[o + 9] = s.lightDir.y;
+    data[o + 10] = s.lightDir.z;
   }
   return data;
 }
