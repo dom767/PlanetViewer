@@ -9,6 +9,7 @@ import { Minimap } from "./ui/Minimap.js";
 import { Hud } from "./ui/Hud.js";
 import { SystemSearch } from "./ui/SystemSearch.js";
 import { AppChrome } from "./ui/AppChrome.js";
+import { CanvasSizeSettings } from "./ui/CanvasSizeSettings.js";
 import { FOCUS_ORBIT_RADIUS_PC } from "./render/PlanetPass.js";
 import { length3, projectToNdc, ndcToScreen } from "./astro/coords.js";
 
@@ -68,6 +69,15 @@ async function main() {
     if (next) selectSystem(next, { openInfo: !!chrome?.isWide });
   }
   hud.onNextNotable = goNextNotable;
+
+  const canvasSize = new CanvasSizeSettings({
+    canvas,
+    widthInput: document.getElementById("canvas-width"),
+    heightInput: document.getElementById("canvas-height"),
+    applyBtn: document.getElementById("canvas-size-apply"),
+    hintEl: document.getElementById("canvas-size-hint"),
+  });
+  canvasSize.init();
 
   let focused = null;
   /** @type {{ system: object, normName: string }[]} */

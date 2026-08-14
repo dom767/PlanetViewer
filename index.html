@@ -86,6 +86,40 @@
           <input type="checkbox" id="toggle-field-stars" checked />
           <span>Nearby stars (≤30 pc)</span>
         </label>
+        <div id="canvas-size" class="settings-group">
+          <span class="settings-group-label">Orbit view size</span>
+          <div class="canvas-size-row">
+            <label class="canvas-size-field" for="canvas-width">
+              <span class="canvas-size-field-label">Width</span>
+              <input
+                type="number"
+                id="canvas-width"
+                min="320"
+                max="4096"
+                step="1"
+                inputmode="numeric"
+              />
+            </label>
+            <label class="canvas-size-field" for="canvas-height">
+              <span class="canvas-size-field-label">Height</span>
+              <input
+                type="number"
+                id="canvas-height"
+                min="240"
+                max="4096"
+                step="1"
+                inputmode="numeric"
+              />
+            </label>
+            <button type="button" id="canvas-size-apply" class="settings-btn" disabled>
+              Change
+            </button>
+          </div>
+          <p class="hud-hint">
+            Resizes the browser window so the render canvas matches this size. The bottom menu overlays the view.
+          </p>
+          <p id="canvas-size-hint" class="hud-hint canvas-size-hint hidden" aria-live="polite"></p>
+        </div>
         <div id="hud-help" class="settings-help">
           WASD move · Drag to orbit · Two-finger pan or pinch (locks until lift) · Tap star to focus
         </div>
