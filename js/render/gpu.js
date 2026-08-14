@@ -179,13 +179,14 @@ fn vs_main(
 
   let phase = hash31(worldPos) * 6.2831853;
   let t = frame.time;
+  // Oscillate around 1 so intensity tracks catalog brightness, not a dimmed mean.
   let twinkle =
-    0.72 +
-    0.16 * sin(t * 2.3 + phase) +
-    0.08 * sin(t * 5.1 + phase * 1.7) +
+    1.0 +
+    0.14 * sin(t * 2.3 + phase) +
+    0.07 * sin(t * 5.1 + phase * 1.7) +
     0.04 * sin(t * 11.0 + phase * 2.3);
-  let glint = pow(max(0.0, sin(t * 1.4 + phase * 3.1)), 24.0) * 0.4;
-  let sparkle = clamp(twinkle + glint, 0.5, 1.5);
+  let glint = pow(max(0.0, sin(t * 1.4 + phase * 3.1)), 24.0) * 0.28;
+  let sparkle = clamp(twinkle + glint, 0.72, 1.4);
 
   let px = clamp(sizeBright.x * 195.0 / dist * (0.9 + 0.12 * sparkle), 3.5, 126.0);
 
@@ -432,13 +433,13 @@ fn vs_main(
   let phase = hash31(worldPos) * 6.2831853;
   let t = frame.time;
   let twinkle =
-    0.70 +
-    0.18 * sin(t * 2.3 + phase) +
-    0.09 * sin(t * 5.1 + phase * 1.7) +
-    0.05 * sin(t * 11.0 + phase * 2.3);
-  let glint = pow(max(0.0, sin(t * 1.4 + phase * 3.1)), 24.0) * 0.35;
+    1.0 +
+    0.14 * sin(t * 2.3 + phase) +
+    0.07 * sin(t * 5.1 + phase * 1.7) +
+    0.04 * sin(t * 11.0 + phase * 2.3);
+  let glint = pow(max(0.0, sin(t * 1.4 + phase * 3.1)), 24.0) * 0.25;
 
-  let sparkle = clamp(twinkle + glint, 0.45, 1.45);
+  let sparkle = clamp(twinkle + glint, 0.72, 1.4);
   let px = clamp(sizeBright.x * 120.0 / dist * (0.92 + 0.10 * sparkle), 2.0, 72.0);
 
   var positioned = clip;

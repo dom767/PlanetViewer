@@ -83,15 +83,34 @@ export function starPointSize(star) {
   return size;
 }
 
+/** Sun absolute V magnitude — used when converting vmag + distance → L/L☉. */
+const SUN_ABS_VMAG = 4.83;
+
 /**
- * Alpha / intensity factor from luminosity or Vmag.
+ * Estimate luminosity in L☉ from catalog fields.
+ * @param {{luminosity?: number|null, vmag?: number|null, distPc?: number|null}} star
+ * @returns {number|null}
+ */
+function luminositySolar(star) {
+  if (star.luminosity && star.luminosity > 0) return star.luminosity;
+  if (star.vmag == null || !Number.isFinite(star.vmag)) return null;
+  if (star.distPc != null && star.distPc > 0) {
+    const absMag =
+      star.vmag - 5 * Math.log10(Math.max(star.distPc, 0.01) / 10);
+    return Math.pow(10, -0.4 * (absMag - SUN_ABS_VMAG));
+  }
+  // Apparent mag alone is a weak stand-in; still better than a flat default.
+  return Math.pow(10, -0.4 * (star.vmag - SUN_ABS_VMAG));
+}
+
+/**
+ * Billboard intensity from intrinsic luminosity (L/L☉).
+ * Log-scaled and centered on the Sun (L=1 → 1.0) so dim M dwarfs and
+ * luminous hosts stay clearly different; the star shader twinkles around this.
  */
 export function starBrightness(star) {
-  if (star.luminosity && star.luminosity > 0) {
-    return Math.max(0.35, Math.min(1.4, 0.55 + Math.log10(star.luminosity + 1) * 0.25));
-  }
-  if (star.vmag != null) {
-    return Math.max(0.35, Math.min(1.3, 1.1 - star.vmag * 0.04));
-  }
-  return 0.85;
+  const lum = luminositySolar(star);
+  if (lum == null) return 0.75;
+  const x = Math.log10(Math.max(lum, 1e-8));
+  return Math.max(0.22, Math.min(2.0, 1.0 + x * 0.28));
 }

@@ -7,6 +7,7 @@
  */
 
 import { GOLDILOCKS_COLOR } from "./habitable.js";
+import { starBrightness } from "./spectrum.js";
 
 const PLANET_COLORS = {
   Mercury: [0.72, 0.68, 0.62],
@@ -169,7 +170,7 @@ export function createSolSystem() {
     z: 0,
     color: [1, 0.95, 0.7],
     pointSize: 18,
-    brightness: 1.4,
+    brightness: starBrightness({ luminosity: 1 }),
     planets,
   };
 }
