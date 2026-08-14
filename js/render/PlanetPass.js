@@ -26,7 +26,18 @@ export const FOCUS_ORBIT_RADIUS_PC = 0.85;
  */
 const PLANET_SIZE_UNIT = 1.73;
 const PLANET_SIZE_EXP = 1.1;
+const PLANET_SIZE_MIN = 0.9;
 const RJUP_TO_REARTH = 11.209;
+
+/**
+ * Compact systems have their orbits stretched hard by auToPc, which would leave
+ * their planets as specks. Boost size by a heavily compressed function of that
+ * stretch: enough to feel inhabited, small enough that absolute radius still
+ * says "gas giant" or "rocky" at a glance.
+ */
+const SIZE_BOOST_REFERENCE_AU = 30.07;
+const SIZE_BOOST_EXP = 0.25;
+const SIZE_BOOST_MAX = 4.5;
 
 /** @param {{ radiusEarth?: number|null, radiusJupiter?: number|null }} planet */
 function planetSizeFromRadius(planet) {
@@ -37,6 +48,13 @@ function planetSizeFromRadius(planet) {
       : 1);
   const r = Math.max(rEarth, 0.15);
   return PLANET_SIZE_UNIT * Math.pow(r, PLANET_SIZE_EXP);
+}
+
+/** @param {number} maxA outermost semi-major axis (AU) */
+function orbitStretchBoost(maxA) {
+  const stretch = SIZE_BOOST_REFERENCE_AU / Math.max(maxA, 1e-4);
+  if (stretch <= 1) return 1;
+  return Math.min(SIZE_BOOST_MAX, Math.pow(stretch, SIZE_BOOST_EXP));
 }
 
 /** Arrival overlook elevation above the system's mean planetary plane. */
@@ -128,6 +146,7 @@ export class PlanetPass {
     this.planetCount = 0;
     this.system = null;
     this.auToPc = 1;
+    this.sizeBoost = 1;
     this._refFrame = null;
 
     /** @type {null | 'out' | 'hold' | 'in'} */
@@ -187,6 +206,7 @@ export class PlanetPass {
     this._refFrame = system ? keplerReferenceFrame(system) : null;
     if (!system) {
       this.auToPc = 1;
+      this.sizeBoost = 1;
       return;
     }
 
@@ -196,6 +216,7 @@ export class PlanetPass {
     }
     maxA = Math.max(maxA, 0.05);
     this.auToPc = FOCUS_ORBIT_RADIUS_PC / maxA;
+    this.sizeBoost = orbitStretchBoost(maxA);
 
     for (const planet of system.planets) {
       if (!planet.a) continue;
@@ -323,7 +344,10 @@ export class PlanetPass {
         y: py,
         z: pz,
         color: planet.color || [0.55, 0.75, 1.0],
-        size: planetSizeFromRadius(planet),
+        size: Math.max(
+          PLANET_SIZE_MIN,
+          planetSizeFromRadius(planet) * this.sizeBoost
+        ),
         brightness: bright,
         lightDir: {
           x: lx * camRight.x + ly * camRight.y + lz * camRight.z,
