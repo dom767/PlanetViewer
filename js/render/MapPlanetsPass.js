@@ -1,9 +1,9 @@
 import {
   createQuadBuffer,
-  createSoftParticlePipeline,
-  PLANET_PARTICLE_WGSL,
+  createFocusPlanetPipeline,
+  MAP_PLANET_LIT_WGSL,
   BLEND_PREMULTIPLIED,
-  packInstances,
+  packLitPlanetInstances,
   writeInstanceBuffer,
 } from "./gpu.js";
 import {
@@ -23,10 +23,10 @@ export class MapPlanetsPass {
   constructor(gpu, frameBuffer) {
     this.device = gpu.device;
     this.quad = createQuadBuffer(gpu.device);
-    this.pipeline = createSoftParticlePipeline(
+    this.pipeline = createFocusPlanetPipeline(
       gpu.device,
       gpu.format,
-      PLANET_PARTICLE_WGSL,
+      MAP_PLANET_LIT_WGSL,
       BLEND_PREMULTIPLIED
     );
     this.bindGroup = gpu.device.createBindGroup({
@@ -57,10 +57,27 @@ export class MapPlanetsPass {
     }
   }
 
-  update(tDays, cameraPos, focused, maxDistPc = 120) {
+  /**
+   * @param {number} tDays
+   * @param {{x:number,y:number,z:number}} cameraPos
+   * @param {object|null} focused
+   * @param {number} [maxDistPc]
+   * @param {Float32Array} [viewMatrix]
+   */
+  update(tDays, cameraPos, focused, maxDistPc = 120, viewMatrix = null) {
     const items = [];
     const maxDist2 = maxDistPc * maxDistPc;
     const focusedId = focused?.id;
+
+    const camRight = viewMatrix
+      ? { x: viewMatrix[0], y: viewMatrix[4], z: viewMatrix[8] }
+      : { x: 1, y: 0, z: 0 };
+    const camUp = viewMatrix
+      ? { x: viewMatrix[1], y: viewMatrix[5], z: viewMatrix[9] }
+      : { x: 0, y: 1, z: 0 };
+    const camToward = viewMatrix
+      ? { x: viewMatrix[2], y: viewMatrix[6], z: viewMatrix[10] }
+      : { x: 0, y: 0, z: 1 };
 
     for (const entry of this.entries) {
       const s = entry.system;
@@ -90,15 +107,30 @@ export class MapPlanetsPass {
           y: off.y * entry.auToPc,
           z: off.z * entry.auToPc,
         });
+        const px = s.x + w.x;
+        const py = s.y + w.y;
+        const pz = s.z + w.z;
+        let lx = s.x - px;
+        let ly = s.y - py;
+        let lz = s.z - pz;
+        const llen = Math.hypot(lx, ly, lz) || 1;
+        lx /= llen;
+        ly /= llen;
+        lz /= llen;
         const r =
           planet.radiusEarth || (planet.radiusJupiter ? planet.radiusJupiter * 11 : 2);
         items.push({
-          x: s.x + w.x,
-          y: s.y + w.y,
-          z: s.z + w.z,
+          x: px,
+          y: py,
+          z: pz,
           color: planet.color || [0.6, 0.75, 1.0],
           size: 2.2 + Math.min(3.5, Math.log10(r + 1) * 1.8),
           brightness: 1,
+          lightDir: {
+            x: lx * camRight.x + ly * camRight.y + lz * camRight.z,
+            y: lx * camUp.x + ly * camUp.y + lz * camUp.z,
+            z: lx * camToward.x + ly * camToward.y + lz * camToward.z,
+          },
         });
         n++;
       }
@@ -106,7 +138,7 @@ export class MapPlanetsPass {
 
     this.count = items.length;
     if (!this.count) return;
-    const data = packInstances(items);
+    const data = packLitPlanetInstances(items);
     this.instanceBuffer = writeInstanceBuffer(
       this.device,
       this.instanceBuffer,

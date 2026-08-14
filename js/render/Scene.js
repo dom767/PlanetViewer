@@ -108,7 +108,8 @@ export class Scene {
       frame.tDays,
       frame.cameraPos,
       this.focusedSystem,
-      120
+      120,
+      frame.viewMatrix
     );
     this.planetPass.update(frame.tDays, frame.cameraPos, {
       orbitSettled: !!frame.orbitSettled,

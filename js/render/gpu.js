@@ -510,6 +510,59 @@ fn fs_main(in : VSOut) -> @location(0) vec4f {
 }
 `;
 
+/** Galactic-map planets: map sizing + host-star sphere lighting. */
+export const MAP_PLANET_LIT_WGSL = /* wgsl */ `
+${FRAME_WGSL}
+
+struct VSOut {
+  @builtin(position) position : vec4f,
+  @location(0) color : vec3f,
+  @location(1) uv : vec2f,
+  @location(2) lightDir : vec3f,
+  @location(3) bright : f32,
+}
+
+@vertex
+fn vs_main(
+  @location(0) corner : vec2f,
+  @location(1) worldPos : vec3f,
+  @location(2) color : vec3f,
+  @location(3) sizeBright : vec2f,
+  @location(4) lightDir : vec3f,
+) -> VSOut {
+  var out : VSOut;
+  let clip = frame.viewProj * vec4f(worldPos, 1.0);
+  let dist = max(clip.w, 0.08);
+  let px = clamp(sizeBright.x * 48.0 / dist, 2.0, 14.0);
+  var positioned = clip;
+  positioned.x += corner.x * (px / frame.resolution.x) * clip.w;
+  positioned.y += corner.y * (px / frame.resolution.y) * clip.w;
+  out.position = positioned;
+  out.color = color;
+  out.uv = corner;
+  out.lightDir = lightDir;
+  out.bright = sizeBright.y;
+  return out;
+}
+
+@fragment
+fn fs_main(in : VSOut) -> @location(0) vec4f {
+  let r = length(in.uv);
+  let a = 1.0 - smoothstep(0.82, 0.98, r);
+  if (a < 0.01) {
+    discard;
+  }
+  let nz = sqrt(max(1e-4, 1.0 - r * r));
+  let n = normalize(vec3f(in.uv.x, in.uv.y, nz));
+  let L = normalize(in.lightDir);
+  let ndotl = max(dot(n, L), 0.0);
+  let lit = 0.12 + 0.88 * smoothstep(0.0, 0.12, ndotl) * ndotl;
+  let limb = 0.85 + 0.15 * nz;
+  let rgb = in.color * lit * limb * a * clamp(in.bright, 0.0, 1.0);
+  return vec4f(rgb, a * clamp(in.bright, 0.0, 1.0));
+}
+`;
+
 /** Focused-system planets: sizeBright.x ∝ (R/R⊕)^n; lit from host star. */
 export const FOCUS_PLANET_PARTICLE_WGSL = /* wgsl */ `
 ${FRAME_WGSL}
