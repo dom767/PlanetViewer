@@ -19,8 +19,12 @@ import { cross3, length3, normalize3, sub3 } from "../astro/coords.js";
 /** Dual-scale: AU orbits mapped into a local focus radius around the star (parsecs). */
 export const FOCUS_ORBIT_RADIUS_PC = 0.85;
 
-/** Billboard size for 1 R⊕; scaled by planet radius / Earth radius. */
-const PLANET_SIZE_EARTH = 5.5;
+/**
+ * Focused-planet billboard size from R / R⊕ on a log curve so gas giants
+ * read larger than terrestrials without dominating the default overlook.
+ */
+const PLANET_SIZE_BASE = 4.2;
+const PLANET_SIZE_LOG = 3.2;
 const RJUP_TO_REARTH = 11.209;
 
 /** @param {{ radiusEarth?: number|null, radiusJupiter?: number|null }} planet */
@@ -30,7 +34,8 @@ function planetSizeFromRadius(planet) {
     (planet.radiusJupiter != null
       ? planet.radiusJupiter * RJUP_TO_REARTH
       : 1);
-  return PLANET_SIZE_EARTH * Math.max(rEarth, 0.15);
+  const r = Math.max(rEarth, 0.15);
+  return PLANET_SIZE_BASE + PLANET_SIZE_LOG * Math.log10(r + 1);
 }
 
 /** Arrival overlook elevation above the system's mean planetary plane. */
