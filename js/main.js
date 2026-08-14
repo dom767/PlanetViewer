@@ -72,9 +72,11 @@ async function main() {
 
   const canvasSize = new CanvasSizeSettings({
     canvas,
+    root: document.body,
     widthInput: document.getElementById("canvas-width"),
     heightInput: document.getElementById("canvas-height"),
     applyBtn: document.getElementById("canvas-size-apply"),
+    popOutBtn: document.getElementById("canvas-size-popout"),
     hintEl: document.getElementById("canvas-size-hint"),
   });
   canvasSize.init();
