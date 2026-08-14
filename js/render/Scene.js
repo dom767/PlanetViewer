@@ -117,7 +117,15 @@ export class Scene {
         : !!frame.orbitSettled,
       dt: frame.dt ?? 1 / 60,
     });
-    this.highlightPass.prepare(this.viewProj, frame.width);
+    const highlightTarget = this.hoverTarget || this.focusedSystem;
+    const highlightingFocus =
+      !!highlightTarget &&
+      !!this.focusedSystem &&
+      highlightTarget === this.focusedSystem;
+    const highlightOpacity = highlightingFocus
+      ? Math.max(0, Math.min(1, frame.focusHighlightOpacity ?? 1))
+      : 1;
+    this.highlightPass.prepare(this.viewProj, frame.width, highlightOpacity);
     this.notablePass.prepare(this.viewProj, frame.width);
 
     this.frameUniforms.write(

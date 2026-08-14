@@ -104,6 +104,8 @@ export class FlyCamera {
     this._flightMode = "free";
     /** @type {'free'|'depart'|'cruise'|'arrive'|'orbit'} */
     this._phase = "orbit";
+    /** 0→1 during travel arrive; used to fade the focus highlight into orbit. */
+    this._arriveBlend = 0;
 
     /** Camera basis (travel / orbit). Free look drives it from yaw/pitch. */
     this._fwd = this.forwardFromYawPitch();
@@ -172,6 +174,19 @@ export class FlyCamera {
   /** True once orbits should be shown (late travel / overlook). */
   shouldRevealOrbits() {
     return this._phase === "arrive" || this._phase === "orbit";
+  }
+
+  /**
+   * Opacity of the cyan ring on the focused destination star.
+   * Full while approaching; fades through arrive; off once orbiting.
+   */
+  focusHighlightOpacity() {
+    if (!this._slot) return 1;
+    if (this._flightMode === "orbit" || this._phase === "orbit") return 0;
+    if (this._flightMode === "travel" && this._phase === "arrive") {
+      return 1 - this._arriveBlend;
+    }
+    return 1;
   }
 
   /** @returns {'free'|'depart'|'cruise'|'arrive'|'orbit'} */
@@ -598,6 +613,7 @@ export class FlyCamera {
 
     this._flightMode = "travel";
     this._phase = source ? "depart" : "cruise";
+    this._arriveBlend = 0;
   }
 
   _ensureSlot(target, preferredDistance) {
@@ -665,6 +681,7 @@ export class FlyCamera {
     this._reattachCooldown = 0;
     this._flightMode = "free";
     this._phase = "orbit";
+    this._arriveBlend = 0;
     this._setBasisFromDir(this.forwardFromYawPitch(), WORLD_UP);
     this._angVel = { x: 0, y: 0, z: 0 };
     this._prevTargetBasis = null;
@@ -920,6 +937,7 @@ export class FlyCamera {
       } else {
         arriveBlend = smootherstep(clamp((u - 0.7) / 0.3, 0, 1));
       }
+      this._arriveBlend = arriveBlend;
 
       const orbitPos = orbitPosition(slot);
       this.position = lerp3(bezierPos, orbitPos, arriveBlend);
@@ -928,6 +946,7 @@ export class FlyCamera {
         this._velocity = lerp3(this._velocity, orbitVel, arriveBlend);
       }
     } else {
+      this._arriveBlend = 0;
       this.position = bezierPos;
     }
 
@@ -956,6 +975,7 @@ export class FlyCamera {
     this._travel = null;
     this._flightMode = "orbit";
     this._phase = "orbit";
+    this._arriveBlend = 1;
   }
 
   /** Continuous overlook: advance azimuth, nose on star, up = plane normal. */

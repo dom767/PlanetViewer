@@ -32,15 +32,22 @@ export class HighlightPass {
     this.capacity = { value: 0 };
     this.target = null;
     this.width = 1;
+    this.opacity = 1;
+    this.visible = false;
   }
 
   setTarget(system) {
     this.target = system;
   }
 
-  prepare(viewProj, width) {
+  prepare(viewProj, width, opacity = 1) {
     this.width = width;
-    if (!this.target) return;
+    this.opacity = opacity;
+    if (!this.target || opacity < 0.02) {
+      this.visible = false;
+      return;
+    }
+    this.visible = true;
     const t = this.target;
     const clipW =
       viewProj[3] * t.x + viewProj[7] * t.y + viewProj[11] * t.z + viewProj[15];
@@ -53,7 +60,7 @@ export class HighlightPass {
         z: t.z,
         color: [0.55, 0.85, 1],
         size,
-        brightness: 1,
+        brightness: opacity,
       },
     ]);
     this.instanceBuffer = writeInstanceBuffer(
@@ -66,7 +73,7 @@ export class HighlightPass {
 
   /** @param {GPURenderPassEncoder} pass */
   draw(pass) {
-    if (!this.target || !this.instanceBuffer) return;
+    if (!this.visible || !this.target || !this.instanceBuffer) return;
     pass.setPipeline(this.pipeline);
     pass.setBindGroup(0, this.bindGroup);
     pass.setVertexBuffer(0, this.quad);

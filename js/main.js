@@ -289,6 +289,7 @@ async function main() {
       cameraPos: camera.position,
       orbitSettled: camera.shouldRevealOrbits(),
       revealOrbits: camera.shouldRevealOrbits(),
+      focusHighlightOpacity: camera.focusHighlightOpacity(),
     });
 
     minimap.draw(camera);
