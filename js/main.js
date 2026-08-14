@@ -116,8 +116,13 @@ async function main() {
       return;
     }
     const hit = pickAtCss(pointerCss.x, pointerCss.y);
-    scene.setHoverTarget(hit);
-    canvas.style.cursor = hit || focused ? "grab" : "crosshair";
+    // Ignore the host you're already in — no cyan hover ring or name label.
+    const hover =
+      hit && focused && (hit === focused || hit.id === focused.id)
+        ? null
+        : hit;
+    scene.setHoverTarget(hover);
+    canvas.style.cursor = hover || focused ? "grab" : "crosshair";
   }
 
   /** Name tag beside the cyan hover ring (CSS px relative to #app / canvas). */
