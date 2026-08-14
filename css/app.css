@@ -439,26 +439,38 @@ body.view-fixed #app {
 #hud-note-next {
   pointer-events: auto;
   appearance: none;
-  margin-top: 4px;
-  padding: 0;
-  border: none;
-  background: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  margin-top: 8px;
+  min-height: 44px;
+  min-width: 7.5rem;
+  padding: 10px 18px;
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-sm);
+  background: var(--accent-amber-soft);
   font-family: var(--font-display);
-  font-size: 0.78rem;
+  font-size: 0.9rem;
   font-weight: 600;
   letter-spacing: 0.02em;
   color: var(--accent-amber);
   cursor: pointer;
+  touch-action: manipulation;
 }
 
-#hud-note-next:hover,
-#hud-note-next:focus-visible {
-  text-decoration: underline;
+#hud-note-next:hover {
+  border-color: var(--accent-amber);
+  background: rgba(242, 165, 68, 0.22);
 }
 
 #hud-note-next:focus-visible {
   outline: 2px solid var(--accent-amber);
   outline-offset: 2px;
+}
+
+#hud-note-next:active {
+  transform: translateY(1px);
 }
 
 /* Bottom navigation */
