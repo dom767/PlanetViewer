@@ -2,12 +2,17 @@
  * WebGPU device bootstrap and shared helpers (billboard quads, frame uniforms).
  */
 
-/** Previous viewProj samples used to reconstruct each star's recent screen path. */
-export const TRAIL_HISTORY_FRAMES = 16;
-/** Ribbon segments: current → 1-frame-ago → … → oldest (16 segments, 17 samples). */
+/**
+ * Previous viewProj samples for star motion trails.
+ * Default trail length (scale=1) uses the newest BASE_TRAIL_FRAMES of these;
+ * scale=2 can use the full buffer.
+ */
+export const BASE_TRAIL_FRAMES = 16;
+export const TRAIL_HISTORY_FRAMES = 32;
+/** Ribbon segments drawn per star (culled in-shader when below trail length scale). */
 export const TRAIL_SEGMENTS = TRAIL_HISTORY_FRAMES;
-// viewProj + 16×trailHistory + resolution/time/strength (+ pad to 16)
-const FRAME_UNIFORM_SIZE = 1104;
+// viewProj + 32×trailHistory + resolution/time/strength/lengthScale (+ pad to 16)
+const FRAME_UNIFORM_SIZE = 2144;
 
 export async function createGPU(canvas) {
   if (!navigator.gpu) {
@@ -118,17 +123,33 @@ export function createFrameUniforms(device) {
      * @param {GPUQueue} queue
      * @param {Float32Array} viewProj
      * @param {Float32Array[]} trailHistory length TRAIL_HISTORY_FRAMES, oldest→newest
+     * @param {number} width
+     * @param {number} height
+     * @param {number} [time]
+     * @param {number} [trailStrength]
+     * @param {number} [trailLengthScale]
      */
-    write(queue, viewProj, trailHistory, width, height, time = 0, trailStrength = 0) {
+    write(
+      queue,
+      viewProj,
+      trailHistory,
+      width,
+      height,
+      time = 0,
+      trailStrength = 0,
+      trailLengthScale = 1
+    ) {
       this.f32.set(viewProj, 0);
       for (let i = 0; i < TRAIL_HISTORY_FRAMES; i++) {
         const m = trailHistory[i] || viewProj;
         this.f32.set(m, 16 + i * 16);
       }
-      this.f32[16 + TRAIL_HISTORY_FRAMES * 16] = width;
-      this.f32[16 + TRAIL_HISTORY_FRAMES * 16 + 1] = height;
-      this.f32[16 + TRAIL_HISTORY_FRAMES * 16 + 2] = time;
-      this.f32[16 + TRAIL_HISTORY_FRAMES * 16 + 3] = trailStrength;
+      const base = 16 + TRAIL_HISTORY_FRAMES * 16;
+      this.f32[base] = width;
+      this.f32[base + 1] = height;
+      this.f32[base + 2] = time;
+      this.f32[base + 3] = trailStrength;
+      this.f32[base + 4] = trailLengthScale;
       queue.writeBuffer(this.buffer, 0, this.data);
     },
   };
@@ -137,11 +158,15 @@ export function createFrameUniforms(device) {
 export const FRAME_WGSL = /* wgsl */ `
 struct Frame {
   viewProj : mat4x4f,
-  /** Oldest → newest previous view-proj (16 frames). Reconstructs each star's screen path. */
-  trailHistory : array<mat4x4f, 16>,
+  /** Oldest → newest previous view-proj. Newest BASE_TRAIL_FRAMES used at scale 1. */
+  trailHistory : array<mat4x4f, 32>,
   resolution : vec2f,
   time : f32,
   trailStrength : f32,
+  trailLengthScale : f32,
+  _pad0 : f32,
+  _pad1 : f32,
+  _pad2 : f32,
 }
 @group(0) @binding(0) var<uniform> frame : Frame;
 `;
@@ -230,9 +255,12 @@ fn fs_main(in : VSOut) -> @location(0) vec4f {
 `;
 
 /**
- * Multi-segment motion ribbon from the last 16 view-proj samples.
+ * Multi-segment motion ribbon from recent view-proj samples.
  * Vertex layout: only instance buffer; corners/segments from vertex_index.
  * draw(6 * TRAIL_SEGMENTS, starCount).
+ *
+ * Trail length scale (0.1–2): uses round(16 * scale) of the newest history
+ * samples (capped at 32), so 1.0 matches the original 16-frame look.
  *
  * Energy scales with path area (length × width) so thin distant-star streaks
  * and long bright ones keep a similar additive budget; head is gapped so the
@@ -241,7 +269,8 @@ fn fs_main(in : VSOut) -> @location(0) vec4f {
 export const STAR_TRAIL_WGSL = /* wgsl */ `
 ${FRAME_WGSL}
 
-const TRAIL_N : u32 = 16u;
+const TRAIL_N : u32 = 32u;
+const TRAIL_BASE : f32 = 16.0;
 
 struct VSOut {
   @builtin(position) position : vec4f,
@@ -271,11 +300,11 @@ fn toOffsetPx(clip : vec4f, clipNow : vec4f) -> vec2f {
 }
 
 fn sampleOffset(i : u32, worldPos : vec3f, clipNow : vec4f) -> vec2f {
-  // i=0 → current (zero offset); i=1..16 → newest past … oldest
+  // i=0 → current (zero offset); i=1..N → newest past … older
   if (i == 0u) {
     return vec2f(0.0, 0.0);
   }
-  // trailHistory: [0]=oldest … [15]=newest past → map i=1 → hist[15], i=16 → hist[0]
+  // trailHistory: [0]=oldest … [31]=newest past → map i=1 → hist[31]
   let histIdx = TRAIL_N - i;
   let clip = frame.trailHistory[histIdx] * vec4f(worldPos, 1.0);
   var off = toOffsetPx(clip, clipNow);
@@ -299,8 +328,10 @@ fn vs_main(
   let corner = cornerFromLocal(local);
 
   let clipNow = frame.viewProj * vec4f(worldPos, 1.0);
+  let lenScale = clamp(frame.trailLengthScale, 0.1, 2.0);
+  let maxSeg = u32(clamp(round(TRAIL_BASE * lenScale), 1.0, f32(TRAIL_N)));
 
-  if (frame.trailStrength < 0.02 || seg >= TRAIL_N) {
+  if (frame.trailStrength < 0.02 || seg >= maxSeg) {
     out.position = vec4f(2.0, 2.0, 0.0, 1.0);
     out.color = color;
     out.bright = 0.0;
@@ -309,10 +340,10 @@ fn vs_main(
     return out;
   }
 
-  var pts : array<vec2f, 17>;
+  var pts : array<vec2f, 33>;
   var totalLen = 0.0;
   pts[0] = sampleOffset(0u, worldPos, clipNow);
-  for (var i = 1u; i <= TRAIL_N; i++) {
+  for (var i = 1u; i <= maxSeg; i++) {
     pts[i] = sampleOffset(i, worldPos, clipNow);
     totalLen += length(pts[i] - pts[i - 1u]);
   }
@@ -343,14 +374,13 @@ fn vs_main(
   let perp = vec2f(-dir.y, dir.x);
 
   let along = corner.x * 0.5 + 0.5; // 0 at newer end of segment, 1 at older
-  let age = (f32(seg) + along) / f32(TRAIL_N);
+  let age = (f32(seg) + along) / f32(maxSeg);
 
   // Match star billboard screen size (catalog size alone ignores distance)
   let dist = max(clipNow.w, 0.05);
   let starPx = clamp(sizeBright.x * 195.0 / dist, 2.0, 90.0);
   let motion = smoothstep(8.0, 140.0, totalLen);
 
-  // TEST: exaggerated width / brightness so trails are obvious while tuning
   let baseHalfW = clamp(starPx * 0.28, 0.8, 4.5) * mix(1.0, 1.35, motion);
   let halfW = baseHalfW * mix(1.0, 0.35, age);
 
@@ -361,7 +391,6 @@ fn vs_main(
     offsetPx = offsetPx + pathDir * headGap * max(0.0, 1.0 - age * 3.0);
   }
 
-  // Still length×width density, but a much larger budget for visibility testing
   let area = max(totalLen * baseHalfW * 2.0, 1.0);
   let dens = 220.0 / area;
   let sizeGate = smoothstep(1.5, 6.0, starPx);

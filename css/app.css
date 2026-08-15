@@ -815,6 +815,27 @@ body.view-fixed #app {
   cursor: pointer;
 }
 
+#hud-trail-length label {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 12px;
+}
+
+#hud-trail-length #trail-length-value {
+  color: var(--text);
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0;
+  text-transform: none;
+  font-family: var(--font-display);
+}
+
+#hud-trail-length input[type="range"] {
+  width: 100%;
+  accent-color: var(--accent-amber);
+  cursor: pointer;
+}
+
 .settings-toggle {
   display: flex;
   align-items: center;

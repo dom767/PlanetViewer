@@ -1,5 +1,5 @@
 import { perspective, multiply4, length3, sub3 } from "../astro/coords.js";
-import { createFrameUniforms, TRAIL_HISTORY_FRAMES } from "./gpu.js";
+import { createFrameUniforms, TRAIL_HISTORY_FRAMES, BASE_TRAIL_FRAMES } from "./gpu.js";
 import { StarPass } from "./StarPass.js";
 import { PlanetPass } from "./PlanetPass.js";
 import { MapPlanetsPass } from "./MapPlanetsPass.js";
@@ -37,11 +37,21 @@ export class Scene {
     this.focusedSystem = null;
     this.showFieldStars = false;
     this.exposure = 1;
+    /** Multiplier on default trail length (0.1–2); 1 = original 16-frame look. */
+    this.trailLengthScale = 1;
   }
 
   setExposure(value) {
     this.exposure = value;
     this.toneMapPass.setExposure(value);
+  }
+
+  /** @param {number} scale */
+  setTrailLengthScale(scale) {
+    const n = Number(scale);
+    this.trailLengthScale = Number.isFinite(n)
+      ? Math.max(0.1, Math.min(2, n))
+      : 1;
   }
 
   /** @param {import('../catalog/Catalog.js').Catalog} catalog */
@@ -137,7 +147,8 @@ export class Scene {
       frame.width,
       frame.height,
       performance.now() * 0.001,
-      trailStrength
+      trailStrength,
+      this.trailLengthScale
     );
 
     this.toneMapPass.setHdrView(hdrView);
@@ -209,7 +220,8 @@ export class Scene {
   /** @param {{cameraPos: {x:number,y:number,z:number}}} frame */
   _updateTrailStrength(frame) {
     const pos = frame.cameraPos;
-    let ok = this._viewHistory.length >= this._trailHistoryFrames;
+    // Enough history for the default trail; longer scales fill in as the ring grows.
+    let ok = this._viewHistory.length >= BASE_TRAIL_FRAMES;
     if (this._lastCamPos) {
       const jump = length3(sub3(pos, this._lastCamPos));
       if (jump > 120) {

@@ -60,9 +60,13 @@ async function main() {
     simClock: document.getElementById("hud-sim-clock"),
     exposure: document.getElementById("exposure"),
     exposureValue: document.getElementById("exposure-value"),
+    trailLength: document.getElementById("trail-length"),
+    trailLengthValue: document.getElementById("trail-length-value"),
   });
   hud.onExposureChange = (v) => scene.setExposure(v);
   scene.setExposure(hud.exposure);
+  hud.onTrailLengthChange = (v) => scene.setTrailLengthScale(v);
+  scene.setTrailLengthScale(hud.trailLengthScale);
 
   function goNextNotable() {
     const next = catalog.nextNotable(focused);

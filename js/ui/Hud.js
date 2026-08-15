@@ -11,12 +11,17 @@ export class Hud {
     this.simClock = els.simClock;
     this.exposureInput = els.exposure;
     this.exposureValue = els.exposureValue;
+    this.trailLengthInput = els.trailLength;
+    this.trailLengthValue = els.trailLengthValue;
     /** Days since J2000.0 — Sol planets use this as ephemeris time. */
     this.simDays = daysSinceJ2000(new Date());
     this.speed = Number(this.timeSpeed.value);
     this.exposure = Number(this.exposureInput?.value ?? 1);
+    this.trailLengthScale = Number(this.trailLengthInput?.value ?? 1);
     /** @type {((v: number) => void) | null} */
     this.onExposureChange = null;
+    /** @type {((v: number) => void) | null} */
+    this.onTrailLengthChange = null;
     /** @type {(() => void) | null} */
     this.onNextNotable = null;
 
@@ -38,6 +43,16 @@ export class Hud {
     };
     this.exposureInput?.addEventListener("input", syncExposure);
     syncExposure();
+
+    const syncTrailLength = () => {
+      this.trailLengthScale = Number(this.trailLengthInput.value);
+      if (this.trailLengthValue) {
+        this.trailLengthValue.textContent = `${this.trailLengthScale.toFixed(2)}×`;
+      }
+      this.onTrailLengthChange?.(this.trailLengthScale);
+    };
+    this.trailLengthInput?.addEventListener("input", syncTrailLength);
+    syncTrailLength();
   }
 
   /**
