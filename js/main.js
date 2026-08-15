@@ -62,11 +62,15 @@ async function main() {
     exposureValue: document.getElementById("exposure-value"),
     trailLength: document.getElementById("trail-length"),
     trailLengthValue: document.getElementById("trail-length-value"),
+    cameraSpeed: document.getElementById("camera-speed"),
+    cameraSpeedValue: document.getElementById("camera-speed-value"),
   });
   hud.onExposureChange = (v) => scene.setExposure(v);
   scene.setExposure(hud.exposure);
   hud.onTrailLengthChange = (v) => scene.setTrailLengthScale(v);
   scene.setTrailLengthScale(hud.trailLengthScale);
+  hud.onCameraSpeedChange = (v) => camera.setPathSpeed(v);
+  camera.setPathSpeed(hud.cameraSpeed);
 
   function goNextNotable() {
     const next = catalog.nextNotable(focused);

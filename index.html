@@ -94,6 +94,18 @@
             title="Star motion trail length relative to the default"
           />
         </div>
+        <div id="hud-camera-speed" class="settings-group">
+          <label for="camera-speed">Camera speed <span id="camera-speed-value">1.00×</span></label>
+          <input
+            type="range"
+            id="camera-speed"
+            min="0.5"
+            max="2"
+            step="0.05"
+            value="1"
+            title="Speed of automated travel and orbit (WASD unchanged)"
+          />
+        </div>
         <label id="toggle-field-stars-wrap" class="settings-toggle" title="Gaia stars within 30 pc of Sol that have no known exoplanets">
           <input type="checkbox" id="toggle-field-stars" checked />
           <span>Nearby stars (≤30 pc)</span>

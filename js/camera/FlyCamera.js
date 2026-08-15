@@ -120,6 +120,8 @@ export class FlyCamera {
     this.autoOrbitResumeDelay = 5.5;
     this._reattachCooldown = 0;
     this.autoOrbitSpeed = (Math.PI * 2) / 90;
+    /** Multiplier on automated travel/orbit pathing (0.5–2); free-flight WASD unchanged. */
+    this.pathSpeed = 1;
 
     this._anchorStar = null;
 
@@ -829,8 +831,18 @@ export class FlyCamera {
     this._syncYawPitchFromDir(this._fwd);
   }
 
+  /**
+   * Scale automated hop / orbit timing without changing the path shape.
+   * @param {number} scale
+   */
+  setPathSpeed(scale) {
+    const n = Number(scale);
+    this.pathSpeed = Number.isFinite(n) ? Math.max(0.5, Math.min(2, n)) : 1;
+  }
+
   update(dt) {
     const dtClamped = Math.min(dt, 0.05);
+    const pathDt = dtClamped * this.pathSpeed;
 
     let speed = this.moveSpeed;
     if (this._keys.has("ShiftLeft")) speed *= 3;
@@ -856,7 +868,7 @@ export class FlyCamera {
     }
 
     if (this._flightMode === "travel" && this._travel && this._slot) {
-      this._updateTravel(dtClamped);
+      this._updateTravel(pathDt);
       return;
     }
 
@@ -867,7 +879,7 @@ export class FlyCamera {
     }
 
     if (this._flightMode === "orbit" && this._reattachCooldown <= 0) {
-      this._updateOrbit(dtClamped);
+      this._updateOrbit(pathDt);
       return;
     }
 

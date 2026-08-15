@@ -13,15 +13,20 @@ export class Hud {
     this.exposureValue = els.exposureValue;
     this.trailLengthInput = els.trailLength;
     this.trailLengthValue = els.trailLengthValue;
+    this.cameraSpeedInput = els.cameraSpeed;
+    this.cameraSpeedValue = els.cameraSpeedValue;
     /** Days since J2000.0 — Sol planets use this as ephemeris time. */
     this.simDays = daysSinceJ2000(new Date());
     this.speed = Number(this.timeSpeed.value);
     this.exposure = Number(this.exposureInput?.value ?? 1);
     this.trailLengthScale = Number(this.trailLengthInput?.value ?? 1);
+    this.cameraSpeed = Number(this.cameraSpeedInput?.value ?? 1);
     /** @type {((v: number) => void) | null} */
     this.onExposureChange = null;
     /** @type {((v: number) => void) | null} */
     this.onTrailLengthChange = null;
+    /** @type {((v: number) => void) | null} */
+    this.onCameraSpeedChange = null;
     /** @type {(() => void) | null} */
     this.onNextNotable = null;
 
@@ -53,6 +58,16 @@ export class Hud {
     };
     this.trailLengthInput?.addEventListener("input", syncTrailLength);
     syncTrailLength();
+
+    const syncCameraSpeed = () => {
+      this.cameraSpeed = Number(this.cameraSpeedInput.value);
+      if (this.cameraSpeedValue) {
+        this.cameraSpeedValue.textContent = `${this.cameraSpeed.toFixed(2)}×`;
+      }
+      this.onCameraSpeedChange?.(this.cameraSpeed);
+    };
+    this.cameraSpeedInput?.addEventListener("input", syncCameraSpeed);
+    syncCameraSpeed();
   }
 
   /**

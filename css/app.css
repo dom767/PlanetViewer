@@ -836,6 +836,27 @@ body.view-fixed #app {
   cursor: pointer;
 }
 
+#hud-camera-speed label {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 12px;
+}
+
+#hud-camera-speed #camera-speed-value {
+  color: var(--text);
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0;
+  text-transform: none;
+  font-family: var(--font-display);
+}
+
+#hud-camera-speed input[type="range"] {
+  width: 100%;
+  accent-color: var(--accent-amber);
+  cursor: pointer;
+}
+
 .settings-toggle {
   display: flex;
   align-items: center;
