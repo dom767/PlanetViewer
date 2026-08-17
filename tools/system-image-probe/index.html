@@ -64,7 +64,6 @@
       line-height: 1;
     }
     button.icon:hover:not(:disabled) { color: var(--accent); }
-    button.select-btn.selected { color: var(--gold); }
     .stats {
       display: flex;
       flex-wrap: wrap;
@@ -111,28 +110,59 @@
       white-space: normal;
       min-width: 88px;
     }
-    .source-cell.selected {
-      background: rgba(212, 167, 44, 0.12);
-      outline: 1px solid rgba(212, 167, 44, 0.35);
-      outline-offset: -1px;
+    .preview-cell {
+      min-width: 72px;
     }
-    .source-cell-inner {
-      display: inline-flex;
+    .preview-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      align-items: flex-start;
+    }
+    .preview-item {
+      display: flex;
       flex-direction: column;
       align-items: center;
-      gap: 2px;
+      gap: 3px;
+      padding: 0;
+      border: none;
+      background: none;
+      cursor: pointer;
+      border-radius: 6px;
     }
-    .tick-link {
-      color: var(--green);
-      text-decoration: none;
-      font-size: 16px;
-      line-height: 1;
-      padding: 0 2px;
+    .preview-item:disabled {
+      cursor: default;
+      opacity: 0.7;
     }
-    .tick-link:hover { color: #56d364; }
-    .tick.no { color: var(--muted); font-size: 16px; }
+    .preview-item .preview {
+      display: block;
+    }
+    .preview-item.selected .preview {
+      outline: 2px solid var(--gold);
+      outline-offset: 1px;
+      box-shadow: 0 0 0 1px rgba(212, 167, 44, 0.35);
+    }
+    .preview-item:not(.selected):hover .preview {
+      border-color: var(--accent);
+    }
+    .preview-label {
+      font-size: 10px;
+      color: var(--muted);
+      max-width: 64px;
+      line-height: 1.2;
+      text-align: center;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+    .preview-item.selected .preview-label {
+      color: var(--gold);
+      font-weight: 600;
+    }
     .selected-source { font-size: 12px; color: var(--muted); }
     .selected-source strong { color: var(--gold); font-weight: 600; }
+    .attr-ok { color: var(--green); font-size: 16px; line-height: 1; }
+    .attr-no { color: var(--muted); font-size: 16px; }
     .preview {
       width: 64px;
       height: 64px;
@@ -145,7 +175,6 @@
       display: inline-block;
       line-height: 0;
     }
-    .preview-link:hover .preview { border-color: var(--accent); }
     .placeholder {
       width: 64px;
       height: 64px;
@@ -215,7 +244,6 @@
       line-height: 1;
     }
     .lightbox-close:hover { background: var(--border); }
-    .view-image { cursor: zoom-in; }
     .status-overlay {
       position: fixed;
       inset: 0;
@@ -348,7 +376,7 @@
     <p style="margin:0;color:var(--muted);font-size:13px;">
       Five sources per directly imaged host — ESO, Commons, NASA, Wikipedia list, OEC.
     </p>
-    <p class="hint">✓ or preview thumb opens the 300×300 image here. ★ picks the image used in the app (<code>data/system-images.json</code>).</p>
+    <p class="hint">Click a preview to choose the app image. Double-click a preview to view it at 300×300.</p>
     <div class="controls">
       <button id="checkAll" type="button">Check all</button>
       <button id="checkMissing" type="button">Check missing</button>
@@ -446,12 +474,6 @@
     document.addEventListener("click", (e) => {
       if (e.target.closest("[data-close]")) {
         closeLightbox();
-        return;
-      }
-      const link = e.target.closest(".view-image");
-      if (link) {
-        e.preventDefault();
-        openLightbox(link.getAttribute("href"), link.dataset.caption || link.title || "");
       }
     });
 
@@ -491,36 +513,60 @@
       return parts.join(" · ");
     }
 
-    function sourceCellHtml(name, sourceKey, cell, selectedSource, probing) {
+    function sourceCellHtml(name, sourceKey, cell, probing) {
       const isActive = probing && state.progress?.sourceKey === sourceKey &&
         (state.progress?.phase === "source" || state.progress?.phase === "assets");
       const live = state.probing ? state.progress?.liveSources?.[sourceKey] : null;
       const status = resolveCellStatus(live || cell, isActive);
       const meta = statusMeta(status);
       const statusHtml = `<span class="source-status ${status}">${esc(meta.label)}</span>`;
+      return `<td class="source-cell" title="${esc(tooltipCell(cell || live))}">${statusHtml}</td>`;
+    }
 
-      if (status !== "successful" || !cell?.ok) {
-        return `<td class="source-cell" title="${esc(tooltipCell(cell || live))}">${statusHtml}</td>`;
+    function previewColumnHtml(name, sources, keys, selectedSource, probing) {
+      const hits = keys
+        .map((key) => ({ key, cell: sources[key] }))
+        .filter(({ cell }) => cell?.ok && cell?.thumb);
+
+      if (!hits.length) {
+        return `<td class="preview-cell"><div class="placeholder">—</div></td>`;
       }
-      const selected = selectedSource === sourceKey;
-      const preview = cell.preview ? `/${cell.preview}` : null;
-      const view = preview
-        ? `<a class="tick-link view-image" href="${preview}" data-caption="${esc(tooltipCell(cell))}" title="View 300×300 image">✓</a>`
-        : `<span class="tick-link" title="Preview unavailable">✓</span>`;
-      const starTitle = selected ? "Selected for app" : "Use this image in the app";
-      return `
-        <td class="source-cell${selected ? " selected" : ""}" title="${esc(tooltipCell(cell))}">
-          <span class="source-cell-inner">
-            ${statusHtml}
-            ${view}
-            <button type="button" class="icon select-btn${selected ? " selected" : ""}"
-              data-name="${encodeURIComponent(name)}"
-              data-source="${sourceKey}"
-              title="${esc(starTitle)}"
-              ${probing ? "disabled" : ""}>★</button>
-          </span>
-        </td>
-      `;
+
+      const items = hits.map(({ key, cell }) => {
+        const selected = key === selectedSource;
+        const label = SOURCE_LABELS[key] || key;
+        const caption = `${name} · ${label} · ${tooltipCell(cell)}`;
+        const previewPath = cell.preview ? `/${cell.preview}` : "";
+        return `
+          <button type="button" class="preview-item${selected ? " selected" : ""}"
+            data-name="${encodeURIComponent(name)}"
+            data-source="${key}"
+            data-preview="${esc(previewPath)}"
+            data-caption="${esc(caption)}"
+            title="${esc(selected ? `${label} · selected for app` : `Select ${label} for the app`)}"
+            ${probing ? "disabled" : ""}>
+            <img class="preview" src="/${cell.thumb}" alt="${esc(label)}" width="64" height="64" />
+            <span class="preview-label">${esc(label)}</span>
+          </button>
+        `;
+      }).join("");
+
+      return `<td class="preview-cell"><div class="preview-row">${items}</div></td>`;
+    }
+
+    async function selectPreviewSource(hostName, source) {
+      const res = await fetch(`/api/select/${encodeURIComponent(hostName)}`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ source }),
+      });
+      if (!res.ok) {
+        const err = await res.json();
+        alert(err.error || "Selection failed");
+        return false;
+      }
+      await refresh();
+      return true;
     }
 
     function sortHosts(hosts) {
@@ -669,13 +715,6 @@
         const attrTip = selectedCell
           ? `${selectedCell.credit || ""} · ${selectedCell.license || ""}`
           : "No selection";
-        const thumb = row.thumb;
-        const previewPath = row.preview;
-        const preview = thumb
-          ? previewPath
-            ? `<a class="preview-link view-image" href="/${previewPath}" data-caption="${esc(name)}${selectedSource ? " · " + esc(SOURCE_LABELS[selectedSource] || selectedSource) : ""}" title="View selected 300×300 image"><img class="preview" src="/${thumb}" alt="" width="64" height="64" /></a>`
-            : `<img class="preview" src="/${thumb}" alt="" width="64" height="64" />`
-          : `<div class="placeholder">—</div>`;
         const selectedLabel = selectedSource
           ? `<span class="selected-source"><strong>${SOURCE_LABELS[selectedSource] || selectedSource}</strong></span>`
           : `<span class="selected-source">—</span>`;
@@ -685,10 +724,10 @@
               <button type="button" class="icon rerun-btn" title="Rerun probe" ${probing ? "disabled" : ""}>↻</button>
             </td>
             <td class="host" title="${esc([name, row.checkedAt ? `Checked ${new Date(row.checkedAt).toLocaleString()}` : "", row.probeServerVersion ? `Probe server v${row.probeServerVersion}` : ""].filter(Boolean).join(" · "))}">${esc(name)}</td>
-            ${keys.map((k) => sourceCellHtml(name, k, sources[k], selectedSource, probing)).join("")}
-            <td title="${esc(attrTip)}">${row.attributionOk ? '<span class="tick-link" style="cursor:default">✓</span>' : '<span class="tick no">✗</span>'}</td>
+            ${keys.map((k) => sourceCellHtml(name, k, sources[k], probing)).join("")}
+            <td title="${esc(attrTip)}">${row.attributionOk ? '<span class="attr-ok">✓</span>' : '<span class="attr-no">✗</span>'}</td>
             <td>${selectedLabel}</td>
-            <td>${preview}</td>
+            ${previewColumnHtml(name, sources, keys, selectedSource, probing)}
           </tr>
         `;
       }).join("");
@@ -712,27 +751,23 @@
         });
       });
 
-      document.querySelectorAll(".select-btn").forEach((el) => {
+      document.querySelectorAll(".preview-item").forEach((el) => {
         el.addEventListener("click", async (e) => {
-          const hostName = decodeURIComponent(e.target.dataset.name);
-          const source = e.target.dataset.source;
-          e.target.disabled = true;
+          if (el.disabled || el.classList.contains("selected")) return;
+          el.disabled = true;
           try {
-            const res = await fetch(`/api/select/${encodeURIComponent(hostName)}`, {
-              method: "POST",
-              headers: { "Content-Type": "application/json" },
-              body: JSON.stringify({ source }),
-            });
-            if (!res.ok) {
-              const err = await res.json();
-              alert(err.error || "Selection failed");
-            } else {
-              await refresh();
-            }
+            const hostName = decodeURIComponent(el.dataset.name);
+            await selectPreviewSource(hostName, el.dataset.source);
           } catch (err) {
             console.error(err);
           }
-          e.target.disabled = false;
+          el.disabled = false;
+        });
+        el.addEventListener("dblclick", (e) => {
+          e.preventDefault();
+          const preview = el.dataset.preview;
+          if (!preview) return;
+          openLightbox(preview, el.dataset.caption || "");
         });
       });
     }
