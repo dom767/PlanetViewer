@@ -77,7 +77,7 @@
     main { padding: 0 12px 24px; }
     .table-wrap {
       overflow: auto;
-      max-height: calc(100vh - 360px);
+      max-height: calc(100vh - 160px);
       border: 1px solid var(--border);
       border-radius: 8px;
       margin-top: 12px;
@@ -214,14 +214,33 @@
     }
     .lightbox-close:hover { background: var(--border); }
     .view-image { cursor: zoom-in; }
+    .status-overlay {
+      position: fixed;
+      inset: 0;
+      z-index: 90;
+      display: none;
+      align-items: center;
+      justify-content: center;
+      padding: 24px;
+    }
+    .status-overlay.open { display: flex; }
+    .status-overlay-backdrop {
+      position: absolute;
+      inset: 0;
+      background: rgba(1, 4, 9, 0.72);
+    }
     .status-panel {
-      margin: 12px 12px 0;
-      padding: 14px 16px;
+      position: relative;
+      width: min(640px, calc(100vw - 48px));
+      max-height: calc(100vh - 48px);
+      display: flex;
+      flex-direction: column;
+      padding: 16px 18px;
       background: var(--surface);
       border: 1px solid var(--border);
-      border-radius: 8px;
+      border-radius: 10px;
+      box-shadow: 0 16px 48px rgba(0, 0, 0, 0.45);
     }
-    .status-panel[hidden] { display: none !important; }
     .status-panel h2 {
       margin: 0 0 10px;
       font-size: 14px;
@@ -278,8 +297,10 @@
       border: 1px solid var(--border);
       border-radius: 6px;
       background: var(--bg);
-      max-height: 180px;
+      max-height: min(280px, 40vh);
       overflow: auto;
+      flex: 1 1 auto;
+      min-height: 120px;
     }
     .status-log {
       margin: 0;
@@ -298,6 +319,16 @@
     .status-log .ok { color: var(--green); }
     .status-log .fail { color: var(--muted); }
     .status-log .info { color: var(--accent); }
+    .status-footer {
+      margin-top: 14px;
+      padding-top: 12px;
+      border-top: 1px solid var(--border);
+      display: flex;
+      justify-content: flex-end;
+    }
+    .status-close {
+      min-width: 96px;
+    }
   </style>
 </head>
 <body>
@@ -315,14 +346,6 @@
     <div class="stats" id="stats"></div>
   </header>
   <main>
-    <section id="statusPanel" class="status-panel" hidden>
-      <h2>Live probe status</h2>
-      <div class="status-summary" id="statusSummary"></div>
-      <div class="status-sources" id="statusSources"></div>
-      <div class="status-log-wrap">
-        <ul class="status-log" id="statusLog"></ul>
-      </div>
-    </section>
     <div class="table-wrap">
       <table>
         <thead id="thead"></thead>
@@ -330,6 +353,20 @@
       </table>
     </div>
   </main>
+  <div id="statusOverlay" class="status-overlay" aria-hidden="true">
+    <div class="status-overlay-backdrop"></div>
+    <section class="status-panel" aria-labelledby="statusTitle">
+      <h2 id="statusTitle">Live probe status</h2>
+      <div class="status-summary" id="statusSummary"></div>
+      <div class="status-sources" id="statusSources"></div>
+      <div class="status-log-wrap">
+        <ul class="status-log" id="statusLog"></ul>
+      </div>
+      <div class="status-footer">
+        <button id="statusClose" type="button" class="status-close" disabled>Close</button>
+      </div>
+    </section>
+  </div>
   <div id="lightbox" class="lightbox" aria-hidden="true">
     <div class="lightbox-backdrop" data-close></div>
     <figure class="lightbox-frame">
@@ -350,6 +387,25 @@
 
     let state = { hosts: [], results: { hosts: {} }, sourceKeys: [], probing: false };
     let pollTimer = null;
+    let statusOverlayOpen = false;
+
+    function openStatusOverlay() {
+      statusOverlayOpen = true;
+      const overlay = document.getElementById("statusOverlay");
+      overlay.classList.add("open");
+      overlay.setAttribute("aria-hidden", "false");
+    }
+
+    function closeStatusOverlay() {
+      statusOverlayOpen = false;
+      const overlay = document.getElementById("statusOverlay");
+      overlay.classList.remove("open");
+      overlay.setAttribute("aria-hidden", "true");
+    }
+
+    document.getElementById("statusClose").addEventListener("click", () => {
+      if (!state.probing) closeStatusOverlay();
+    });
 
     const lightbox = document.getElementById("lightbox");
     const lightboxImg = document.getElementById("lightboxImg");
@@ -457,10 +513,16 @@
     }
 
     function renderStatusPanel(probing, progress, sourceKeys) {
-      const panel = document.getElementById("statusPanel");
-      const show = probing || (progress?.log?.length > 0);
-      panel.hidden = !show;
-      if (!show) return;
+      if (probing && !statusOverlayOpen) openStatusOverlay();
+      const overlay = document.getElementById("statusOverlay");
+      if (!statusOverlayOpen) {
+        overlay.classList.remove("open");
+        overlay.setAttribute("aria-hidden", "true");
+        return;
+      }
+
+      const closeBtn = document.getElementById("statusClose");
+      closeBtn.disabled = probing;
 
       const keys = sourceKeys.length ? sourceKeys : Object.keys(SOURCE_LABELS);
       const hostPart = progress.hostTotal > 1
@@ -603,6 +665,7 @@
           const hostName = decodeURIComponent(tr.dataset.name);
           e.target.disabled = true;
           try {
+            openStatusOverlay();
             state.probing = true;
             render();
             startPolling();
@@ -643,6 +706,7 @@
     async function refresh() {
       const res = await fetch("/api/state");
       state = await res.json();
+      if (state.probing && !statusOverlayOpen) openStatusOverlay();
       render();
     }
 
@@ -665,6 +729,7 @@
         return;
       }
       state.probing = true;
+      openStatusOverlay();
       render();
       startPolling();
       await refresh();
