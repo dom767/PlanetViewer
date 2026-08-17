@@ -99,7 +99,7 @@ function renderSystem(s) {
     .join("");
 
   return `
-    <h2>${escapeHtml(s.name)}</h2>
+    <h2>${escapeHtml(s.label ?? s.name)}</h2>
     <div class="subtitle">${subtitle}</div>
     ${photo}
     <dl>

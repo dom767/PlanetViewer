@@ -78,7 +78,7 @@ export class SystemSearch {
     matches.sort(
       (a, b) =>
         (a.system.distPc ?? Infinity) - (b.system.distPc ?? Infinity) ||
-        a.system.name.localeCompare(b.system.name)
+        (a.system.label ?? a.system.name).localeCompare(b.system.label ?? b.system.name)
     );
     this.renderResults(matches.slice(0, 12));
   }
@@ -100,7 +100,7 @@ export class SystemSearch {
       btn.type = "button";
       btn.className = "system-search-item";
       if (i === 0) btn.classList.add("active");
-      btn.textContent = system.name;
+      btn.textContent = system.label ?? system.name;
       btn.addEventListener("click", (e) => {
         e.stopPropagation();
         this.onSelect(system);

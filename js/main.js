@@ -3,13 +3,14 @@ import { Scene } from "./render/Scene.js";
 import { FlyCamera } from "./camera/FlyCamera.js";
 import { Catalog } from "./catalog/Catalog.js";
 import { buildFieldStars, FIELD_STAR_RADIUS_PC } from "./catalog/FieldStars.js";
-import { loadExoplanetCatalog, loadNearbyStars } from "./data/loader.js";
+import { loadExoplanetCatalog, loadNearbyStars, loadSystemImages } from "./data/loader.js";
 import { InfoPanel } from "./ui/InfoPanel.js";
 import { Minimap } from "./ui/Minimap.js";
 import { Hud } from "./ui/Hud.js";
 import { SystemSearch } from "./ui/SystemSearch.js";
 import { AppChrome } from "./ui/AppChrome.js";
 import { CanvasSizeSettings } from "./ui/CanvasSizeSettings.js";
+import { setSystemImages } from "./content/systemImages.js";
 import { FOCUS_ORBIT_RADIUS_PC } from "./render/PlanetPass.js";
 import { length3, projectToNdc, ndcToScreen } from "./astro/coords.js";
 
@@ -168,7 +169,7 @@ async function main() {
     const gap = ringBuf / scaleX * 0.55 + 10;
     const placeLeft = cssX + gap + 160 > rect.width;
 
-    hoverLabel.textContent = hit.name;
+    hoverLabel.textContent = hit.label ?? hit.name;
     hoverLabel.classList.toggle("is-left", placeLeft);
     hoverLabel.style.left = `${placeLeft ? cssX - gap : cssX + gap}px`;
     hoverLabel.style.top = `${cssY}px`;
@@ -183,7 +184,7 @@ async function main() {
       : Math.max(FOCUS_ORBIT_RADIUS_PC * 2.2, 1.5);
     camera.focusOn(system, focusDist, fromStar);
     scene.setFocusedSystem(system, camera.getOrbitBasis());
-    hud.setSelection(system.name, system.distPc, true, system.note?.text);
+    hud.setSelection(system.label ?? system.name, system.distPc, true, system.note?.text);
 
     // On mobile, map taps focus only; Info opens via the nav tab (or when
     // already open, refresh contents for the newly focused system).
@@ -199,6 +200,8 @@ async function main() {
     loading.textContent = "Loading catalog…";
     const raw = await loadExoplanetCatalog();
     catalog.load(raw);
+    const imageMap = await loadSystemImages();
+    setSystemImages(imageMap);
     const starCount = catalog.systems.filter((s) => (s.planets?.length ?? 0) > 0).length;
     const planetCount = catalog.systems.reduce((n, s) => n + (s.planets?.length || 0), 0);
     document.getElementById("stat-stars").textContent = starCount.toLocaleString();
@@ -212,7 +215,7 @@ async function main() {
     systemSearchIndex = catalog.systems
       .filter((s) => s.isSol || (s.planets?.length ?? 0) > 0 || s.notable)
       .flatMap((s) => {
-        const names = [s.name, ...(s.aliases || [])];
+        const names = [s.name, s.label, ...(s.aliases || [])].filter(Boolean);
         return names.map((name) => ({ system: s, normName: normalizeName(name) }));
       });
 

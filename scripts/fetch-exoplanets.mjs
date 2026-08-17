@@ -7,6 +7,7 @@
 import { writeFile, mkdir } from "node:fs/promises";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
+import { pressLabel } from "./star-label.mjs";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const OUT = join(__dirname, "..", "data", "exoplanets.json");
@@ -87,6 +88,7 @@ for (const row of rows) {
   if (!system) {
     system = {
       name,
+      label: pressLabel(name),
       ra,
       dec,
       distPc,
@@ -136,6 +138,8 @@ for (const row of rows) {
 }
 
 const systems = [...byHost.values()].sort((a, b) => a.distPc - b.distPc);
+const relabeled = systems.filter((s) => s.label !== s.name).length;
+console.log(`${relabeled} of ${systems.length} hosts have press labels distinct from hostname`);
 const payload = {
   source: "NASA Exoplanet Archive PSCompPars",
   fetchedAt: new Date().toISOString(),

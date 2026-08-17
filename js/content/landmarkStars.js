@@ -4,6 +4,7 @@
  *
  * @typedef {{
  *   name: string,
+ *   label: string,
  *   aliases: string[],
  *   ra: number,
  *   dec: number,
@@ -24,6 +25,7 @@
 export const LANDMARK_STARS = [
   {
     name: "40 Eri A",
+    label: "40 Eridani A",
     aliases: [
       "40 Eridani",
       "40 Eri",
@@ -49,6 +51,7 @@ export const LANDMARK_STARS = [
   },
   {
     name: "zet 2 Ret",
+    label: "Zeta 2 Reticuli",
     aliases: [
       "zet02 Ret",
       "Zeta 2 Reticuli",

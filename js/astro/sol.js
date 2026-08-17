@@ -153,6 +153,7 @@ export function createSolSystem() {
   return {
     id: -1,
     name: "Sol",
+    label: "Sol",
     isSol: true,
     ra: 0,
     dec: 0,

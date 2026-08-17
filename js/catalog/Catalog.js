@@ -127,6 +127,7 @@ function ingestRawSystem(catalog, raw) {
   const system = {
     id: catalog.systems.length,
     name: raw.name || "Unknown",
+    label: raw.label ?? raw.name ?? "Unknown",
     ra: raw.ra,
     dec: raw.dec,
     distPc: raw.distPc,
@@ -249,6 +250,7 @@ function warnUnmatchedStarNotes(byName) {
  * @typedef {object} SystemRecord
  * @property {number} id
  * @property {string} name
+ * @property {string} label
  * @property {number} x
  * @property {number} y
  * @property {number} z
