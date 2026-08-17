@@ -21,7 +21,7 @@ Then open http://localhost:8765/
 
 ## What it does
 
-For each imaging host (~82 systems), the dashboard probes independently:
+Search uses the **host name**, **press aliases**, and **planet names** (e.g. `KOINTREAU-1 b` for host `XEST 17-036`).
 
 | Column | Source |
 |--------|--------|

@@ -150,12 +150,29 @@ export function matchHostToStar(host, star) {
   return false;
 }
 
-export function searchTerms(name) {
+export function searchTerms(name, planetNames = []) {
   const extra = SEARCH_ALIASES[name] || [];
   const terms = [name, ...extra];
   const stripped = String(name).replace(/\s+(A|B|AB|C)$/i, "").trim();
   if (stripped !== name && stripped.length >= 4) terms.push(stripped);
-  return [...new Set(terms)];
+  for (const planet of planetNames) {
+    if (!planet) continue;
+    terms.push(String(planet).trim());
+    // KOINTREAU-1 b → KOINTREAU-1b (Commons filenames often omit the space)
+    const compact = String(planet).replace(/\s+(?=[a-z]\b)/i, "").trim();
+    if (compact !== planet) terms.push(compact);
+    // Drop trailing planet letter for survey-style names: KOINTREAU-1 b → KOINTREAU-1
+    const stem = String(planet).replace(/\s+[a-z]\b$/i, "").trim();
+    if (stem !== planet && stem.length >= 4) terms.push(stem);
+  }
+  return [...new Set(terms.filter((t) => String(t).trim().length >= 3))];
+}
+
+function matchPlanetToFile(planetOrAlias, file) {
+  const p = norm(planetOrAlias);
+  const f = norm(String(file).replace(/^File:/i, "").replace(/\.[^.]+$/, ""));
+  if (!p || !f || p.length < 4) return false;
+  return f.includes(p) || p.includes(f);
 }
 
 function newsQueries(terms) {
@@ -453,7 +470,8 @@ export async function probeCommons(name, aliases, { delay = DELAY_MS } = {}) {
       if (!/\.(jpe?g|png)$/i.test(fileTitle)) continue;
       const preview = `${fileTitle} ${hit.snippet || ""}`;
       if (REJECT_RE.test(preview)) continue;
-      if (!INSTITUTION_RE.test(preview) && !PREFER_RE.test(preview)) continue;
+      const titleMatch = mentionsHostInFields([fileTitle], name, aliases);
+      if (!titleMatch && !INSTITUTION_RE.test(preview) && !PREFER_RE.test(preview)) continue;
       if (delay) await sleep(delay);
       let info;
       try {
@@ -472,8 +490,9 @@ export async function probeCommons(name, aliases, { delay = DELAY_MS } = {}) {
       const artist = stripHtml(meta.Artist?.value || meta.Credit?.value || "");
       const blob = `${fileTitle} ${hit.snippet || ""} ${desc} ${artist}`;
       if (!mentionsHostInFields([fileTitle, hit.snippet || "", desc], name, aliases)) continue;
-      if (!INSTITUTION_RE.test(blob) && !PREFER_RE.test(blob)) continue;
-      const sc = scoreTitle(fileTitle, `${hit.snippet || ""} ${desc}`);
+      if (!titleMatch && !INSTITUTION_RE.test(blob) && !PREFER_RE.test(blob)) continue;
+      let sc = scoreTitle(fileTitle, `${hit.snippet || ""} ${desc}`);
+      if (titleMatch) sc = Math.max(sc, MIN_SCORE + 1);
       if (sc < MIN_SCORE) continue;
       const downloadUrl = info.thumburl || info.url;
       if (!downloadUrl) continue;
@@ -554,9 +573,14 @@ export async function loadWikiTable(cachePath) {
   return rows;
 }
 
-export async function probeWikiList(name, aliases, wikiTable, { delay = DELAY_MS } = {}) {
+export async function probeWikiList(name, aliases, wikiTable, { delay = DELAY_MS, planetNames = [] } = {}) {
   if (!wikiTable?.length) return null;
-  const row = wikiTable.find((r) => matchHostToStar(name, r.star));
+  const row = wikiTable.find(
+    (r) =>
+      matchHostToStar(name, r.star) ||
+      planetNames.some((p) => matchPlanetToFile(p, r.file)) ||
+      aliases.some((a) => matchPlanetToFile(a, r.file))
+  );
   if (!row) return null;
   const fileTitle = row.file.startsWith("File:") ? row.file : `File:${row.file}`;
   if (REJECT_RE.test(fileTitle)) return null;
@@ -697,8 +721,9 @@ export async function probeHost(name, options = {}) {
     wikiTable = null,
     wikiCachePath = null,
     onProgress = null,
+    planetNames = [],
   } = options;
-  const aliases = searchTerms(name);
+  const aliases = searchTerms(name, planetNames);
   let table = wikiTable;
   if (sources.includes("wikiList") && !table) {
     onProgress?.({ phase: "wiki-table", name, status: "loading" });
@@ -718,7 +743,7 @@ export async function probeHost(name, options = {}) {
     let hit = null;
     try {
       if (key === "wikiList") {
-        hit = await probeWikiList(name, aliases, table, { delay });
+        hit = await probeWikiList(name, aliases, table, { delay, planetNames });
       } else if (PROBE_FNS[key]) {
         hit = await PROBE_FNS[key](name, aliases, { delay });
       }
@@ -740,16 +765,23 @@ export async function probeHost(name, options = {}) {
   return out;
 }
 
-export function imagingHosts(catalog) {
+export function imagingHostEntries(catalog) {
   const systems = Array.isArray(catalog) ? catalog : catalog.systems || [];
-  const names = [];
+  const entries = [];
   for (const s of systems) {
     if (!(s.planets || []).some((p) => /imaging/i.test(p.discoveryMethod || ""))) {
       continue;
     }
-    names.push(s.name);
+    entries.push({
+      name: s.name,
+      planetNames: (s.planets || []).map((p) => p.name).filter(Boolean),
+    });
   }
-  return names;
+  return entries;
+}
+
+export function imagingHosts(catalog) {
+  return imagingHostEntries(catalog).map((e) => e.name);
 }
 
 export function sourceResultToCell(hit) {

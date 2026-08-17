@@ -34,6 +34,7 @@ import {
   searchTerms,
   slugFromName,
   imagingHosts,
+  imagingHostEntries,
   fetchBuffer,
 } from "./system-image-sources.mjs";
 
@@ -84,11 +85,11 @@ async function fileExists(path) {
 
 async function main() {
   const raw = JSON.parse(await readFile(CATALOG, "utf8"));
-  let hosts = imagingHosts(raw);
-  if (only) hosts = hosts.filter((n) => n === only);
-  hosts = hosts.slice(0, Number.isFinite(limit) ? limit : hosts.length);
+  let entries = imagingHostEntries(raw);
+  if (only) entries = entries.filter((e) => e.name === only);
+  entries = entries.slice(0, Number.isFinite(limit) ? limit : entries.length);
 
-  console.log(`Imaging hosts: ${hosts.length}${dryRun ? " (dry-run)" : ""}`);
+  console.log(`Imaging hosts: ${entries.length}${dryRun ? " (dry-run)" : ""}`);
   await mkdir(OUT_DIR, { recursive: true });
   await mkdir(join(ROOT, "data"), { recursive: true });
 
@@ -105,11 +106,11 @@ async function main() {
   const images = force ? {} : { ...existing };
   const report = { fetchedAt: new Date().toISOString(), matched: [], skipped: [], noMatch: [], errors: [] };
 
-  for (const name of hosts) {
+  for (const { name, planetNames } of entries) {
     const slug = slugFromName(name);
     const dest = join(OUT_DIR, `${slug}.jpg`);
     const rel = `images/systems/${slug}.jpg`;
-    const aliases = searchTerms(name);
+    const aliases = searchTerms(name, planetNames);
 
     if (!force && images[name] && (await fileExists(dest))) {
       console.log(`skip (exists) ${name}`);

@@ -20,6 +20,7 @@ import {
   MIN_SCORE,
   probeHost,
   imagingHosts,
+  imagingHostEntries,
   slugFromName,
   attributionOk,
   sourceResultToCell,
@@ -299,6 +300,15 @@ async function buildHostRecord(name, probeResult, previousRecord = null, options
   return record;
 }
 
+async function readCatalog() {
+  return JSON.parse(await readFile(CATALOG, "utf8"));
+}
+
+function planetNamesForHost(catalog, name) {
+  const entry = imagingHostEntries(catalog).find((e) => e.name === name);
+  return entry?.planetNames || [];
+}
+
 async function probeOneHost(name, { hostIndex = 1, hostTotal = 1 } = {}) {
   probeProgress.hostIndex = hostIndex;
   probeProgress.hostTotal = hostTotal;
@@ -307,11 +317,14 @@ async function probeOneHost(name, { hostIndex = 1, hostTotal = 1 } = {}) {
   probeProgress.phase = "source";
   logProgress(`—— ${name} (${hostIndex}/${hostTotal}) ——`);
 
+  const catalog = await readCatalog();
+  const planetNames = planetNamesForHost(catalog, name);
   const results = await readResults();
   const previous = results.hosts[name];
   const probeResult = await probeHost(name, {
     wikiCachePath: WIKI_CACHE,
     onProgress: handleProbeProgress,
+    planetNames,
   });
   const record = await buildHostRecord(name, probeResult, previous, {
     onAssetProgress(key, status) {
@@ -450,7 +463,7 @@ async function handleRequest(req, res) {
 
   if (req.method === "POST" && pathname === "/api/probe/all") {
     if (probing) return jsonResponse(res, 409, { error: "Probe already running" });
-    const catalog = JSON.parse(await readFile(CATALOG, "utf8"));
+    const catalog = await readCatalog();
     const hosts = imagingHosts(catalog);
     probeAllHosts(hosts).catch((err) => {
       console.error(err);
