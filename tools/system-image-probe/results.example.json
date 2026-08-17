@@ -6,7 +6,6 @@
       "checkedAt": "2026-08-17T12:00:00.000Z",
       "sources": {
         "esoTitle": { "ok": false },
-        "esoNews": { "ok": false },
         "commons": { "ok": false },
         "nasa": { "ok": false },
         "wikiList": { "ok": false },

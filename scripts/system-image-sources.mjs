@@ -23,7 +23,6 @@ export {
 
 export const SOURCE_KEYS = [
   "esoTitle",
-  "esoNews",
   "commons",
   "nasa",
   "wikiList",
@@ -166,10 +165,6 @@ function matchPlanetToFile(planetOrAlias, file) {
   return f.includes(p) || p.includes(f);
 }
 
-function newsQueries(terms) {
-  return terms.filter((q) => String(q).trim().length >= 8);
-}
-
 export function scoreTitle(title, extra = "") {
   const t = `${title} ${extra}`;
   if (REJECT_RE.test(t)) return -100;
@@ -252,87 +247,6 @@ export async function probeEsoTitle(name, aliases, { delay = DELAY_MS } = {}) {
       const sc = scoreTitle(img.title);
       if (sc < 0) continue;
       if (!best || !best.score || sc > best.score) best = { ...img, score: sc };
-    }
-    if (best?.score >= GOOD_SCORE) break;
-  }
-  if (!best?.score || best.score < MIN_SCORE) return best?.error ? { error: best.error } : null;
-  if (delay) await sleep(delay);
-  best.credit = await esoCredit(best.pageUrl);
-  return esoHit(best, best.score);
-}
-
-function parseEsoNewsIds(html) {
-  const ids = [...html.matchAll(/\/public\/news\/([a-z]{2,4}\d+)\//gi)].map((m) => m[1]);
-  return [...new Set(ids)].slice(0, 4);
-}
-
-function parseEsoRelatedImages(html) {
-  const byId = new Map();
-  const re =
-    /href="\/public\/images\/([a-z0-9-]+)\/"[^>]*>[\s\S]{0,500}?alt="([^"]*)"/gi;
-  let m;
-  while ((m = re.exec(html))) {
-    const id = m[1];
-    if (/logo|icon|banner|header|eso-org|placeholder/i.test(id)) continue;
-    if (!byId.has(id)) byId.set(id, decodeEntities(m[2] || ""));
-  }
-  const idRe = /\/public\/images\/([a-z0-9-]+)\//gi;
-  while ((m = idRe.exec(html))) {
-    const id = m[1];
-    if (/logo|icon|banner|header|eso-org|placeholder/i.test(id)) continue;
-    if (!byId.has(id)) byId.set(id, "");
-  }
-  return [...byId.entries()].map(([id, title]) => ({
-    id,
-    title,
-    pageUrl: `https://www.eso.org/public/images/${id}/`,
-  }));
-}
-
-async function esoImageTitle(pageUrl) {
-  const html = await fetchText(pageUrl);
-  const h1 = html.match(/<h1[^>]*>([\s\S]*?)<\/h1>/i);
-  return h1 ? stripHtml(h1[1]) : "";
-}
-
-export async function probeEsoNews(name, aliases, { delay = DELAY_MS } = {}) {
-  let best = null;
-  for (const q of newsQueries(aliases)) {
-    if (delay) await sleep(delay);
-    let html = "";
-    try {
-      html = await fetchText(
-        "https://www.eso.org/public/news/?search=" + encodeURIComponent(q)
-      );
-    } catch (err) {
-      if (!best) best = { error: err.message };
-      continue;
-    }
-    for (const newsId of parseEsoNewsIds(html)) {
-      if (delay) await sleep(delay);
-      let newsHtml = "";
-      try {
-        newsHtml = await fetchText(`https://www.eso.org/public/news/${newsId}/`);
-      } catch (err) {
-        continue;
-      }
-      if (!mentionsHostInFields([stripHtml(newsHtml)], name, aliases)) continue;
-      const related = parseEsoRelatedImages(newsHtml).slice(0, 8);
-      for (const img of related) {
-        let title = img.title;
-        if (!title) {
-          if (delay) await sleep(delay);
-          try {
-            title = await esoImageTitle(img.pageUrl);
-          } catch {
-            continue;
-          }
-        }
-        const sc = scoreTitle(title);
-        if (sc < MIN_SCORE) continue;
-        if (!best || !best.score || sc > best.score) best = { ...img, title, score: sc };
-      }
-      if (best?.score >= GOOD_SCORE) break;
     }
     if (best?.score >= GOOD_SCORE) break;
   }
@@ -678,7 +592,7 @@ export function attributionOk(hit) {
 
 export function pickBestFromHits(hits) {
   let best = null;
-  for (const key of ["esoTitle", "esoNews", "commons", "nasa", "wikiList", "oec"]) {
+  for (const key of ["esoTitle", "commons", "nasa", "wikiList", "oec"]) {
     const h = hits[key];
     if (h && !h.error && h.score >= MIN_SCORE) best = better(best, h);
   }
@@ -688,9 +602,6 @@ export function pickBestFromHits(hits) {
 /** Cascade used by fetch-system-images (ESO → Commons → NASA, early exit on good score). */
 export async function pickBest(name, aliases, { delay = DELAY_MS } = {}) {
   let best = await probeEsoTitle(name, aliases, { delay });
-  if (!best || best.score < GOOD_SCORE) {
-    best = better(best, await probeEsoNews(name, aliases, { delay }));
-  }
   if (!best || best.score < GOOD_SCORE) {
     best = better(best, await probeCommons(name, aliases, { delay }));
   }
@@ -702,7 +613,6 @@ export async function pickBest(name, aliases, { delay = DELAY_MS } = {}) {
 
 const PROBE_FNS = {
   esoTitle: probeEsoTitle,
-  esoNews: probeEsoNews,
   commons: probeCommons,
   nasa: probeNasa,
   wikiList: null,

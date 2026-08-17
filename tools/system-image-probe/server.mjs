@@ -43,7 +43,6 @@ const THUMB_SIZE = 64;
 
 const SOURCE_LABELS = {
   esoTitle: "ESO title",
-  esoNews: "ESO news",
   commons: "Commons",
   nasa: "NASA",
   wikiList: "Wikipedia",

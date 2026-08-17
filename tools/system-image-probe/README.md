@@ -1,6 +1,6 @@
 # System image probe dashboard
 
-Local tool to probe six image sources for each directly imaged catalog host and compare results in a table.
+Local tool to probe five image sources for each directly imaged catalog host and compare results in a table.
 
 ## Prerequisites
 
@@ -26,7 +26,6 @@ Search uses the **host name**, **press aliases**, **planet names**, and **survey
 | Column | Source |
 |--------|--------|
 | ESO title | ESO archive title search |
-| ESO news | ESO news → related image |
 | Commons | Wikimedia Commons quoted search |
 | NASA | NASA Image Library |
 | Wikipedia | [List of directly imaged exoplanets](https://en.wikipedia.org/wiki/List_of_directly_imaged_exoplanets) → Commons file |
@@ -44,7 +43,7 @@ Results are cached locally in `tools/system-image-probe/results.json` and `thumb
 ## Column meanings
 
 - Source columns: ✓ = hit passed score/reject filters; ✗ = no hit or below threshold. Hover for title, score, errors.
-- **Winner** = best hit across all six sources (`pickBestFromHits` scoring).
+- **Winner** = best hit across all five sources (`pickBestFromHits` scoring).
 - The fetch pipeline (`npm run fetch-system-images`) still uses ESO → Commons → NASA only; wiki/OEC are for evaluation here.
 
 ## Dev smoke test

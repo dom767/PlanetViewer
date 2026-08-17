@@ -1,8 +1,8 @@
 /**
  * Download public telescope photos for directly imaged catalog hosts.
  *
- * Matching is heuristic: ESO press images, ESO news-related frames,
- * Wikimedia Commons (quoted name), then NASA Image Library.
+ * Matching is heuristic: ESO press images, Wikimedia Commons (quoted name),
+ * then NASA Image Library.
  * Artist concepts / illustrations / star charts are rejected. Some imaging
  * hosts have no press JPEG — those are listed in data/system-images-report.json.
  *
