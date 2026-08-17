@@ -153,7 +153,7 @@ const COMPONENT_SUFFIX_RE = /^(.*?)(?:\s+(A|B|AB|C))$/i;
  * @param {string} abbrev
  * @returns {string|null}
  */
-function constellationGenitive(abbrev) {
+export function constellationGenitive(abbrev) {
   if (!abbrev) return null;
   const key = abbrev.toLowerCase();
   if (CONSTELLATION_GENITIVE[key]) return CONSTELLATION_GENITIVE[key];
@@ -202,6 +202,13 @@ function expandBody(body) {
   if (flam) {
     const gen = constellationGenitive(flam[2]);
     if (gen) return `${flam[1]} ${gen}`;
+  }
+
+  // Association serial: Oph 11, Cha 110913 (constellation abbrev + number)
+  const assocSerial = body.match(/^([A-Za-z]{2,4})\s+(\d+)$/);
+  if (assocSerial) {
+    const gen = constellationGenitive(assocSerial[1]);
+    if (gen) return `${gen} ${assocSerial[2]}`;
   }
 
   // Letter designation or word + constellation: HN Peg, YZ Cet, Proxima Cen, AU Mic

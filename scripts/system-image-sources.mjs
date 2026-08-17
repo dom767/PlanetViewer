@@ -2,6 +2,25 @@
  * Shared image-source probes for system-image fetch + probe dashboard.
  */
 
+import {
+  coordinateKeysMatch,
+  coordinateSearchAliases,
+  expandHostAliases,
+  matchHostToFile,
+  matchHostToStar,
+  mentionsHost,
+  mentionsHostInFields,
+  parseCoordinateDesignation,
+} from "./host-aliases.mjs";
+
+export {
+  coordinateSearchAliases,
+  matchHostToStar,
+  mentionsHost,
+  mentionsHostInFields,
+  parseCoordinateDesignation,
+} from "./host-aliases.mjs";
+
 export const SOURCE_KEYS = [
   "esoTitle",
   "esoNews",
@@ -117,158 +136,23 @@ function norm(s) {
     .replace(/[^\w+]/g, "");
 }
 
-function normalizeDash(s) {
-  return String(s)
-    .replace(/\u2212/g, "-")
-    .replace(/[\u2013\u2014]/g, "-")
-    .replace(/−/g, "-");
-}
-
-/** @typedef {{ prefix: string, raKey: string, decKey: string, decSign: number }} CoordDesignation */
-
-const SURVEY_PREFIX_RE = /^(VHS|WISEP?|CWISEP?|2MASS|2M|ULAS|SDSS|SOHO|TYC)\s+/i;
-
-function normalizeSurveyPrefix(raw) {
-  let p = String(raw).toLowerCase();
-  if (p === "2m") return "2mass";
-  if (p === "wisep" || p.startsWith("cwise")) return "wise";
-  return p;
-}
-
-/**
- * Parse survey-style coordinate designations (long HHMMSS ± DDMMSS or short HHMM ± DDMM).
- * e.g. VHS J125601.92-125723.9 ↔ VHS J1256-1257, WISEP J121756.91+162640.2 ↔ WISE 1217+1626
- * @returns {CoordDesignation|null}
- */
-export function parseCoordinateDesignation(raw) {
-  let s = normalizeDash(raw).trim();
-  const prefixMatch = s.match(SURVEY_PREFIX_RE);
-  const prefix = prefixMatch ? normalizeSurveyPrefix(prefixMatch[1]) : "";
-  if (prefixMatch) s = s.slice(prefixMatch[0].length).trim();
-  s = s.replace(/^J(?=\d)/i, "");
-
-  let m = s.match(/^(\d{4})\s*([+\-])\s*(\d{4})/);
-  if (m) {
-    return {
-      prefix: prefix || "coord",
-      raKey: m[1],
-      decKey: m[3],
-      decSign: m[2] === "-" ? -1 : 1,
-    };
-  }
-
-  m = s.match(/^(\d{2})(\d{2})(\d{2})[\d.]*([+\-])(\d{1,2})(\d{2})[\d.]*/);
-  if (m) {
-    return {
-      prefix: prefix || "coord",
-      raKey: m[1] + m[2],
-      decKey: String(m[5]).padStart(2, "0") + m[6],
-      decSign: m[4] === "-" ? -1 : 1,
-    };
-  }
-
-  m = s.match(/^(\d{2})(\d{2})(\d{2})[\d.]*([+\-])(\d{2})(\d{2})(\d{2})[\d.]*/);
-  if (m) {
-    return {
-      prefix: prefix || "coord",
-      raKey: m[1] + m[2],
-      decKey: m[5] + m[6],
-      decSign: m[4] === "-" ? -1 : 1,
-    };
-  }
-
-  return null;
-}
-
-function coordFingerprint(c) {
-  return `${c.prefix}:${c.raKey}:${c.decKey}`;
-}
-
-/** @returns {Set<string>} */
-export function coordinateKeys(raw) {
-  const keys = new Set();
-  const parsed = parseCoordinateDesignation(raw);
-  if (parsed) keys.add(coordFingerprint(parsed));
-  return keys;
-}
-
-function coordinateKeysMatch(a, b) {
-  const ka = coordinateKeys(a);
-  const kb = coordinateKeys(b);
-  if (!ka.size || !kb.size) return false;
-  for (const x of ka) {
-    if (kb.has(x)) return true;
-  }
-  return false;
-}
-
-/** Human-readable short forms for Commons / Wikipedia matching. */
-export function coordinateSearchAliases(raw) {
-  const parsed = parseCoordinateDesignation(raw);
-  if (!parsed) return [];
-  const label = parsed.prefix === "coord" ? "" : parsed.prefix.toUpperCase();
-  const sign = parsed.decSign < 0 ? "-" : "+";
-  const ra = parsed.raKey;
-  const dec = parsed.decKey;
-  const withPrefix = (body) => (label ? `${label} ${body}` : body);
-  return [
-    withPrefix(`J${ra}${sign}${dec}`),
-    withPrefix(`${ra}${sign}${dec}`),
-    withPrefix(`J${ra}-${dec}`),
-    withPrefix(`${ra}-${dec}`),
-  ];
-}
-
-export function mentionsHost(text, name) {
-  if (!text) return false;
-  const h = text.toLowerCase();
-  const n = String(name).toLowerCase().trim();
-  if (h.includes(n)) return true;
-  const compact = n.replace(/[\s._-]+/g, "");
-  const hCompact = h.replace(/[\s._-]+/g, "");
-  if (compact.length >= 5 && hCompact.includes(compact)) return true;
-  if (coordinateKeysMatch(text, name)) return true;
-  return false;
-}
-
-export function mentionsHostInFields(fields, name, aliases = []) {
-  const blob = fields.filter(Boolean).join(" \n ");
-  if (mentionsHost(blob, name)) return true;
-  return aliases.some((a) => mentionsHost(blob, a));
-}
-
-export function matchHostToStar(host, star) {
-  const h = norm(host);
-  const s = norm(star);
-  if (!h || !s) return false;
-  if (h === s || h.includes(s) || s.includes(h)) return true;
-  const hs = h.replace(/a$/, "");
-  if (hs === s || s.includes(hs) || hs.includes(s)) return true;
-  if (coordinateKeysMatch(host, star)) return true;
-  const gscHost = h.match(/^gsc0*(\d+0*)/);
-  const gscStar = s.match(/^gsc0*(\d+0*)/);
-  if (gscHost && gscStar && gscHost[1] === gscStar[1]) return true;
-  return false;
-}
-
 export function searchTerms(name, planetNames = []) {
   const extra = SEARCH_ALIASES[name] || [];
-  const terms = [name, ...extra, ...coordinateSearchAliases(name)];
-  const stripped = String(name).replace(/\s+(A|B|AB|C)$/i, "").trim();
-  if (stripped !== name && stripped.length >= 4) {
-    terms.push(stripped);
-    terms.push(...coordinateSearchAliases(stripped));
+  const terms = expandHostAliases(name);
+  for (const alias of extra) {
+    terms.push(alias);
+    for (const expanded of expandHostAliases(alias)) terms.push(expanded);
   }
   for (const planet of planetNames) {
     if (!planet) continue;
-    terms.push(String(planet).trim());
-    terms.push(...coordinateSearchAliases(planet));
+    for (const alias of expandHostAliases(planet)) terms.push(alias);
     const compact = String(planet).replace(/\s+(?=[a-z]\b)/i, "").trim();
-    if (compact !== planet) terms.push(compact);
+    if (compact !== planet) {
+      for (const alias of expandHostAliases(compact)) terms.push(alias);
+    }
     const stem = String(planet).replace(/\s+[a-z]\b$/i, "").trim();
     if (stem !== planet && stem.length >= 4) {
-      terms.push(stem);
-      terms.push(...coordinateSearchAliases(stem));
+      for (const alias of expandHostAliases(stem)) terms.push(alias);
     }
   }
   return [...new Set(terms.filter((t) => String(t).trim().length >= 3))];
@@ -596,7 +480,9 @@ export async function probeCommons(name, aliases, { delay = DELAY_MS } = {}) {
       const desc = stripHtml(meta.ImageDescription?.value || "");
       const artist = stripHtml(meta.Artist?.value || meta.Credit?.value || "");
       const blob = `${fileTitle} ${hit.snippet || ""} ${desc} ${artist}`;
-      if (!mentionsHostInFields([fileTitle, hit.snippet || "", desc], name, aliases)) continue;
+      if (!mentionsHostInFields([fileTitle, hit.snippet || "", desc], name, aliases)) {
+        if (!matchHostToFile(name, fileTitle, aliases)) continue;
+      }
       if (!titleMatch && !INSTITUTION_RE.test(blob) && !PREFER_RE.test(blob)) continue;
       let sc = scoreTitle(fileTitle, `${hit.snippet || ""} ${desc}`);
       if (titleMatch) sc = Math.max(sc, MIN_SCORE + 1);
@@ -685,6 +571,7 @@ export async function probeWikiList(name, aliases, wikiTable, { delay = DELAY_MS
   const row = wikiTable.find(
     (r) =>
       matchHostToStar(name, r.star) ||
+      aliases.some((a) => matchHostToStar(a, r.star)) ||
       planetNames.some((p) => matchPlanetToFile(p, r.file)) ||
       aliases.some((a) => matchPlanetToFile(a, r.file))
   );
