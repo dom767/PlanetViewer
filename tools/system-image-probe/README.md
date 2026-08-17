@@ -21,7 +21,7 @@ Then open http://localhost:8765/
 
 ## What it does
 
-Search uses the **host name**, **press aliases**, and **planet names** (e.g. `KOINTREAU-1 b` for host `XEST 17-036`).
+Search uses the **host name**, **press aliases**, **planet names**, and **survey coordinate short forms** (e.g. `VHS J125601.92-125723.9` also queries `VHS J1256-1257`).
 
 | Column | Source |
 |--------|--------|

@@ -117,6 +117,108 @@ function norm(s) {
     .replace(/[^\w+]/g, "");
 }
 
+function normalizeDash(s) {
+  return String(s)
+    .replace(/\u2212/g, "-")
+    .replace(/[\u2013\u2014]/g, "-")
+    .replace(/−/g, "-");
+}
+
+/** @typedef {{ prefix: string, raKey: string, decKey: string, decSign: number }} CoordDesignation */
+
+const SURVEY_PREFIX_RE = /^(VHS|WISEP?|CWISEP?|2MASS|2M|ULAS|SDSS|SOHO|TYC)\s+/i;
+
+function normalizeSurveyPrefix(raw) {
+  let p = String(raw).toLowerCase();
+  if (p === "2m") return "2mass";
+  if (p === "wisep" || p.startsWith("cwise")) return "wise";
+  return p;
+}
+
+/**
+ * Parse survey-style coordinate designations (long HHMMSS ± DDMMSS or short HHMM ± DDMM).
+ * e.g. VHS J125601.92-125723.9 ↔ VHS J1256-1257, WISEP J121756.91+162640.2 ↔ WISE 1217+1626
+ * @returns {CoordDesignation|null}
+ */
+export function parseCoordinateDesignation(raw) {
+  let s = normalizeDash(raw).trim();
+  const prefixMatch = s.match(SURVEY_PREFIX_RE);
+  const prefix = prefixMatch ? normalizeSurveyPrefix(prefixMatch[1]) : "";
+  if (prefixMatch) s = s.slice(prefixMatch[0].length).trim();
+  s = s.replace(/^J(?=\d)/i, "");
+
+  let m = s.match(/^(\d{4})\s*([+\-])\s*(\d{4})/);
+  if (m) {
+    return {
+      prefix: prefix || "coord",
+      raKey: m[1],
+      decKey: m[3],
+      decSign: m[2] === "-" ? -1 : 1,
+    };
+  }
+
+  m = s.match(/^(\d{2})(\d{2})(\d{2})[\d.]*([+\-])(\d{1,2})(\d{2})[\d.]*/);
+  if (m) {
+    return {
+      prefix: prefix || "coord",
+      raKey: m[1] + m[2],
+      decKey: String(m[5]).padStart(2, "0") + m[6],
+      decSign: m[4] === "-" ? -1 : 1,
+    };
+  }
+
+  m = s.match(/^(\d{2})(\d{2})(\d{2})[\d.]*([+\-])(\d{2})(\d{2})(\d{2})[\d.]*/);
+  if (m) {
+    return {
+      prefix: prefix || "coord",
+      raKey: m[1] + m[2],
+      decKey: m[5] + m[6],
+      decSign: m[4] === "-" ? -1 : 1,
+    };
+  }
+
+  return null;
+}
+
+function coordFingerprint(c) {
+  return `${c.prefix}:${c.raKey}:${c.decKey}`;
+}
+
+/** @returns {Set<string>} */
+export function coordinateKeys(raw) {
+  const keys = new Set();
+  const parsed = parseCoordinateDesignation(raw);
+  if (parsed) keys.add(coordFingerprint(parsed));
+  return keys;
+}
+
+function coordinateKeysMatch(a, b) {
+  const ka = coordinateKeys(a);
+  const kb = coordinateKeys(b);
+  if (!ka.size || !kb.size) return false;
+  for (const x of ka) {
+    if (kb.has(x)) return true;
+  }
+  return false;
+}
+
+/** Human-readable short forms for Commons / Wikipedia matching. */
+export function coordinateSearchAliases(raw) {
+  const parsed = parseCoordinateDesignation(raw);
+  if (!parsed) return [];
+  const label = parsed.prefix === "coord" ? "" : parsed.prefix.toUpperCase();
+  const sign = parsed.decSign < 0 ? "-" : "+";
+  const ra = parsed.raKey;
+  const dec = parsed.decKey;
+  const withPrefix = (body) => (label ? `${label} ${body}` : body);
+  return [
+    withPrefix(`J${ra}${sign}${dec}`),
+    withPrefix(`${ra}${sign}${dec}`),
+    withPrefix(`J${ra}-${dec}`),
+    withPrefix(`${ra}-${dec}`),
+  ];
+}
+
 export function mentionsHost(text, name) {
   if (!text) return false;
   const h = text.toLowerCase();
@@ -125,6 +227,7 @@ export function mentionsHost(text, name) {
   const compact = n.replace(/[\s._-]+/g, "");
   const hCompact = h.replace(/[\s._-]+/g, "");
   if (compact.length >= 5 && hCompact.includes(compact)) return true;
+  if (coordinateKeysMatch(text, name)) return true;
   return false;
 }
 
@@ -141,9 +244,7 @@ export function matchHostToStar(host, star) {
   if (h === s || h.includes(s) || s.includes(h)) return true;
   const hs = h.replace(/a$/, "");
   if (hs === s || s.includes(hs) || hs.includes(s)) return true;
-  const wiseHost = h.match(/^wisep?j(\d{4})/);
-  const wiseStar = s.match(/^wisej?(\d{4})/);
-  if (wiseHost && wiseStar && wiseHost[1] === wiseStar[1]) return true;
+  if (coordinateKeysMatch(host, star)) return true;
   const gscHost = h.match(/^gsc0*(\d+0*)/);
   const gscStar = s.match(/^gsc0*(\d+0*)/);
   if (gscHost && gscStar && gscHost[1] === gscStar[1]) return true;
@@ -152,23 +253,29 @@ export function matchHostToStar(host, star) {
 
 export function searchTerms(name, planetNames = []) {
   const extra = SEARCH_ALIASES[name] || [];
-  const terms = [name, ...extra];
+  const terms = [name, ...extra, ...coordinateSearchAliases(name)];
   const stripped = String(name).replace(/\s+(A|B|AB|C)$/i, "").trim();
-  if (stripped !== name && stripped.length >= 4) terms.push(stripped);
+  if (stripped !== name && stripped.length >= 4) {
+    terms.push(stripped);
+    terms.push(...coordinateSearchAliases(stripped));
+  }
   for (const planet of planetNames) {
     if (!planet) continue;
     terms.push(String(planet).trim());
-    // KOINTREAU-1 b → KOINTREAU-1b (Commons filenames often omit the space)
+    terms.push(...coordinateSearchAliases(planet));
     const compact = String(planet).replace(/\s+(?=[a-z]\b)/i, "").trim();
     if (compact !== planet) terms.push(compact);
-    // Drop trailing planet letter for survey-style names: KOINTREAU-1 b → KOINTREAU-1
     const stem = String(planet).replace(/\s+[a-z]\b$/i, "").trim();
-    if (stem !== planet && stem.length >= 4) terms.push(stem);
+    if (stem !== planet && stem.length >= 4) {
+      terms.push(stem);
+      terms.push(...coordinateSearchAliases(stem));
+    }
   }
   return [...new Set(terms.filter((t) => String(t).trim().length >= 3))];
 }
 
 function matchPlanetToFile(planetOrAlias, file) {
+  if (coordinateKeysMatch(planetOrAlias, file)) return true;
   const p = norm(planetOrAlias);
   const f = norm(String(file).replace(/^File:/i, "").replace(/\.[^.]+$/, ""));
   if (!p || !f || p.length < 4) return false;
@@ -596,8 +703,9 @@ export async function probeWikiList(name, aliases, wikiTable, { delay = DELAY_MS
     if (!commonsLicenseOk(license, usage)) return null;
     const desc = stripHtml(meta.ImageDescription?.value || "");
     const artist = stripHtml(meta.Artist?.value || meta.Credit?.value || "");
-    const sc = scoreTitle(fileTitle, desc);
-    if (sc < MIN_SCORE) return null;
+    let sc = scoreTitle(fileTitle, desc);
+    // Curated directly-imaged list: trust the row once host/file matching succeeded.
+    if (sc < MIN_SCORE) sc = MIN_SCORE + 2;
     const downloadUrl = info.thumburl || info.url;
     if (!downloadUrl) return null;
     return {
