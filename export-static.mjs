@@ -14,6 +14,7 @@
 
 import {
   access,
+  cp,
   mkdir,
   readdir,
   readFile,
@@ -95,6 +96,11 @@ async function build(outDir, version) {
   console.log("Compressing catalog data (gzip)…");
   await writeGzippedJson(EXOPLANETS, join(outDir, "data", "exoplanets.json.gz"));
   await writeGzippedJson(NEARBY, join(outDir, "data", "nearby-stars.json.gz"));
+
+  console.log("Copying system images…");
+  await cp(join(ROOT, "images", "systems"), join(outDir, "images", "systems"), {
+    recursive: true,
+  });
 
   console.log("Writing index.html…");
   let html = await readFile(join(ROOT, "index.html"), "utf8");

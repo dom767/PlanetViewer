@@ -1,3 +1,5 @@
+import { getSystemImage } from "../content/systemImages.js";
+
 function fmt(v, digits = 2, unit = "") {
   if (v == null || Number.isNaN(v)) return "—";
   const n = typeof v === "number" ? v.toFixed(digits) : String(v);
@@ -68,6 +70,7 @@ function renderSystem(s) {
   const subtitle = s.isSol
     ? "G2V · Our solar system (origin)"
     : `${s.spectype ? escapeHtml(s.spectype) : "Spectral type unknown"} · ${fmt(s.distPc, 2, "pc")} from Sol`;
+  const photo = renderSystemImage(s.name);
 
   const planets = (s.planets || [])
     .map((p) => {
@@ -98,6 +101,7 @@ function renderSystem(s) {
   return `
     <h2>${escapeHtml(s.name)}</h2>
     <div class="subtitle">${subtitle}</div>
+    ${photo}
     <dl>
       <dt>Effective temperature</dt><dd>${fmt(s.teff, 0, "K")}</dd>
       <dt>Radius</dt><dd>${fmt(s.radius, 2, "R☉")}</dd>
@@ -111,6 +115,19 @@ function renderSystem(s) {
     <h3>Planets</h3>
     <ul class="planet-list">${planets || "<li><div class='meta'>No confirmed exoplanets</div></li>"}</ul>
   `;
+}
+
+/** @param {string} name */
+function renderSystemImage(name) {
+  const img = getSystemImage(name);
+  if (!img) return "";
+  return `<figure class="system-photo">
+      <img src="${escapeHtml(img.src)}" width="300" height="300" alt="${escapeHtml(img.alt)}" />
+      <figcaption>
+        <a href="${escapeHtml(img.sourceUrl)}" target="_blank" rel="noopener noreferrer">${escapeHtml(img.credit)}</a>
+        · ${escapeHtml(img.license)}
+      </figcaption>
+    </figure>`;
 }
 
 function escapeHtml(str) {

@@ -277,6 +277,40 @@ body.view-fixed #app {
   margin-bottom: 16px;
 }
 
+#panel-content .system-photo {
+  margin: 0 0 16px;
+}
+
+#panel-content .system-photo img {
+  display: block;
+  width: 100%;
+  max-width: 300px;
+  height: auto;
+  aspect-ratio: 1;
+  object-fit: cover;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border);
+  background: #000;
+}
+
+#panel-content .system-photo figcaption {
+  margin-top: 6px;
+  font-family: var(--font-mono);
+  font-size: 0.68rem;
+  letter-spacing: 0.02em;
+  color: var(--text-faint);
+}
+
+#panel-content .system-photo figcaption a {
+  color: var(--text-muted);
+  text-decoration: none;
+}
+
+#panel-content .system-photo figcaption a:hover {
+  color: var(--accent-amber);
+  text-decoration: underline;
+}
+
 #panel-content dl {
   display: grid;
   grid-template-columns: 1fr auto;
