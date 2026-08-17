@@ -351,6 +351,7 @@
     <p class="hint">✓ or preview thumb opens the 300×300 image here. ★ picks the image used in the app (<code>data/system-images.json</code>).</p>
     <div class="controls">
       <button id="checkAll" type="button">Check all</button>
+      <button id="checkMissing" type="button">Check missing</button>
       <button id="stopProbe" type="button" class="stop" hidden>Stop</button>
       <span id="progress" class="progress"></span>
     </div>
@@ -565,7 +566,7 @@
           : "";
       document.getElementById("statusSummary").textContent =
         probing
-          ? `${hostPart}${phaseLabel(progress)}`
+          ? `${progress.mode === "missing" ? "Check missing · " : ""}${hostPart}${phaseLabel(progress)}`
           : progress.cancelled
             ? `Stopped after ${progress.hostIndex}/${progress.hostTotal} hosts`
             : "Probe finished";
@@ -624,6 +625,11 @@
       `;
 
       document.getElementById("checkAll").disabled = probing;
+      const checkMissingBtn = document.getElementById("checkMissing");
+      checkMissingBtn.disabled = probing || stats.noSelection === 0;
+      checkMissingBtn.title = stats.noSelection === 0
+        ? "All hosts already have a selected image"
+        : `Probe ${stats.noSelection} host(s) with no selection`;
       const stopBtn = document.getElementById("stopProbe");
       stopBtn.hidden = !probing;
       const prog = document.getElementById("progress");
@@ -749,11 +755,15 @@
       }, 600);
     }
 
-    document.getElementById("checkAll").addEventListener("click", async () => {
-      const res = await fetch("/api/probe/all", { method: "POST" });
+    async function startBatchProbe(url) {
+      const res = await fetch(url, { method: "POST" });
+      const body = await res.json();
       if (!res.ok) {
-        const err = await res.json();
-        alert(err.error || "Probe failed to start");
+        alert(body.error || "Probe failed to start");
+        return;
+      }
+      if (body.started === false) {
+        alert(body.message || "Nothing to probe");
         return;
       }
       state.probing = true;
@@ -761,6 +771,14 @@
       render();
       startPolling();
       await refresh();
+    }
+
+    document.getElementById("checkAll").addEventListener("click", () => {
+      startBatchProbe("/api/probe/all");
+    });
+
+    document.getElementById("checkMissing").addEventListener("click", () => {
+      startBatchProbe("/api/probe/missing");
     });
 
     document.getElementById("stopProbe").addEventListener("click", async () => {

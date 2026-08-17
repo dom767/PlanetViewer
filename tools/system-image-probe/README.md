@@ -32,6 +32,7 @@ Search uses the **host name**, **press aliases**, **planet names**, and **survey
 | OEC | Open Exoplanet Catalogue XML + outreach images |
 
 - **Check all** runs every host sequentially (several minutes due to API rate limits). Progress updates as each host finishes.
+- **Check missing** runs only hosts with no selected image (same as the “no selection” count in the stats bar).
 - **↻** on a row reruns a single host.
 - **Attribution** ✓ when the winning hit has usable credit and license for the app.
 - **Preview** shows the selected source’s 64×64 thumb; click to view the 300×300 image in-page.

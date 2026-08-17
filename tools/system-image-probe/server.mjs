@@ -369,11 +369,17 @@ async function selectHostSource(name, sourceKey) {
   return row;
 }
 
-async function probeAllHosts(hosts) {
+function hostsMissingSelection(allHosts, results) {
+  const hostsData = results.hosts || {};
+  return allHosts.filter((name) => !hostsData[name]?.selectedSource);
+}
+
+async function probeHostList(hosts, { mode = "all" } = {}) {
   probing = true;
   probeCancelRequested = false;
-  resetProbeProgress("all", hosts.length);
-  logProgress(`Starting check-all for ${hosts.length} hosts`);
+  resetProbeProgress(mode, hosts.length);
+  const modeLabel = mode === "missing" ? "check-missing" : "check-all";
+  logProgress(`Starting ${modeLabel} for ${hosts.length} hosts`);
   const catalog = JSON.parse(await readFile(CATALOG, "utf8"));
   const results = await readResults();
   results.catalogFetchedAt = catalog.fetchedAt || null;
@@ -404,7 +410,7 @@ async function probeAllHosts(hosts) {
   probing = false;
   probeCancelRequested = false;
   if (cancelled) logProgress(`Stopped after ${probeProgress.hostIndex} / ${hosts.length} hosts`);
-  else logProgress(`Check-all complete (${hosts.length} hosts)`);
+  else logProgress(`${modeLabel} complete (${hosts.length} hosts)`);
   probeProgress.running = false;
   probeProgress.phase = cancelled ? "cancelled" : "idle";
   probeProgress.cancelled = cancelled;
@@ -474,7 +480,28 @@ async function handleRequest(req, res) {
     if (probing) return jsonResponse(res, 409, { error: "Probe already running" });
     const catalog = await readCatalog();
     const hosts = imagingHosts(catalog);
-    probeAllHosts(hosts).catch((err) => {
+    probeHostList(hosts, { mode: "all" }).catch((err) => {
+      console.error(err);
+      probing = false;
+      probeProgress.running = false;
+    });
+    return jsonResponse(res, 202, { started: true, total: hosts.length });
+  }
+
+  if (req.method === "POST" && pathname === "/api/probe/missing") {
+    if (probing) return jsonResponse(res, 409, { error: "Probe already running" });
+    const catalog = await readCatalog();
+    const allHosts = imagingHosts(catalog);
+    const results = await readResults();
+    const hosts = hostsMissingSelection(allHosts, results);
+    if (hosts.length === 0) {
+      return jsonResponse(res, 200, {
+        started: false,
+        total: 0,
+        message: "All hosts already have a selected image",
+      });
+    }
+    probeHostList(hosts, { mode: "missing" }).catch((err) => {
       console.error(err);
       probing = false;
       probeProgress.running = false;
