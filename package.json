@@ -8,6 +8,8 @@
     "fetch-data": "node scripts/fetch-exoplanets.mjs && node scripts/fetch-nearby-stars.mjs",
     "fetch-exoplanets": "node scripts/fetch-exoplanets.mjs",
     "fetch-nearby-stars": "node scripts/fetch-nearby-stars.mjs",
+    "fetch-system-images": "node scripts/fetch-system-images.mjs",
+    "probe-dashboard": "node tools/system-image-probe/server.mjs",
     "export-static": "node export-static.mjs",
     "build": "node export-static.mjs",
     "start": "npx --yes serve -p 8080"

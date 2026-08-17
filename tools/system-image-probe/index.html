@@ -1,0 +1,326 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>System image probe</title>
+  <style>
+    :root {
+      --bg: #0d1117;
+      --surface: #161b22;
+      --border: #30363d;
+      --text: #e6edf3;
+      --muted: #8b949e;
+      --green: #3fb950;
+      --red: #f85149;
+      --accent: #58a6ff;
+      --hover: #21262d;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      font-size: 14px;
+      line-height: 1.4;
+    }
+    header {
+      padding: 16px 20px;
+      border-bottom: 1px solid var(--border);
+      background: var(--surface);
+      position: sticky;
+      top: 0;
+      z-index: 10;
+    }
+    h1 { margin: 0 0 8px; font-size: 18px; font-weight: 600; }
+    .controls {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 12px;
+      align-items: center;
+      margin-top: 12px;
+    }
+    button {
+      background: var(--accent);
+      color: #fff;
+      border: none;
+      padding: 8px 14px;
+      border-radius: 6px;
+      font-size: 13px;
+      cursor: pointer;
+    }
+    button:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+    button.icon {
+      background: transparent;
+      color: var(--muted);
+      padding: 4px 8px;
+      font-size: 16px;
+    }
+    button.icon:hover:not(:disabled) { color: var(--accent); }
+    .stats {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 16px;
+      color: var(--muted);
+      font-size: 13px;
+    }
+    .stats strong { color: var(--text); }
+    .progress { color: var(--accent); }
+    main { padding: 0 12px 24px; }
+    .table-wrap {
+      overflow: auto;
+      max-height: calc(100vh - 140px);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      margin-top: 12px;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      min-width: 960px;
+    }
+    thead th {
+      position: sticky;
+      top: 0;
+      background: var(--surface);
+      border-bottom: 1px solid var(--border);
+      padding: 10px 8px;
+      text-align: left;
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--muted);
+      white-space: nowrap;
+    }
+    tbody tr:hover { background: var(--hover); }
+    td {
+      border-bottom: 1px solid var(--border);
+      padding: 8px;
+      vertical-align: middle;
+    }
+    .host { font-weight: 500; }
+    .tick { font-size: 16px; text-align: center; }
+    .tick.ok { color: var(--green); }
+    .tick.no { color: var(--muted); }
+    .winner { font-size: 12px; color: var(--muted); }
+    .preview {
+      width: 64px;
+      height: 64px;
+      object-fit: cover;
+      border-radius: 4px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+    }
+    .placeholder {
+      width: 64px;
+      height: 64px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: var(--muted);
+      font-size: 11px;
+    }
+    .rerun { width: 36px; text-align: center; }
+    [title] { cursor: help; }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>System image probe dashboard</h1>
+    <p style="margin:0;color:var(--muted);font-size:13px;">
+      Six sources per directly imaged host — ESO, Commons, NASA, Wikipedia list, OEC.
+    </p>
+    <div class="controls">
+      <button id="checkAll" type="button">Check all</button>
+      <span id="progress" class="progress"></span>
+    </div>
+    <div class="stats" id="stats"></div>
+  </header>
+  <main>
+    <div class="table-wrap">
+      <table>
+        <thead id="thead"></thead>
+        <tbody id="tbody"></tbody>
+      </table>
+    </div>
+  </main>
+  <script>
+    const SOURCE_LABELS = {
+      esoTitle: "ESO title",
+      esoNews: "ESO news",
+      commons: "Commons",
+      nasa: "NASA",
+      wikiList: "Wikipedia",
+      oec: "OEC",
+    };
+
+    let state = { hosts: [], results: { hosts: {} }, sourceKeys: [], probing: false };
+    let pollTimer = null;
+
+    function tooltipCell(cell) {
+      if (!cell) return "";
+      const parts = [];
+      if (cell.title) parts.push(cell.title);
+      if (cell.score != null) parts.push(`score ${cell.score}`);
+      if (cell.error) parts.push(cell.error);
+      if (cell.credit) parts.push(cell.credit);
+      if (cell.license) parts.push(cell.license);
+      return parts.join(" · ");
+    }
+
+    function tickHtml(ok) {
+      return `<span class="tick ${ok ? "ok" : "no"}">${ok ? "✓" : "✗"}</span>`;
+    }
+
+    function sortHosts(hosts, resultsHosts) {
+      return [...hosts].sort((a, b) => {
+        const aw = resultsHosts[a]?.winner;
+        const bw = resultsHosts[b]?.winner;
+        const aMatch = aw ? 1 : 0;
+        const bMatch = bw ? 1 : 0;
+        if (aMatch !== bMatch) return aMatch - bMatch;
+        return a.localeCompare(b);
+      });
+    }
+
+    function computeStats(hosts, resultsHosts) {
+      let matched = 0;
+      let noWinner = 0;
+      let attrMissing = 0;
+      for (const name of hosts) {
+        const row = resultsHosts[name];
+        if (!row) {
+          noWinner++;
+          continue;
+        }
+        if (row.winner) {
+          matched++;
+          if (!row.attributionOk) attrMissing++;
+        } else {
+          noWinner++;
+        }
+      }
+      return { matched, noWinner, attrMissing, total: hosts.length };
+    }
+
+    function render() {
+      const { hosts, results, sourceKeys, probing, progress } = state;
+      const resultsHosts = results.hosts || {};
+      const keys = sourceKeys.length ? sourceKeys : Object.keys(SOURCE_LABELS);
+
+      const stats = computeStats(hosts, resultsHosts);
+      document.getElementById("stats").innerHTML = `
+        <span><strong>${stats.matched}</strong> matched</span>
+        <span><strong>${stats.noWinner}</strong> no winner</span>
+        <span><strong>${stats.attrMissing}</strong> attribution missing</span>
+        <span>of <strong>${stats.total}</strong> hosts</span>
+        ${results.updatedAt ? `<span>Last run: ${new Date(results.updatedAt).toLocaleString()}</span>` : ""}
+      `;
+
+      const btn = document.getElementById("checkAll");
+      btn.disabled = probing;
+      const prog = document.getElementById("progress");
+      if (probing && progress?.running) {
+        prog.textContent = `${progress.current} / ${progress.total} — ${progress.name || "…"}`;
+      } else if (probing) {
+        prog.textContent = "Starting…";
+      } else {
+        prog.textContent = "";
+      }
+
+      document.getElementById("thead").innerHTML = `
+        <tr>
+          <th></th>
+          <th>Host</th>
+          ${keys.map((k) => `<th>${SOURCE_LABELS[k] || k}</th>`).join("")}
+          <th>Attribution</th>
+          <th>Winner</th>
+          <th>Preview</th>
+        </tr>
+      `;
+
+      const sorted = sortHosts(hosts, resultsHosts);
+      document.getElementById("tbody").innerHTML = sorted.map((name) => {
+        const row = resultsHosts[name] || {};
+        const sources = row.sources || {};
+        const winner = row.winner;
+        const thumb = row.thumb;
+        const attrTip = winner
+          ? `${winner.credit || ""} · ${winner.license || ""}`
+          : "No winner";
+        const preview = thumb
+          ? `<img class="preview" src="/${thumb}" alt="" width="64" height="64" />`
+          : `<div class="placeholder">—</div>`;
+        return `
+          <tr data-name="${encodeURIComponent(name)}">
+            <td class="rerun">
+              <button type="button" class="icon rerun-btn" title="Rerun probe" ${probing ? "disabled" : ""}>↻</button>
+            </td>
+            <td class="host">${name}</td>
+            ${keys.map((k) => {
+              const cell = sources[k] || { ok: false };
+              return `<td title="${tooltipCell(cell).replace(/"/g, "&quot;")}">${tickHtml(cell.ok)}</td>`;
+            }).join("")}
+            <td title="${attrTip.replace(/"/g, "&quot;")}">${tickHtml(row.attributionOk)}</td>
+            <td class="winner">${winner ? winner.source : "—"}</td>
+            <td>${preview}</td>
+          </tr>
+        `;
+      }).join("");
+
+      document.querySelectorAll(".rerun-btn").forEach((el) => {
+        el.addEventListener("click", async (e) => {
+          const tr = e.target.closest("tr");
+          const name = decodeURIComponent(tr.dataset.name);
+          e.target.disabled = true;
+          try {
+            await fetch(`/api/probe/${encodeURIComponent(name)}`, { method: "POST" });
+            await refresh();
+          } catch (err) {
+            console.error(err);
+          }
+          e.target.disabled = false;
+        });
+      });
+    }
+
+    async function refresh() {
+      const res = await fetch("/api/state");
+      state = await res.json();
+      render();
+    }
+
+    function startPolling() {
+      if (pollTimer) return;
+      pollTimer = setInterval(async () => {
+        await refresh();
+        if (!state.probing) {
+          clearInterval(pollTimer);
+          pollTimer = null;
+        }
+      }, 1500);
+    }
+
+    document.getElementById("checkAll").addEventListener("click", async () => {
+      const res = await fetch("/api/probe/all", { method: "POST" });
+      if (!res.ok) {
+        const err = await res.json();
+        alert(err.error || "Probe failed to start");
+        return;
+      }
+      state.probing = true;
+      render();
+      startPolling();
+      await refresh();
+    });
+
+    refresh();
+  </script>
+</body>
+</html>

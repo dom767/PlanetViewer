@@ -1,0 +1,20 @@
+{
+  "updatedAt": "2026-08-17T12:00:00.000Z",
+  "catalogFetchedAt": null,
+  "hosts": {
+    "HIP 78530": {
+      "checkedAt": "2026-08-17T12:00:00.000Z",
+      "sources": {
+        "esoTitle": { "ok": false },
+        "esoNews": { "ok": false },
+        "commons": { "ok": false },
+        "nasa": { "ok": false },
+        "wikiList": { "ok": false },
+        "oec": { "ok": true, "title": "HIP 78530 b", "credit": "ESO", "license": "see source", "score": 12 }
+      },
+      "winner": { "source": "oec", "title": "HIP 78530 b", "credit": "ESO", "license": "see source", "score": 12 },
+      "attributionOk": false,
+      "thumb": null
+    }
+  }
+}

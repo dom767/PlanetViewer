@@ -2,6 +2,10 @@ node_modules/
 .DS_Store
 *.log
 .server.pid
+.probe-dashboard.pid
+tools/system-image-probe/results.json
+tools/system-image-probe/wiki-table.json
+tools/system-image-probe/thumbs/
 Export/
 Exports/
 .cursor/*
