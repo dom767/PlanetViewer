@@ -9,7 +9,7 @@ Local tool to probe six image sources for each directly imaged catalog host and 
 
 ## Run
 
-**Windows (recommended):** double-click **`Probe-Dashboard.cmd`** at the repo root, or run it from a terminal. Opens `http://localhost:8765/` in your browser.
+**Windows (recommended):** double-click **`Probe-Dashboard.cmd`** at the repo root, or run it from a terminal. Opens `http://localhost:8765/` in your browser. Stop with **`Stop-Probe-Dashboard.cmd`**.
 
 **npm:**
 

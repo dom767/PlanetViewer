@@ -41,6 +41,6 @@ goto :opened
 
 :opened
 start "" "http://localhost:%PORT%/"
-echo Close the Probe Dashboard server window to shut down.
+echo Close the Probe Dashboard server window to shut down, or run Stop-Probe-Dashboard.cmd.
 pause
 endlocal
