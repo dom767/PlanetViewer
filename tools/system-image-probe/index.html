@@ -14,6 +14,7 @@
       --green: #3fb950;
       --red: #f85149;
       --accent: #58a6ff;
+      --gold: #d4a72c;
       --hover: #21262d;
     }
     * { box-sizing: border-box; }
@@ -54,13 +55,16 @@
       opacity: 0.5;
       cursor: not-allowed;
     }
+    button.stop { background: var(--red); }
     button.icon {
       background: transparent;
       color: var(--muted);
-      padding: 4px 8px;
-      font-size: 16px;
+      padding: 2px 4px;
+      font-size: 14px;
+      line-height: 1;
     }
     button.icon:hover:not(:disabled) { color: var(--accent); }
+    button.select-btn.selected { color: var(--gold); }
     .stats {
       display: flex;
       flex-wrap: wrap;
@@ -73,7 +77,7 @@
     main { padding: 0 12px 24px; }
     .table-wrap {
       overflow: auto;
-      max-height: calc(100vh - 140px);
+      max-height: calc(100vh - 160px);
       border: 1px solid var(--border);
       border-radius: 8px;
       margin-top: 12px;
@@ -81,7 +85,7 @@
     table {
       width: 100%;
       border-collapse: collapse;
-      min-width: 960px;
+      min-width: 1020px;
     }
     thead th {
       position: sticky;
@@ -102,10 +106,31 @@
       vertical-align: middle;
     }
     .host { font-weight: 500; }
-    .tick { font-size: 16px; text-align: center; }
-    .tick.ok { color: var(--green); }
-    .tick.no { color: var(--muted); }
-    .winner { font-size: 12px; color: var(--muted); }
+    .source-cell {
+      text-align: center;
+      white-space: nowrap;
+    }
+    .source-cell.selected {
+      background: rgba(212, 167, 44, 0.12);
+      outline: 1px solid rgba(212, 167, 44, 0.35);
+      outline-offset: -1px;
+    }
+    .source-cell-inner {
+      display: inline-flex;
+      align-items: center;
+      gap: 2px;
+    }
+    .tick-link {
+      color: var(--green);
+      text-decoration: none;
+      font-size: 16px;
+      line-height: 1;
+      padding: 0 2px;
+    }
+    .tick-link:hover { color: #56d364; }
+    .tick.no { color: var(--muted); font-size: 16px; }
+    .selected-source { font-size: 12px; color: var(--muted); }
+    .selected-source strong { color: var(--gold); font-weight: 600; }
     .preview {
       width: 64px;
       height: 64px;
@@ -114,6 +139,11 @@
       background: var(--surface);
       border: 1px solid var(--border);
     }
+    .preview-link {
+      display: inline-block;
+      line-height: 0;
+    }
+    .preview-link:hover .preview { border-color: var(--accent); }
     .placeholder {
       width: 64px;
       height: 64px;
@@ -127,7 +157,7 @@
       font-size: 11px;
     }
     .rerun { width: 36px; text-align: center; }
-    [title] { cursor: help; }
+    .hint { margin: 8px 0 0; color: var(--muted); font-size: 12px; }
   </style>
 </head>
 <body>
@@ -136,8 +166,10 @@
     <p style="margin:0;color:var(--muted);font-size:13px;">
       Six sources per directly imaged host — ESO, Commons, NASA, Wikipedia list, OEC.
     </p>
+    <p class="hint">✓ opens that source’s 300×300 image. ★ picks the image used in the app (<code>data/system-images.json</code>).</p>
     <div class="controls">
       <button id="checkAll" type="button">Check all</button>
+      <button id="stopProbe" type="button" class="stop" hidden>Stop</button>
       <span id="progress" class="progress"></span>
     </div>
     <div class="stats" id="stats"></div>
@@ -163,50 +195,72 @@
     let state = { hosts: [], results: { hosts: {} }, sourceKeys: [], probing: false };
     let pollTimer = null;
 
+    function esc(text) {
+      return String(text ?? "")
+        .replace(/&/g, "&amp;")
+        .replace(/"/g, "&quot;")
+        .replace(/</g, "&lt;");
+    }
+
     function tooltipCell(cell) {
       if (!cell) return "";
       const parts = [];
       if (cell.title) parts.push(cell.title);
       if (cell.score != null) parts.push(`score ${cell.score}`);
       if (cell.error) parts.push(cell.error);
+      if (cell.assetError) parts.push(cell.assetError);
       if (cell.credit) parts.push(cell.credit);
       if (cell.license) parts.push(cell.license);
       return parts.join(" · ");
     }
 
-    function tickHtml(ok) {
-      return `<span class="tick ${ok ? "ok" : "no"}">${ok ? "✓" : "✗"}</span>`;
+    function sourceCellHtml(name, sourceKey, cell, selectedSource, probing) {
+      if (!cell?.ok) {
+        return `<td class="source-cell" title="${esc(tooltipCell(cell))}"><span class="tick no">✗</span></td>`;
+      }
+      const selected = selectedSource === sourceKey;
+      const preview = cell.preview ? `/${cell.preview}` : null;
+      const view = preview
+        ? `<a class="tick-link" href="${preview}" target="_blank" rel="noopener" title="View 300×300 image">✓</a>`
+        : `<span class="tick-link" title="Preview unavailable">✓</span>`;
+      const starTitle = selected ? "Selected for app" : "Use this image in the app";
+      return `
+        <td class="source-cell${selected ? " selected" : ""}" title="${esc(tooltipCell(cell))}">
+          <span class="source-cell-inner">
+            ${view}
+            <button type="button" class="icon select-btn${selected ? " selected" : ""}"
+              data-name="${encodeURIComponent(name)}"
+              data-source="${sourceKey}"
+              title="${esc(starTitle)}"
+              ${probing ? "disabled" : ""}>★</button>
+          </span>
+        </td>
+      `;
     }
 
     function sortHosts(hosts, resultsHosts) {
       return [...hosts].sort((a, b) => {
-        const aw = resultsHosts[a]?.winner;
-        const bw = resultsHosts[b]?.winner;
-        const aMatch = aw ? 1 : 0;
-        const bMatch = bw ? 1 : 0;
-        if (aMatch !== bMatch) return aMatch - bMatch;
+        const aSel = resultsHosts[a]?.selectedSource ? 1 : 0;
+        const bSel = resultsHosts[b]?.selectedSource ? 1 : 0;
+        if (aSel !== bSel) return aSel - bSel;
         return a.localeCompare(b);
       });
     }
 
     function computeStats(hosts, resultsHosts) {
-      let matched = 0;
-      let noWinner = 0;
+      let selected = 0;
+      let noSelection = 0;
       let attrMissing = 0;
       for (const name of hosts) {
         const row = resultsHosts[name];
-        if (!row) {
-          noWinner++;
+        if (!row?.selectedSource) {
+          noSelection++;
           continue;
         }
-        if (row.winner) {
-          matched++;
-          if (!row.attributionOk) attrMissing++;
-        } else {
-          noWinner++;
-        }
+        selected++;
+        if (!row.attributionOk) attrMissing++;
       }
-      return { matched, noWinner, attrMissing, total: hosts.length };
+      return { selected, noSelection, attrMissing, total: hosts.length };
     }
 
     function render() {
@@ -216,20 +270,24 @@
 
       const stats = computeStats(hosts, resultsHosts);
       document.getElementById("stats").innerHTML = `
-        <span><strong>${stats.matched}</strong> matched</span>
-        <span><strong>${stats.noWinner}</strong> no winner</span>
+        <span><strong>${stats.selected}</strong> selected for app</span>
+        <span><strong>${stats.noSelection}</strong> no selection</span>
         <span><strong>${stats.attrMissing}</strong> attribution missing</span>
         <span>of <strong>${stats.total}</strong> hosts</span>
         ${results.updatedAt ? `<span>Last run: ${new Date(results.updatedAt).toLocaleString()}</span>` : ""}
       `;
 
-      const btn = document.getElementById("checkAll");
-      btn.disabled = probing;
+      document.getElementById("checkAll").disabled = probing;
+      const stopBtn = document.getElementById("stopProbe");
+      stopBtn.hidden = !probing;
       const prog = document.getElementById("progress");
       if (probing && progress?.running) {
-        prog.textContent = `${progress.current} / ${progress.total} — ${progress.name || "…"}`;
+        const suffix = progress.cancelled ? " — stopping…" : "";
+        prog.textContent = `${progress.current} / ${progress.total} — ${progress.name || "…"}${suffix}`;
       } else if (probing) {
         prog.textContent = "Starting…";
+      } else if (progress?.cancelled) {
+        prog.textContent = `Stopped at ${progress.current} / ${progress.total}`;
       } else {
         prog.textContent = "";
       }
@@ -240,7 +298,7 @@
           <th>Host</th>
           ${keys.map((k) => `<th>${SOURCE_LABELS[k] || k}</th>`).join("")}
           <th>Attribution</th>
-          <th>Winner</th>
+          <th>Selected</th>
           <th>Preview</th>
         </tr>
       `;
@@ -249,26 +307,30 @@
       document.getElementById("tbody").innerHTML = sorted.map((name) => {
         const row = resultsHosts[name] || {};
         const sources = row.sources || {};
-        const winner = row.winner;
+        const selectedSource = row.selectedSource;
+        const selectedCell = selectedSource ? sources[selectedSource] : null;
+        const attrTip = selectedCell
+          ? `${selectedCell.credit || ""} · ${selectedCell.license || ""}`
+          : "No selection";
         const thumb = row.thumb;
-        const attrTip = winner
-          ? `${winner.credit || ""} · ${winner.license || ""}`
-          : "No winner";
+        const previewPath = row.preview;
         const preview = thumb
-          ? `<img class="preview" src="/${thumb}" alt="" width="64" height="64" />`
+          ? previewPath
+            ? `<a class="preview-link" href="/${previewPath}" target="_blank" rel="noopener" title="Open selected 300×300 image"><img class="preview" src="/${thumb}" alt="" width="64" height="64" /></a>`
+            : `<img class="preview" src="/${thumb}" alt="" width="64" height="64" />`
           : `<div class="placeholder">—</div>`;
+        const selectedLabel = selectedSource
+          ? `<span class="selected-source"><strong>${SOURCE_LABELS[selectedSource] || selectedSource}</strong></span>`
+          : `<span class="selected-source">—</span>`;
         return `
           <tr data-name="${encodeURIComponent(name)}">
             <td class="rerun">
               <button type="button" class="icon rerun-btn" title="Rerun probe" ${probing ? "disabled" : ""}>↻</button>
             </td>
-            <td class="host">${name}</td>
-            ${keys.map((k) => {
-              const cell = sources[k] || { ok: false };
-              return `<td title="${tooltipCell(cell).replace(/"/g, "&quot;")}">${tickHtml(cell.ok)}</td>`;
-            }).join("")}
-            <td title="${attrTip.replace(/"/g, "&quot;")}">${tickHtml(row.attributionOk)}</td>
-            <td class="winner">${winner ? winner.source : "—"}</td>
+            <td class="host">${esc(name)}</td>
+            ${keys.map((k) => sourceCellHtml(name, k, sources[k], selectedSource, probing)).join("")}
+            <td title="${esc(attrTip)}">${row.attributionOk ? '<span class="tick-link" style="cursor:default">✓</span>' : '<span class="tick no">✗</span>'}</td>
+            <td>${selectedLabel}</td>
             <td>${preview}</td>
           </tr>
         `;
@@ -277,11 +339,35 @@
       document.querySelectorAll(".rerun-btn").forEach((el) => {
         el.addEventListener("click", async (e) => {
           const tr = e.target.closest("tr");
-          const name = decodeURIComponent(tr.dataset.name);
+          const hostName = decodeURIComponent(tr.dataset.name);
           e.target.disabled = true;
           try {
-            await fetch(`/api/probe/${encodeURIComponent(name)}`, { method: "POST" });
+            await fetch(`/api/probe/${encodeURIComponent(hostName)}`, { method: "POST" });
             await refresh();
+          } catch (err) {
+            console.error(err);
+          }
+          e.target.disabled = false;
+        });
+      });
+
+      document.querySelectorAll(".select-btn").forEach((el) => {
+        el.addEventListener("click", async (e) => {
+          const hostName = decodeURIComponent(e.target.dataset.name);
+          const source = e.target.dataset.source;
+          e.target.disabled = true;
+          try {
+            const res = await fetch(`/api/select/${encodeURIComponent(hostName)}`, {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ source }),
+            });
+            if (!res.ok) {
+              const err = await res.json();
+              alert(err.error || "Selection failed");
+            } else {
+              await refresh();
+            }
           } catch (err) {
             console.error(err);
           }
@@ -318,6 +404,18 @@
       render();
       startPolling();
       await refresh();
+    });
+
+    document.getElementById("stopProbe").addEventListener("click", async () => {
+      const stopBtn = document.getElementById("stopProbe");
+      stopBtn.disabled = true;
+      try {
+        await fetch("/api/probe/stop", { method: "POST" });
+        await refresh();
+      } catch (err) {
+        console.error(err);
+      }
+      stopBtn.disabled = false;
     });
 
     refresh();

@@ -10,11 +10,21 @@
         "commons": { "ok": false },
         "nasa": { "ok": false },
         "wikiList": { "ok": false },
-        "oec": { "ok": true, "title": "HIP 78530 b", "credit": "ESO", "license": "see source", "score": 12 }
+        "oec": {
+          "ok": true,
+          "title": "HIP 78530 b",
+          "credit": "David Lafreniere (University of Montreal)",
+          "license": "see source",
+          "score": 12,
+          "thumb": "thumbs/hip-78530/oec.jpg",
+          "preview": "previews/hip-78530/oec.jpg"
+        }
       },
-      "winner": { "source": "oec", "title": "HIP 78530 b", "credit": "ESO", "license": "see source", "score": 12 },
+      "winner": { "source": "oec", "sourceKey": "oec", "title": "HIP 78530 b", "score": 12 },
+      "selectedSource": "oec",
       "attributionOk": false,
-      "thumb": null
+      "thumb": "thumbs/hip-78530/oec.jpg",
+      "preview": "previews/hip-78530/oec.jpg"
     }
   }
 }
