@@ -484,13 +484,8 @@
       `;
     }
 
-    function sortHosts(hosts, resultsHosts) {
-      return [...hosts].sort((a, b) => {
-        const aSel = resultsHosts[a]?.selectedSource ? 1 : 0;
-        const bSel = resultsHosts[b]?.selectedSource ? 1 : 0;
-        if (aSel !== bSel) return aSel - bSel;
-        return a.localeCompare(b);
-      });
+    function sortHosts(hosts) {
+      return [...hosts].sort((a, b) => a.localeCompare(b));
     }
 
     function phaseLabel(progress) {
@@ -626,7 +621,7 @@
         </tr>
       `;
 
-      const sorted = sortHosts(hosts, resultsHosts);
+      const sorted = sortHosts(hosts);
       document.getElementById("tbody").innerHTML = sorted.map((name) => {
         const row = resultsHosts[name] || {};
         const sources = row.sources || {};
