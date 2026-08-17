@@ -64,6 +64,11 @@
       line-height: 1;
     }
     button.icon:hover:not(:disabled) { color: var(--accent); }
+    .source-star {
+      color: var(--gold);
+      font-size: 14px;
+      line-height: 1;
+    }
     .stats {
       display: flex;
       flex-wrap: wrap;
@@ -109,6 +114,17 @@
       text-align: center;
       white-space: normal;
       min-width: 88px;
+    }
+    .source-cell.selected {
+      background: rgba(212, 167, 44, 0.12);
+      outline: 1px solid rgba(212, 167, 44, 0.35);
+      outline-offset: -1px;
+    }
+    .source-cell-inner {
+      display: inline-flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 4px;
     }
     .preview-cell {
       min-width: 72px;
@@ -513,14 +529,21 @@
       return parts.join(" · ");
     }
 
-    function sourceCellHtml(name, sourceKey, cell, probing) {
+    function sourceCellHtml(name, sourceKey, cell, selectedSource, probing) {
       const isActive = probing && state.progress?.sourceKey === sourceKey &&
         (state.progress?.phase === "source" || state.progress?.phase === "assets");
       const live = state.probing ? state.progress?.liveSources?.[sourceKey] : null;
       const status = resolveCellStatus(live || cell, isActive);
       const meta = statusMeta(status);
       const statusHtml = `<span class="source-status ${status}">${esc(meta.label)}</span>`;
-      return `<td class="source-cell" title="${esc(tooltipCell(cell || live))}">${statusHtml}</td>`;
+      const selected = selectedSource === sourceKey;
+      const star = selected && cell?.ok
+        ? `<span class="source-star" title="Selected for app">★</span>`
+        : "";
+      return `
+        <td class="source-cell${selected ? " selected" : ""}" title="${esc(tooltipCell(cell || live))}">
+          <span class="source-cell-inner">${statusHtml}${star}</span>
+        </td>`;
     }
 
     function previewColumnHtml(name, sources, keys, selectedSource, probing) {
@@ -724,7 +747,7 @@
               <button type="button" class="icon rerun-btn" title="Rerun probe" ${probing ? "disabled" : ""}>↻</button>
             </td>
             <td class="host" title="${esc([name, row.checkedAt ? `Checked ${new Date(row.checkedAt).toLocaleString()}` : "", row.probeServerVersion ? `Probe server v${row.probeServerVersion}` : ""].filter(Boolean).join(" · "))}">${esc(name)}</td>
-            ${keys.map((k) => sourceCellHtml(name, k, sources[k], probing)).join("")}
+            ${keys.map((k) => sourceCellHtml(name, k, sources[k], selectedSource, probing)).join("")}
             <td title="${esc(attrTip)}">${row.attributionOk ? '<span class="attr-ok">✓</span>' : '<span class="attr-no">✗</span>'}</td>
             <td>${selectedLabel}</td>
             ${previewColumnHtml(name, sources, keys, selectedSource, probing)}
