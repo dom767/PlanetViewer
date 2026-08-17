@@ -158,6 +158,62 @@
     }
     .rerun { width: 36px; text-align: center; }
     .hint { margin: 8px 0 0; color: var(--muted); font-size: 12px; }
+    .lightbox {
+      position: fixed;
+      inset: 0;
+      z-index: 100;
+      display: none;
+      align-items: center;
+      justify-content: center;
+      padding: 24px;
+    }
+    .lightbox.open { display: flex; }
+    .lightbox-backdrop {
+      position: absolute;
+      inset: 0;
+      background: rgba(1, 4, 9, 0.82);
+    }
+    .lightbox-frame {
+      position: relative;
+      margin: 0;
+      padding: 12px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      box-shadow: 0 16px 48px rgba(0, 0, 0, 0.45);
+      max-width: calc(100vw - 48px);
+    }
+    .lightbox-frame img {
+      display: block;
+      width: 300px;
+      height: 300px;
+      object-fit: cover;
+      border-radius: 6px;
+      background: var(--bg);
+      border: 1px solid var(--border);
+    }
+    .lightbox-caption {
+      margin: 10px 0 0;
+      max-width: 300px;
+      font-size: 12px;
+      color: var(--muted);
+      line-height: 1.45;
+    }
+    .lightbox-close {
+      position: absolute;
+      top: 6px;
+      right: 6px;
+      width: 28px;
+      height: 28px;
+      padding: 0;
+      border-radius: 6px;
+      background: var(--hover);
+      color: var(--text);
+      font-size: 18px;
+      line-height: 1;
+    }
+    .lightbox-close:hover { background: var(--border); }
+    .view-image { cursor: zoom-in; }
   </style>
 </head>
 <body>
@@ -166,7 +222,7 @@
     <p style="margin:0;color:var(--muted);font-size:13px;">
       Six sources per directly imaged host — ESO, Commons, NASA, Wikipedia list, OEC.
     </p>
-    <p class="hint">✓ opens that source’s 300×300 image. ★ picks the image used in the app (<code>data/system-images.json</code>).</p>
+    <p class="hint">✓ or preview thumb opens the 300×300 image here. ★ picks the image used in the app (<code>data/system-images.json</code>).</p>
     <div class="controls">
       <button id="checkAll" type="button">Check all</button>
       <button id="stopProbe" type="button" class="stop" hidden>Stop</button>
@@ -182,6 +238,14 @@
       </table>
     </div>
   </main>
+  <div id="lightbox" class="lightbox" aria-hidden="true">
+    <div class="lightbox-backdrop" data-close></div>
+    <figure class="lightbox-frame">
+      <button type="button" class="lightbox-close" data-close aria-label="Close">×</button>
+      <img id="lightboxImg" alt="" width="300" height="300" />
+      <figcaption id="lightboxCaption" class="lightbox-caption"></figcaption>
+    </figure>
+  </div>
   <script>
     const SOURCE_LABELS = {
       esoTitle: "ESO title",
@@ -194,6 +258,40 @@
 
     let state = { hosts: [], results: { hosts: {} }, sourceKeys: [], probing: false };
     let pollTimer = null;
+
+    const lightbox = document.getElementById("lightbox");
+    const lightboxImg = document.getElementById("lightboxImg");
+    const lightboxCaption = document.getElementById("lightboxCaption");
+
+    function openLightbox(src, caption) {
+      lightboxImg.src = src;
+      lightboxCaption.textContent = caption || "";
+      lightbox.classList.add("open");
+      lightbox.setAttribute("aria-hidden", "false");
+    }
+
+    function closeLightbox() {
+      lightbox.classList.remove("open");
+      lightbox.setAttribute("aria-hidden", "true");
+      lightboxImg.removeAttribute("src");
+      lightboxCaption.textContent = "";
+    }
+
+    document.addEventListener("click", (e) => {
+      if (e.target.closest("[data-close]")) {
+        closeLightbox();
+        return;
+      }
+      const link = e.target.closest(".view-image");
+      if (link) {
+        e.preventDefault();
+        openLightbox(link.getAttribute("href"), link.dataset.caption || link.title || "");
+      }
+    });
+
+    document.addEventListener("keydown", (e) => {
+      if (e.key === "Escape" && lightbox.classList.contains("open")) closeLightbox();
+    });
 
     function esc(text) {
       return String(text ?? "")
@@ -221,7 +319,7 @@
       const selected = selectedSource === sourceKey;
       const preview = cell.preview ? `/${cell.preview}` : null;
       const view = preview
-        ? `<a class="tick-link" href="${preview}" target="_blank" rel="noopener" title="View 300×300 image">✓</a>`
+        ? `<a class="tick-link view-image" href="${preview}" data-caption="${esc(tooltipCell(cell))}" title="View 300×300 image">✓</a>`
         : `<span class="tick-link" title="Preview unavailable">✓</span>`;
       const starTitle = selected ? "Selected for app" : "Use this image in the app";
       return `
@@ -316,7 +414,7 @@
         const previewPath = row.preview;
         const preview = thumb
           ? previewPath
-            ? `<a class="preview-link" href="/${previewPath}" target="_blank" rel="noopener" title="Open selected 300×300 image"><img class="preview" src="/${thumb}" alt="" width="64" height="64" /></a>`
+            ? `<a class="preview-link view-image" href="/${previewPath}" data-caption="${esc(name)}${selectedSource ? " · " + esc(SOURCE_LABELS[selectedSource] || selectedSource) : ""}" title="View selected 300×300 image"><img class="preview" src="/${thumb}" alt="" width="64" height="64" /></a>`
             : `<img class="preview" src="/${thumb}" alt="" width="64" height="64" />`
           : `<div class="placeholder">—</div>`;
         const selectedLabel = selectedSource

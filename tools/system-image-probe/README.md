@@ -35,8 +35,8 @@ For each imaging host (~82 systems), the dashboard probes independently:
 - **Check all** runs every host sequentially (several minutes due to API rate limits). Progress updates as each host finishes.
 - **↻** on a row reruns a single host.
 - **Attribution** ✓ when the winning hit has usable credit and license for the app.
-- **Preview** shows the selected source’s 64×64 thumb; click to open its 300×300 image.
-- Each source **✓** links to that source’s 300×300 preview; **★** selects it for the app (`data/system-images.json` + `images/systems/`).
+- **Preview** shows the selected source’s 64×64 thumb; click to view the 300×300 image in-page.
+- Each source **✓** also opens that source’s 300×300 preview in the same lightbox.
 - **Stop** cancels an in-progress “Check all” after the current host finishes.
 
 Results are cached locally in `tools/system-image-probe/results.json` and `thumbs/` (not committed).
