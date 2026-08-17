@@ -108,7 +108,8 @@
     .host { font-weight: 500; }
     .source-cell {
       text-align: center;
-      white-space: nowrap;
+      white-space: normal;
+      min-width: 88px;
     }
     .source-cell.selected {
       background: rgba(212, 167, 44, 0.12);
@@ -117,6 +118,7 @@
     }
     .source-cell-inner {
       display: inline-flex;
+      flex-direction: column;
       align-items: center;
       gap: 2px;
     }
@@ -269,16 +271,16 @@
       color: var(--muted);
     }
     .status-source.pending { opacity: 0.55; }
-    .status-source.active {
+    .status-source.queried {
       border-color: var(--accent);
       color: var(--accent);
       box-shadow: 0 0 0 1px rgba(88, 166, 255, 0.25);
     }
-    .status-source.ok {
+    .status-source.successful {
       border-color: rgba(63, 185, 80, 0.45);
       color: var(--green);
     }
-    .status-source.fail { color: var(--muted); }
+    .status-source.not_found { color: var(--muted); }
     .status-source-dot {
       width: 8px;
       height: 8px;
@@ -286,7 +288,7 @@
       background: currentColor;
       opacity: 0.8;
     }
-    .status-source.active .status-source-dot {
+    .status-source.queried .status-source-dot {
       animation: pulse 1s ease-in-out infinite;
     }
     @keyframes pulse {
@@ -329,13 +331,22 @@
     .status-close {
       min-width: 96px;
     }
+    .source-status {
+      display: block;
+      font-size: 11px;
+      line-height: 1.3;
+      margin-bottom: 4px;
+      color: var(--muted);
+    }
+    .source-status.successful { color: var(--green); }
+    .source-status.queried { color: var(--accent); }
   </style>
 </head>
 <body>
   <header>
     <h1>System image probe dashboard</h1>
     <p style="margin:0;color:var(--muted);font-size:13px;">
-      Six sources per directly imaged host — ESO, Commons, NASA, Wikipedia list, OEC.
+      Five sources per directly imaged host — ESO, Commons, NASA, Wikipedia list, OEC.
     </p>
     <p class="hint">✓ or preview thumb opens the 300×300 image here. ★ picks the image used in the app (<code>data/system-images.json</code>).</p>
     <div class="controls">
@@ -384,7 +395,14 @@
       oec: "OEC",
     };
 
-    let state = { hosts: [], results: { hosts: {} }, sourceKeys: [], probing: false };
+    const SOURCE_STATUS = {
+      pending: { label: "…", title: "Not queried yet" },
+      queried: { label: "Queried", title: "Query in progress" },
+      not_found: { label: "Nothing found", title: "Queried but nothing found" },
+      successful: { label: "Successful", title: "Match found" },
+    };
+
+    let state = { hosts: [], results: { hosts: {} }, sourceKeys: [], probing: false, probeServerVersion: null };
     let pollTimer = null;
     let statusOverlayOpen = false;
 
@@ -447,6 +465,17 @@
         .replace(/</g, "&lt;");
     }
 
+    function resolveCellStatus(cell, isActive) {
+      if (isActive) return "queried";
+      if (cell?.status) return cell.status;
+      if (!cell) return "pending";
+      return cell.ok ? "successful" : "not_found";
+    }
+
+    function statusMeta(status) {
+      return SOURCE_STATUS[status] || SOURCE_STATUS.pending;
+    }
+
     function tooltipCell(cell) {
       if (!cell) return "";
       const parts = [];
@@ -456,12 +485,21 @@
       if (cell.assetError) parts.push(cell.assetError);
       if (cell.credit) parts.push(cell.credit);
       if (cell.license) parts.push(cell.license);
+      const status = resolveCellStatus(cell, false);
+      parts.unshift(statusMeta(status).title);
       return parts.join(" · ");
     }
 
     function sourceCellHtml(name, sourceKey, cell, selectedSource, probing) {
-      if (!cell?.ok) {
-        return `<td class="source-cell" title="${esc(tooltipCell(cell))}"><span class="tick no">✗</span></td>`;
+      const isActive = probing && state.progress?.sourceKey === sourceKey &&
+        (state.progress?.phase === "source" || state.progress?.phase === "assets");
+      const live = state.probing ? state.progress?.liveSources?.[sourceKey] : null;
+      const status = resolveCellStatus(live || cell, isActive);
+      const meta = statusMeta(status);
+      const statusHtml = `<span class="source-status ${status}">${esc(meta.label)}</span>`;
+
+      if (status !== "successful" || !cell?.ok) {
+        return `<td class="source-cell" title="${esc(tooltipCell(cell || live))}">${statusHtml}</td>`;
       }
       const selected = selectedSource === sourceKey;
       const preview = cell.preview ? `/${cell.preview}` : null;
@@ -472,6 +510,7 @@
       return `
         <td class="source-cell${selected ? " selected" : ""}" title="${esc(tooltipCell(cell))}">
           <span class="source-cell-inner">
+            ${statusHtml}
             ${view}
             <button type="button" class="icon select-btn${selected ? " selected" : ""}"
               data-name="${encodeURIComponent(name)}"
@@ -501,8 +540,8 @@
     }
 
     function logLineClass(message) {
-      if (message.includes("✓")) return "ok";
-      if (message.includes("✗") || message.includes("error") || message.includes("failed")) return "fail";
+      if (/successful/i.test(message)) return "ok";
+      if (/nothing found|error|failed|stopped/i.test(message)) return "fail";
       return "info";
     }
 
@@ -535,19 +574,12 @@
         const live = progress.liveSources?.[key];
         const isActive = probing && progress.sourceKey === key &&
           (progress.phase === "source" || progress.phase === "assets");
-        let state = "pending";
-        let mark = "…";
-        if (live) {
-          state = live.ok ? "ok" : "fail";
-          mark = live.ok ? "✓" : "✗";
-        } else if (isActive) {
-          state = "active";
-          mark = "●";
-        }
+        const status = resolveCellStatus(live, isActive);
+        const meta = statusMeta(status);
         return `
-          <span class="status-source ${state}" title="${esc(live ? tooltipCell(live) : "")}">
+          <span class="status-source ${status}" title="${esc(live ? tooltipCell(live) : meta.title)}">
             <span class="status-source-dot"></span>
-            ${esc(SOURCE_LABELS[key] || key)} ${mark}
+            ${esc(SOURCE_LABELS[key] || key)}: ${esc(meta.label)}
           </span>
         `;
       }).join("");
@@ -581,11 +613,13 @@
       const keys = sourceKeys.length ? sourceKeys : Object.keys(SOURCE_LABELS);
 
       const stats = computeStats(hosts, resultsHosts);
+      const serverVersion = state.probeServerVersion || results.probeServerVersion;
       document.getElementById("stats").innerHTML = `
         <span><strong>${stats.selected}</strong> selected for app</span>
         <span><strong>${stats.noSelection}</strong> no selection</span>
         <span><strong>${stats.attrMissing}</strong> attribution missing</span>
         <span>of <strong>${stats.total}</strong> hosts</span>
+        ${serverVersion ? `<span>Probe server <strong>v${esc(serverVersion)}</strong></span>` : ""}
         ${results.updatedAt ? `<span>Last run: ${new Date(results.updatedAt).toLocaleString()}</span>` : ""}
       `;
 
@@ -644,7 +678,7 @@
             <td class="rerun">
               <button type="button" class="icon rerun-btn" title="Rerun probe" ${probing ? "disabled" : ""}>↻</button>
             </td>
-            <td class="host">${esc(name)}</td>
+            <td class="host" title="${esc([name, row.checkedAt ? `Checked ${new Date(row.checkedAt).toLocaleString()}` : "", row.probeServerVersion ? `Probe server v${row.probeServerVersion}` : ""].filter(Boolean).join(" · "))}">${esc(name)}</td>
             ${keys.map((k) => sourceCellHtml(name, k, sources[k], selectedSource, probing)).join("")}
             <td title="${esc(attrTip)}">${row.attributionOk ? '<span class="tick-link" style="cursor:default">✓</span>' : '<span class="tick no">✗</span>'}</td>
             <td>${selectedLabel}</td>

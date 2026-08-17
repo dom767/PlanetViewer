@@ -690,11 +690,14 @@ export function imagingHosts(catalog) {
 }
 
 export function sourceResultToCell(hit) {
-  if (!hit) return { ok: false };
-  if (hit.error) return { ok: false, error: hit.error };
-  if (!hit.score || hit.score < MIN_SCORE) return { ok: false, title: hit.title, score: hit.score };
+  if (!hit) return { ok: false, status: "not_found" };
+  if (hit.error) return { ok: false, error: hit.error, status: "not_found" };
+  if (!hit.score || hit.score < MIN_SCORE) {
+    return { ok: false, title: hit.title, score: hit.score, status: "not_found" };
+  }
   return {
     ok: true,
+    status: "successful",
     title: hit.title,
     credit: hit.credit,
     license: hit.license,

@@ -1,16 +1,19 @@
 {
   "updatedAt": "2026-08-17T12:00:00.000Z",
   "catalogFetchedAt": null,
+  "probeServerVersion": "1.1.0",
   "hosts": {
     "HIP 78530": {
       "checkedAt": "2026-08-17T12:00:00.000Z",
+      "probeServerVersion": "1.1.0",
       "sources": {
-        "esoTitle": { "ok": false },
-        "commons": { "ok": false },
-        "nasa": { "ok": false },
-        "wikiList": { "ok": false },
+        "esoTitle": { "ok": false, "status": "not_found" },
+        "commons": { "ok": false, "status": "not_found" },
+        "nasa": { "ok": false, "status": "not_found" },
+        "wikiList": { "ok": false, "status": "not_found" },
         "oec": {
           "ok": true,
+          "status": "successful",
           "title": "HIP 78530 b",
           "credit": "David Lafreniere (University of Montreal)",
           "license": "see source",

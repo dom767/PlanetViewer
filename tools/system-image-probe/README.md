@@ -42,8 +42,9 @@ Results are cached locally in `tools/system-image-probe/results.json` and `thumb
 
 ## Column meanings
 
-- Source columns: ✓ = hit passed score/reject filters; ✗ = no hit or below threshold. Hover for title, score, errors.
+- Source columns: **Queried** (in progress), **Nothing found** (queried but no match), or **Successful** (match found). Hover for title, score, errors.
 - **Winner** = best hit across all five sources (`pickBestFromHits` scoring).
+- Each host record stores **`probeServerVersion`** — the probe server version that ran the query.
 - The fetch pipeline (`npm run fetch-system-images`) still uses ESO → Commons → NASA only; wiki/OEC are for evaluation here.
 
 ## Dev smoke test

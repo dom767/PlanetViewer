@@ -41,6 +41,9 @@ const PORT = Number(process.env.PROBE_PORT) || 8765;
 const PREVIEW_SIZE = 300;
 const THUMB_SIZE = 64;
 
+/** Bump when probe server behavior or result schema changes. */
+export const PROBE_SERVER_VERSION = "1.1.0";
+
 const SOURCE_LABELS = {
   esoTitle: "ESO title",
   commons: "Commons",
@@ -95,13 +98,13 @@ function resetProbeProgress(mode, hostTotal) {
 function formatSourceResult(name, sourceKey, hit) {
   const cell = sourceResultToCell(hit);
   const label = sourceLabel(sourceKey);
-  if (cell.ok) {
+  if (cell.status === "successful") {
     const title = cell.title ? `: ${cell.title.slice(0, 72)}` : "";
-    return `${name} · ${label} ✓${title} (score ${cell.score})`;
+    return `${name} · ${label} successful${title} (score ${cell.score})`;
   }
-  if (cell.error) return `${name} · ${label} ✗ ${cell.error}`;
-  if (cell.title) return `${name} · ${label} ✗ below threshold (score ${cell.score})`;
-  return `${name} · ${label} ✗ no match`;
+  if (cell.error) return `${name} · ${label} nothing found (${cell.error})`;
+  if (cell.title) return `${name} · ${label} nothing found (score ${cell.score})`;
+  return `${name} · ${label} nothing found`;
 }
 
 function handleProbeProgress(ev) {
@@ -116,6 +119,7 @@ function handleProbeProgress(ev) {
     probeProgress.sourceKey = ev.sourceKey;
     probeProgress.sourceIndex = ev.sourceIndex;
     probeProgress.sourceTotal = ev.sourceTotal;
+    probeProgress.liveSources[ev.sourceKey] = { status: "queried" };
     logProgress(`${ev.name}: querying ${sourceLabel(ev.sourceKey)}…`);
     return;
   }
@@ -133,12 +137,13 @@ async function readResults() {
   try {
     return JSON.parse(await readFile(RESULTS, "utf8"));
   } catch {
-    return { updatedAt: null, catalogFetchedAt: null, hosts: {} };
+    return { updatedAt: null, catalogFetchedAt: null, probeServerVersion: null, hosts: {} };
   }
 }
 
 async function writeResults(data) {
   data.updatedAt = new Date().toISOString();
+  data.probeServerVersion = PROBE_SERVER_VERSION;
   await writeFile(RESULTS, JSON.stringify(data, null, 2) + "\n");
 }
 
@@ -283,6 +288,7 @@ async function buildHostRecord(name, probeResult, previousRecord = null, options
 
   const record = applySelectionToRecord({
     checkedAt: new Date().toISOString(),
+    probeServerVersion: PROBE_SERVER_VERSION,
     sources,
     winner,
     selectedSource,
@@ -382,7 +388,10 @@ async function probeAllHosts(hosts) {
       const resultsErr = await readResults();
       resultsErr.hosts[name] = {
         checkedAt: new Date().toISOString(),
-        sources: Object.fromEntries(SOURCE_KEYS.map((k) => [k, { ok: false, error: err.message }])),
+        probeServerVersion: PROBE_SERVER_VERSION,
+        sources: Object.fromEntries(
+          SOURCE_KEYS.map((k) => [k, { ok: false, status: "not_found", error: err.message }])
+        ),
         winner: null,
         selectedSource: null,
         attributionOk: false,
@@ -451,6 +460,7 @@ async function handleRequest(req, res) {
       probing,
       progress: probeProgress,
       sourceKeys: SOURCE_KEYS,
+      probeServerVersion: PROBE_SERVER_VERSION,
     });
   }
 
@@ -546,5 +556,5 @@ createServer((req, res) => {
     }
   });
 }).listen(PORT, () => {
-  console.log(`System image probe dashboard: http://localhost:${PORT}/`);
+  console.log(`System image probe dashboard v${PROBE_SERVER_VERSION}: http://localhost:${PORT}/`);
 });
