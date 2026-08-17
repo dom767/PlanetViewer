@@ -40,9 +40,94 @@ const PORT = Number(process.env.PROBE_PORT) || 8765;
 const PREVIEW_SIZE = 300;
 const THUMB_SIZE = 64;
 
+const SOURCE_LABELS = {
+  esoTitle: "ESO title",
+  esoNews: "ESO news",
+  commons: "Commons",
+  nasa: "NASA",
+  wikiList: "Wikipedia",
+  oec: "OEC",
+};
+
 let probing = false;
 let probeCancelRequested = false;
-let probeProgress = { running: false, current: 0, total: 0, name: "", cancelled: false };
+let probeProgress = {
+  running: false,
+  mode: null,
+  hostIndex: 0,
+  hostTotal: 0,
+  name: "",
+  phase: "idle",
+  sourceKey: null,
+  sourceIndex: 0,
+  sourceTotal: SOURCE_KEYS.length,
+  liveSources: {},
+  log: [],
+  cancelled: false,
+};
+
+function sourceLabel(key) {
+  return SOURCE_LABELS[key] || key;
+}
+
+function logProgress(message) {
+  probeProgress.log.unshift({ at: new Date().toISOString(), message });
+  if (probeProgress.log.length > 100) probeProgress.log.length = 100;
+}
+
+function resetProbeProgress(mode, hostTotal) {
+  probeProgress = {
+    running: true,
+    mode,
+    hostIndex: 0,
+    hostTotal,
+    name: "",
+    phase: "idle",
+    sourceKey: null,
+    sourceIndex: 0,
+    sourceTotal: SOURCE_KEYS.length,
+    liveSources: {},
+    log: [],
+    cancelled: false,
+  };
+}
+
+function formatSourceResult(name, sourceKey, hit) {
+  const cell = sourceResultToCell(hit);
+  const label = sourceLabel(sourceKey);
+  if (cell.ok) {
+    const title = cell.title ? `: ${cell.title.slice(0, 72)}` : "";
+    return `${name} · ${label} ✓${title} (score ${cell.score})`;
+  }
+  if (cell.error) return `${name} · ${label} ✗ ${cell.error}`;
+  if (cell.title) return `${name} · ${label} ✗ below threshold (score ${cell.score})`;
+  return `${name} · ${label} ✗ no match`;
+}
+
+function handleProbeProgress(ev) {
+  if (ev.phase === "wiki-table") {
+    probeProgress.phase = "wiki-table";
+    if (ev.status === "loading") logProgress("Loading Wikipedia exoplanet table…");
+    else logProgress("Wikipedia table ready");
+    return;
+  }
+  if (ev.phase === "source-start") {
+    probeProgress.phase = "source";
+    probeProgress.sourceKey = ev.sourceKey;
+    probeProgress.sourceIndex = ev.sourceIndex;
+    probeProgress.sourceTotal = ev.sourceTotal;
+    logProgress(`${ev.name}: querying ${sourceLabel(ev.sourceKey)}…`);
+    return;
+  }
+  if (ev.phase === "source-done") {
+    probeProgress.liveSources[ev.sourceKey] = sourceResultToCell(ev.hit);
+    logProgress(formatSourceResult(ev.name, ev.sourceKey, ev.hit));
+    return;
+  }
+  if (ev.phase === "host-probe-done") {
+    probeProgress.phase = "assets";
+  }
+}
 
 async function readResults() {
   try {
@@ -169,18 +254,22 @@ async function applySelectionToApp(name, cell, sourceKey) {
   await writeFile(SYSTEM_IMAGES_JSON, JSON.stringify(payload, null, 2) + "\n");
 }
 
-async function buildHostRecord(name, probeResult, previousRecord = null) {
+async function buildHostRecord(name, probeResult, previousRecord = null, options = {}) {
+  const { onAssetProgress } = options;
   const slug = slugFromName(name);
   const sources = {};
   for (const key of SOURCE_KEYS) {
     const cell = sourceResultToCell(probeResult.sources[key]);
     if (cell.ok) {
+      onAssetProgress?.(key, "start");
       const assets = await buildSourceAssets(slug, key, probeResult.sources[key]);
       if (assets?.thumb) {
         cell.thumb = assets.thumb;
         cell.preview = assets.preview;
+        onAssetProgress?.(key, "done");
       } else if (assets?.error) {
         cell.assetError = assets.error;
+        onAssetProgress?.(key, "error");
       }
     }
     sources[key] = cell;
@@ -210,13 +299,38 @@ async function buildHostRecord(name, probeResult, previousRecord = null) {
   return record;
 }
 
-async function probeOneHost(name) {
+async function probeOneHost(name, { hostIndex = 1, hostTotal = 1 } = {}) {
+  probeProgress.hostIndex = hostIndex;
+  probeProgress.hostTotal = hostTotal;
+  probeProgress.name = name;
+  probeProgress.liveSources = {};
+  probeProgress.phase = "source";
+  logProgress(`—— ${name} (${hostIndex}/${hostTotal}) ——`);
+
   const results = await readResults();
   const previous = results.hosts[name];
-  const probeResult = await probeHost(name, { wikiCachePath: WIKI_CACHE });
-  const record = await buildHostRecord(name, probeResult, previous);
+  const probeResult = await probeHost(name, {
+    wikiCachePath: WIKI_CACHE,
+    onProgress: handleProbeProgress,
+  });
+  const record = await buildHostRecord(name, probeResult, previous, {
+    onAssetProgress(key, status) {
+      if (status === "start") {
+        probeProgress.phase = "assets";
+        probeProgress.sourceKey = key;
+        logProgress(`${name}: downloading ${sourceLabel(key)} preview…`);
+      } else if (status === "done") {
+        logProgress(`${name}: ${sourceLabel(key)} preview ready`);
+      } else if (status === "error") {
+        logProgress(`${name}: ${sourceLabel(key)} preview failed`);
+      }
+    },
+  });
   results.hosts[name] = record;
   await writeResults(results);
+  probeProgress.phase = "host-done";
+  const pick = record.selectedSource ? sourceLabel(record.selectedSource) : "none";
+  logProgress(`${name}: finished (selected: ${pick})`);
   return record;
 }
 
@@ -240,7 +354,8 @@ async function selectHostSource(name, sourceKey) {
 async function probeAllHosts(hosts) {
   probing = true;
   probeCancelRequested = false;
-  probeProgress = { running: true, current: 0, total: hosts.length, name: "", cancelled: false };
+  resetProbeProgress("all", hosts.length);
+  logProgress(`Starting check-all for ${hosts.length} hosts`);
   const catalog = JSON.parse(await readFile(CATALOG, "utf8"));
   const results = await readResults();
   results.catalogFetchedAt = catalog.fetchedAt || null;
@@ -248,16 +363,10 @@ async function probeAllHosts(hosts) {
   for (let i = 0; i < hosts.length; i++) {
     if (probeCancelRequested) break;
     const name = hosts[i];
-    probeProgress = {
-      running: true,
-      current: i + 1,
-      total: hosts.length,
-      name,
-      cancelled: false,
-    };
     try {
-      await probeOneHost(name);
+      await probeOneHost(name, { hostIndex: i + 1, hostTotal: hosts.length });
     } catch (err) {
+      logProgress(`${name}: error — ${err.message}`);
       const resultsErr = await readResults();
       resultsErr.hosts[name] = {
         checkedAt: new Date().toISOString(),
@@ -273,13 +382,11 @@ async function probeAllHosts(hosts) {
   const cancelled = probeCancelRequested;
   probing = false;
   probeCancelRequested = false;
-  probeProgress = {
-    running: false,
-    current: cancelled ? probeProgress.current : hosts.length,
-    total: hosts.length,
-    name: "",
-    cancelled,
-  };
+  if (cancelled) logProgress(`Stopped after ${probeProgress.hostIndex} / ${hosts.length} hosts`);
+  else logProgress(`Check-all complete (${hosts.length} hosts)`);
+  probeProgress.running = false;
+  probeProgress.phase = cancelled ? "cancelled" : "idle";
+  probeProgress.cancelled = cancelled;
 }
 
 function jsonResponse(res, status, body) {
@@ -369,10 +476,18 @@ async function handleRequest(req, res) {
     const name = pathname.slice("/api/probe/".length);
     if (!name) return jsonResponse(res, 400, { error: "Missing host name" });
     if (probing) return jsonResponse(res, 409, { error: "Full probe running" });
+    probing = true;
+    resetProbeProgress("single", 1);
     try {
-      const record = await probeOneHost(name);
+      const record = await probeOneHost(name, { hostIndex: 1, hostTotal: 1 });
+      probing = false;
+      probeProgress.running = false;
+      probeProgress.phase = "idle";
       return jsonResponse(res, 200, { name, record });
     } catch (err) {
+      probing = false;
+      probeProgress.running = false;
+      probeProgress.phase = "idle";
       return jsonResponse(res, 500, { error: err.message });
     }
   }

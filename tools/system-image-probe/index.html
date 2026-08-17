@@ -77,7 +77,7 @@
     main { padding: 0 12px 24px; }
     .table-wrap {
       overflow: auto;
-      max-height: calc(100vh - 160px);
+      max-height: calc(100vh - 360px);
       border: 1px solid var(--border);
       border-radius: 8px;
       margin-top: 12px;
@@ -214,6 +214,90 @@
     }
     .lightbox-close:hover { background: var(--border); }
     .view-image { cursor: zoom-in; }
+    .status-panel {
+      margin: 12px 12px 0;
+      padding: 14px 16px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+    }
+    .status-panel[hidden] { display: none !important; }
+    .status-panel h2 {
+      margin: 0 0 10px;
+      font-size: 14px;
+      font-weight: 600;
+    }
+    .status-summary {
+      color: var(--accent);
+      font-size: 13px;
+      margin-bottom: 12px;
+    }
+    .status-sources {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-bottom: 12px;
+    }
+    .status-source {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 6px 10px;
+      border-radius: 999px;
+      border: 1px solid var(--border);
+      background: var(--bg);
+      font-size: 12px;
+      color: var(--muted);
+    }
+    .status-source.pending { opacity: 0.55; }
+    .status-source.active {
+      border-color: var(--accent);
+      color: var(--accent);
+      box-shadow: 0 0 0 1px rgba(88, 166, 255, 0.25);
+    }
+    .status-source.ok {
+      border-color: rgba(63, 185, 80, 0.45);
+      color: var(--green);
+    }
+    .status-source.fail { color: var(--muted); }
+    .status-source-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: currentColor;
+      opacity: 0.8;
+    }
+    .status-source.active .status-source-dot {
+      animation: pulse 1s ease-in-out infinite;
+    }
+    @keyframes pulse {
+      0%, 100% { opacity: 0.35; transform: scale(0.85); }
+      50% { opacity: 1; transform: scale(1); }
+    }
+    .status-log-wrap {
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      background: var(--bg);
+      max-height: 180px;
+      overflow: auto;
+    }
+    .status-log {
+      margin: 0;
+      padding: 8px 10px;
+      list-style: none;
+      font-family: ui-monospace, SFMono-Regular, Consolas, monospace;
+      font-size: 11px;
+      line-height: 1.5;
+    }
+    .status-log li {
+      padding: 2px 0;
+      color: var(--muted);
+      border-bottom: 1px solid rgba(48, 54, 61, 0.55);
+    }
+    .status-log li:last-child { border-bottom: none; }
+    .status-log .ok { color: var(--green); }
+    .status-log .fail { color: var(--muted); }
+    .status-log .info { color: var(--accent); }
   </style>
 </head>
 <body>
@@ -231,6 +315,14 @@
     <div class="stats" id="stats"></div>
   </header>
   <main>
+    <section id="statusPanel" class="status-panel" hidden>
+      <h2>Live probe status</h2>
+      <div class="status-summary" id="statusSummary"></div>
+      <div class="status-sources" id="statusSources"></div>
+      <div class="status-log-wrap">
+        <ul class="status-log" id="statusLog"></ul>
+      </div>
+    </section>
     <div class="table-wrap">
       <table>
         <thead id="thead"></thead>
@@ -345,6 +437,72 @@
       });
     }
 
+    function phaseLabel(progress) {
+      if (progress.phase === "wiki-table") return "Loading Wikipedia table";
+      if (progress.phase === "source" && progress.sourceKey) {
+        return `Querying ${SOURCE_LABELS[progress.sourceKey] || progress.sourceKey} (${progress.sourceIndex}/${progress.sourceTotal})`;
+      }
+      if (progress.phase === "assets" && progress.sourceKey) {
+        return `Downloading ${SOURCE_LABELS[progress.sourceKey] || progress.sourceKey} preview`;
+      }
+      if (progress.phase === "host-done") return "Finishing host";
+      if (progress.phase === "cancelled") return "Stopped";
+      return "Working…";
+    }
+
+    function logLineClass(message) {
+      if (message.includes("✓")) return "ok";
+      if (message.includes("✗") || message.includes("error") || message.includes("failed")) return "fail";
+      return "info";
+    }
+
+    function renderStatusPanel(probing, progress, sourceKeys) {
+      const panel = document.getElementById("statusPanel");
+      const show = probing || (progress?.log?.length > 0);
+      panel.hidden = !show;
+      if (!show) return;
+
+      const keys = sourceKeys.length ? sourceKeys : Object.keys(SOURCE_LABELS);
+      const hostPart = progress.hostTotal > 1
+        ? `Host ${progress.hostIndex}/${progress.hostTotal}: `
+        : progress.name
+          ? `${progress.name}: `
+          : "";
+      document.getElementById("statusSummary").textContent =
+        probing
+          ? `${hostPart}${phaseLabel(progress)}`
+          : progress.cancelled
+            ? `Stopped after ${progress.hostIndex}/${progress.hostTotal} hosts`
+            : "Probe finished";
+
+      document.getElementById("statusSources").innerHTML = keys.map((key) => {
+        const live = progress.liveSources?.[key];
+        const isActive = probing && progress.sourceKey === key &&
+          (progress.phase === "source" || progress.phase === "assets");
+        let state = "pending";
+        let mark = "…";
+        if (live) {
+          state = live.ok ? "ok" : "fail";
+          mark = live.ok ? "✓" : "✗";
+        } else if (isActive) {
+          state = "active";
+          mark = "●";
+        }
+        return `
+          <span class="status-source ${state}" title="${esc(live ? tooltipCell(live) : "")}">
+            <span class="status-source-dot"></span>
+            ${esc(SOURCE_LABELS[key] || key)} ${mark}
+          </span>
+        `;
+      }).join("");
+
+      const logEl = document.getElementById("statusLog");
+      const lines = progress.log || [];
+      logEl.innerHTML = lines.map((entry) =>
+        `<li class="${logLineClass(entry.message)}">${esc(entry.message)}</li>`
+      ).join("");
+    }
+
     function computeStats(hosts, resultsHosts) {
       let selected = 0;
       let noSelection = 0;
@@ -379,16 +537,21 @@
       const stopBtn = document.getElementById("stopProbe");
       stopBtn.hidden = !probing;
       const prog = document.getElementById("progress");
-      if (probing && progress?.running) {
+      if (probing && progress?.running !== false) {
         const suffix = progress.cancelled ? " — stopping…" : "";
-        prog.textContent = `${progress.current} / ${progress.total} — ${progress.name || "…"}${suffix}`;
+        const hostPart = progress.hostTotal > 0
+          ? `${progress.hostIndex} / ${progress.hostTotal}`
+          : "…";
+        prog.textContent = `${hostPart} — ${progress.name || "…"}${suffix}`;
       } else if (probing) {
         prog.textContent = "Starting…";
       } else if (progress?.cancelled) {
-        prog.textContent = `Stopped at ${progress.current} / ${progress.total}`;
+        prog.textContent = `Stopped at ${progress.hostIndex} / ${progress.hostTotal}`;
       } else {
         prog.textContent = "";
       }
+
+      renderStatusPanel(probing, progress, keys);
 
       document.getElementById("thead").innerHTML = `
         <tr>
@@ -440,6 +603,9 @@
           const hostName = decodeURIComponent(tr.dataset.name);
           e.target.disabled = true;
           try {
+            state.probing = true;
+            render();
+            startPolling();
             await fetch(`/api/probe/${encodeURIComponent(hostName)}`, { method: "POST" });
             await refresh();
           } catch (err) {
@@ -488,7 +654,7 @@
           clearInterval(pollTimer);
           pollTimer = null;
         }
-      }, 1500);
+      }, 600);
     }
 
     document.getElementById("checkAll").addEventListener("click", async () => {

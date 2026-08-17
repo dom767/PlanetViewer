@@ -696,14 +696,25 @@ export async function probeHost(name, options = {}) {
     delay = DELAY_MS,
     wikiTable = null,
     wikiCachePath = null,
+    onProgress = null,
   } = options;
   const aliases = searchTerms(name);
   let table = wikiTable;
   if (sources.includes("wikiList") && !table) {
+    onProgress?.({ phase: "wiki-table", name, status: "loading" });
     table = await loadWikiTable(wikiCachePath);
+    onProgress?.({ phase: "wiki-table", name, status: "ready" });
   }
   const out = { name, aliases, sources: {}, winner: null };
-  for (const key of sources) {
+  for (let i = 0; i < sources.length; i++) {
+    const key = sources[i];
+    onProgress?.({
+      phase: "source-start",
+      name,
+      sourceKey: key,
+      sourceIndex: i + 1,
+      sourceTotal: sources.length,
+    });
     let hit = null;
     try {
       if (key === "wikiList") {
@@ -715,8 +726,17 @@ export async function probeHost(name, options = {}) {
       hit = { error: err.message };
     }
     out.sources[key] = hit;
+    onProgress?.({
+      phase: "source-done",
+      name,
+      sourceKey: key,
+      sourceIndex: i + 1,
+      sourceTotal: sources.length,
+      hit,
+    });
   }
   out.winner = pickBestFromHits(out.sources);
+  onProgress?.({ phase: "host-probe-done", name, result: out });
   return out;
 }
 
