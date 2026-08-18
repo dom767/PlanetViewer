@@ -29,6 +29,7 @@ export const TOURS = [
       "GJ 581",
       "HD 69830",
       "Kepler-22",
+      "Kepler-16",
       "47 UMa",
     ],
   },
