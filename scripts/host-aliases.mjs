@@ -6,11 +6,18 @@ import { constellationGenitive, pressLabel } from "./star-label.mjs";
 
 /** @typedef {{ prefix: string, raKey: string, decKey: string, decSign: number }} CoordDesignation */
 
+/**
+ * Survey prefix at the start of a designation.
+ * 2MASS nicknames are often glued (`2M1207`) rather than spaced (`2MASS J…`).
+ */
 const COORD_PREFIX_RE =
-  /^(VHS|WISEP?|CWISEP?|2MASS|2M|ULAS|SDSS|SOHO|TYC|Oph|Cha|USco|CT|ISO|CFHTWIR|CFBDSIR|CFBDS|DENIS|SCR)\s+/i;
+  /^(VHS|WISEP?|CWISEP?|2MASSW|2MASS|2M|ULAS|SDSS|SOHO|TYC|Oph|Cha|USco|CT|ISO|CFHTWIR|CFBDSIR|CFBDS|DENIS|SCR)(?:\s+|(?=J?\d))/i;
 
 const SURVEY_COORD_IN_TEXT_RE =
-  /\b(VHS|WISEP?|CWISEP?|2MASS|2M|ULAS|CFBDSIR|CFBDS|DENIS|Oph|Cha|USco|CT|ISO|CFHTWIR)\s+(\d{4,6})[\d.-]*([+\-−–—])(\d{2,6})/gi;
+  /\b(VHS|WISEP?|CWISEP?|2MASSW?|2M|ULAS|CFBDSIR|CFBDS|DENIS|Oph|Cha|USco|CT|ISO|CFHTWIR)\s+(?:J)?(\d{4,6})[\d.-]*([+\-−–—])(\d{2,6})/gi;
+
+/** Glued 2MASS nicknames in captions/filenames: 2M1207, 2M1207b, 2M0437-26. */
+const GLUED_2MASS_IN_TEXT_RE = /\b2M(?:ASSW?)?(\d{4})(?:([+\-−–—])(\d{2,4}))?[a-z]?\b/gi;
 
 function normalizeDash(s) {
   return String(s)
@@ -21,7 +28,7 @@ function normalizeDash(s) {
 
 function normalizeCoordPrefix(raw) {
   let p = String(raw).toLowerCase();
-  if (p === "2m") return "2mass";
+  if (p === "2m" || p === "2massw") return "2mass";
   if (p === "wisep" || p.startsWith("cwise")) return "wise";
   if (p === "cfhtwir") return "cfhtwir";
   if (p === "cfbds") return "cfbds";
@@ -88,6 +95,8 @@ export function parseCoordinateDesignation(raw) {
   const prefix = prefixMatch ? normalizeCoordPrefix(prefixMatch[1]) : "";
   if (prefixMatch) s = s.slice(prefixMatch[0].length).trim();
   s = s.replace(/^J(?=\d)/i, "");
+  // Planet letters glued to nicknames: 2M1207b, 2M0437b
+  s = s.replace(/[a-z]$/i, "").trim();
 
   let m = s.match(/^(\d{4})\s*([+\-])\s*(\d{4})/);
   if (m) {
@@ -143,7 +152,7 @@ export function parseCoordinateDesignation(raw) {
 }
 
 function coordFingerprint(c) {
-  return `${c.prefix}:${c.raKey}:${c.decKey}`;
+  return `${c.prefix}:${c.raKey}:${c.decKey}:${c.decSign}`;
 }
 
 /** @returns {Set<string>} */
@@ -154,14 +163,17 @@ export function coordinateKeys(raw) {
   return keys;
 }
 
+function coordsCompatible(a, b) {
+  if (!a || !b) return false;
+  if (a.prefix !== b.prefix) return false;
+  if (a.raKey !== b.raKey) return false;
+  if (!a.decKey || !b.decKey) return true;
+  if (a.decSign !== b.decSign) return false;
+  return a.decKey.startsWith(b.decKey) || b.decKey.startsWith(a.decKey);
+}
+
 export function coordinateKeysMatch(a, b) {
-  const ka = coordinateKeys(a);
-  const kb = coordinateKeys(b);
-  if (!ka.size || !kb.size) return false;
-  for (const x of ka) {
-    if (kb.has(x)) return true;
-  }
-  return false;
+  return coordsCompatible(parseCoordinateDesignation(a), parseCoordinateDesignation(b));
 }
 
 function prefixLabel(prefix) {
@@ -208,6 +220,15 @@ export function coordinateSearchAliases(raw) {
       aliases.push(withPrefix(ra));
       aliases.push(withPrefix(`${ra}-${dec}`));
     }
+    if (parsed.prefix === "2mass") {
+      aliases.push(`2M${ra}`);
+      aliases.push(`2M ${ra}`);
+      if (parsed.decKey) {
+        const d2 = parsed.decKey.slice(0, 2);
+        aliases.push(`2M${ra}${sign}${d2}`);
+        aliases.push(`2M${ra}-${d2}`);
+      }
+    }
   }
   return [...new Set(aliases.filter(Boolean))];
 }
@@ -222,6 +243,11 @@ function coordinateSubstringsInText(text) {
     if (m[2].length >= 4 && m[4].length >= 2) {
       found.push(`${m[1]} ${m[2].slice(0, 4)}${m[3]}${m[4].slice(0, 2)}`);
     }
+  }
+  GLUED_2MASS_IN_TEXT_RE.lastIndex = 0;
+  while ((m = GLUED_2MASS_IN_TEXT_RE.exec(blob))) {
+    found.push(`2M${m[1]}`);
+    if (m[2] && m[3]) found.push(`2M${m[1]}${m[2]}${m[3]}`);
   }
   return found;
 }
