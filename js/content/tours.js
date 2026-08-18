@@ -38,6 +38,7 @@ export const TOURS = [
     title: "Directly imaged",
     blurb: "Worlds caught on camera — disks, forming planets, and photographed giants.",
     stops: [
+      "2MASS J12073346-3932539",
       "HR 8799",
       "bet Pic",
       "PDS 70",
@@ -48,6 +49,11 @@ export const TOURS = [
       "TYC 8998-760-1",
       "GJ 504",
       "GQ Lup",
+      "AF Lep",
+      "VHS J125601.92-125723.9",
+      "HD 106906",
+      "kap And",
+      "HD 95086",
     ],
   },
   {

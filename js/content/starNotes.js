@@ -105,6 +105,24 @@ export const STAR_NOTES = {
   "GQ Lup": {
     text: "GQ Lupi b, one of the first imaged planetary-mass companions, a young world still glowing from its formation.",
   },
+  "2MASS J12073346-3932539": {
+    text: "2M1207, home to the first exoplanet ever photographed (2004): a giant world orbiting a brown dwarf, seen directly instead of inferred from a wobble or a transit.",
+  },
+  "AF Lep": {
+    text: "AF Leporis b, a nearby Jupiter analog on a roughly 9 AU orbit, imaged in 2023 — one of the closest twins yet to a solar-system giant caught on camera.",
+  },
+  "VHS J125601.92-125723.9": {
+    text: "VHS 1256 b, a nearby imaged giant that JWST has studied in detail: a cloudy, variable atmosphere only about 13 parsecs from Sol.",
+  },
+  "HD 106906": {
+    text: "HD 106906 b sits on a vast ~650 AU orbit, photographed by Hubble and GPI far outside its star’s debris disk.",
+  },
+  "kap And": {
+    text: "Kappa Andromedae b, a classic directly imaged giant from 2013, a massive companion seen in infrared light about 50 parsecs away.",
+  },
+  "HD 95086": {
+    text: "HD 95086 b, a textbook GPI/SPHERE imaged planet: a young giant in a dusty disk, photographed well outside its star.",
+  },
 };
 
 /**
