@@ -1,7 +1,7 @@
 /**
  * Curated blurbs for notable hosts (NASA names, plus a few injected landmarks).
  * Keys must match system.name exactly.
- * Key order is the Next-tour order.
+ * Tour order lives in tours.js — this file is copy only.
  *
  * To add a fact: look up the host in Search, then add an entry here.
  *
@@ -58,7 +58,40 @@ export const STAR_NOTES = {
     text: "Rocky’s home star in Project Hail Mary, and Vulcan in Star Trek. No exoplanet is confirmed, a 2018 candidate was stellar activity, not a world.",
   },
   "zet 2 Ret": {
-    text: "Zeta 2 Reticuli, the real star behind Alien’s LV-426. There are no confirmed exoplanets here,.",
+    text: "Zeta 2 Reticuli, the real star behind Alien’s LV-426. There are no confirmed exoplanets here.",
+  },
+  "Barnard's star": {
+    text: "Barnard's Star, one of the nearest red dwarfs, now with four known planets — and a classic science-fiction destination, from The Hitchhiker's Guide to countless stories of Earth's closest neighbours.",
+  },
+  "Kepler-16": {
+    text: "A binary star with a circumbinary planet, Kepler-16b: a real Tatooine-style world that orbits both suns.",
+  },
+  "HR 8799": {
+    text: "The first system with multiple planets photographed directly: four giant worlds, imaged over years as they moved around their young star.",
+  },
+  "bet Pic": {
+    text: "Beta Pictoris, a young star with a dusty debris disk and a giant planet, bet Pic b, one of the first worlds seen in a photograph.",
+  },
+  "PDS 70": {
+    text: "A still-forming planetary system: two gas giants sit in a gap in the disk, with PDS 70 b even showing signs of its own circumplanetary disk.",
+  },
+  "51 Eri": {
+    text: "51 Eridani b, a young Jupiter analog imaged by Gemini — one of the closest twins to our own giant planets yet photographed.",
+  },
+  "HIP 65426": {
+    text: "HIP 65426 b was among the first exoplanets imaged by JWST, a young giant already seen in infrared light far from its star.",
+  },
+  "AB Aur": {
+    text: "AB Aurigae, a young star whose swirling disk has revealed a forming protoplanet, AB Aur b, still gathering material.",
+  },
+  "TYC 8998-760-1": {
+    text: "A young Sun-like star with two giant planets photographed by ESO's SPHERE, one of the rare multi-planet images.",
+  },
+  "GJ 504": {
+    text: "GJ 504 b, a massive companion imaged in the near-infrared — a pinkish giant several times Jupiter's mass.",
+  },
+  "GQ Lup": {
+    text: "GQ Lupi b, one of the first imaged planetary-mass companions, a young world still glowing from its formation.",
   },
 };
 

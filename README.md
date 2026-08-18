@@ -18,6 +18,8 @@ npx --yes serve -p 8080
 
 Open [http://localhost:8080](http://localhost:8080).
 
+On first load, pick one of three **guided tours** (ten systems each): science fiction, directly imaged worlds, or record holders. Amber bookmarks mark the active tour; **Next** hops along it. Change tour from the HUD or Settings.
+
 ## Controls
 
 | Input | Action |
@@ -29,10 +31,12 @@ Open [http://localhost:8080](http://localhost:8080).
 | Scroll | Zoom (orbit) / dolly |
 | Drag on star | Orbit around star |
 | Click near a star | Focus (+ info panel on desktop; use Info on mobile) |
-| Esc | Close panel |
+| Esc | Close panel or tour picker |
 | Minimap click | Jump toward that XY position |
 | Time dropdown | Orbit simulation speed |
-| SOL button | Return to Sol |
+| Home | Return to Sol |
+| Next | Next stop on the active tour (wraps after 10) |
+| Change tour | Reopen the tour picker (also in Settings) |
 
 ## Data
 
@@ -73,7 +77,8 @@ js/camera/         # free-fly camera + focus tween
 js/catalog/        # system catalog + picking
 js/data/loader.js
 js/render/         # WebGL2 Scene, StarPass, PlanetPass
-js/ui/             # InfoPanel, Minimap, Hud
+js/content/        # star notes, tours, landmarks, system stills
+js/ui/             # InfoPanel, Minimap, Hud, TourPicker
 data/exoplanets.json
 data/nearby-stars.json
 data/system-images.json

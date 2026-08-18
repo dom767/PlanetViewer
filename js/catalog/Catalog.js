@@ -4,6 +4,7 @@ import { estimateSemiMajorAxis } from "../astro/orbits.js";
 import { createSolSystem } from "../astro/sol.js";
 import { applyGoldilocksColors } from "../astro/habitable.js";
 import { STAR_NOTES, getStarNote } from "../content/starNotes.js";
+import { TOURS, getTour } from "../content/tours.js";
 import { LANDMARK_STARS } from "../content/landmarkStars.js";
 import {
   notableBookmarkSize,
@@ -24,6 +25,10 @@ export class Catalog {
     this.sol = null;
     /** @type {SystemRecord[]} */
     this.notableSystems = [];
+    /** @type {string|null} */
+    this.activeTourId = null;
+    /** Index into notableSystems for the active tour. */
+    this.tourIndex = 0;
   }
 
   /** @param {object[]} rawSystems from loader */
@@ -31,6 +36,8 @@ export class Catalog {
     this.systems = [];
     this.byName.clear();
     this.notableSystems = [];
+    this.activeTourId = null;
+    this.tourIndex = 0;
 
     // Older snapshots stored NASA st_lum as log10(L/L☉). Convert if needed.
     const systemsIn = convertLogLuminositiesIfNeeded(rawSystems);
@@ -51,26 +58,59 @@ export class Catalog {
       ingestRawSystem(this, raw);
     }
 
-    // Tour order follows STAR_NOTES key order (not catalog distance).
-    this.notableSystems = Object.keys(STAR_NOTES)
-      .map((name) => this.byName.get(name))
-      .filter((s) => s?.notable);
     warnUnmatchedStarNotes(this.byName);
+    warnUnmatchedTourStops(this.byName);
 
     return this;
   }
 
   /**
-   * Next curated notable after `current`, wrapping around.
-   * @param {SystemRecord|null|undefined} current
+   * Activate a tour: notable ribbons follow its 10 stops, index resets to 0.
+   * @param {string} id
+   * @returns {SystemRecord|null} first stop, or null if unknown / unmatched
+   */
+  setActiveTour(id) {
+    const tour = getTour(id);
+    if (!tour) return null;
+
+    const names = new Set(tour.stops);
+    for (const s of this.systems) {
+      s.notable = names.has(s.name);
+    }
+    this.notableSystems = tour.stops
+      .map((name) => this.byName.get(name))
+      .filter((s) => s?.notable);
+    this.activeTourId = id;
+    this.tourIndex = 0;
+    return this.notableSystems[0] ?? null;
+  }
+
+  /** @returns {import("../content/tours.js").Tour|null} */
+  getActiveTour() {
+    return getTour(this.activeTourId);
+  }
+
+  /**
+   * If `system` is on the active tour, move the tour index to that stop.
+   * @param {SystemRecord|null|undefined} system
+   */
+  syncTourIndex(system) {
+    if (!system || !this.notableSystems.length) return;
+    const i = this.notableSystems.findIndex(
+      (s) => s === system || s.name === system.name
+    );
+    if (i >= 0) this.tourIndex = i;
+  }
+
+  /**
+   * Next stop on the active tour, wrapping around. Advances tourIndex.
    * @returns {SystemRecord|null}
    */
-  nextNotable(current) {
+  nextTourStop() {
     const list = this.notableSystems;
     if (!list.length) return null;
-    const i = list.findIndex((s) => s === current || s.name === current?.name);
-    if (i < 0) return list[0];
-    return list[(i + 1) % list.length];
+    this.tourIndex = (this.tourIndex + 1) % list.length;
+    return list[this.tourIndex];
   }
 
   /**
@@ -225,14 +265,8 @@ function convertLogLuminositiesIfNeeded(systems) {
  * @param {SystemRecord} system
  */
 function attachStarNote(system) {
-  const note = getStarNote(system.name);
-  if (note) {
-    system.note = note;
-    system.notable = true;
-  } else {
-    system.note = null;
-    system.notable = false;
-  }
+  system.note = getStarNote(system.name) ?? null;
+  system.notable = false;
 }
 
 /**
@@ -242,6 +276,21 @@ function warnUnmatchedStarNotes(byName) {
   for (const key of Object.keys(STAR_NOTES)) {
     if (!byName.has(key)) {
       console.warn(`[starNotes] No catalog system matched hostname "${key}"`);
+    }
+  }
+}
+
+/**
+ * @param {Map<string, SystemRecord>} byName
+ */
+function warnUnmatchedTourStops(byName) {
+  for (const tour of TOURS) {
+    for (const name of tour.stops) {
+      if (!byName.has(name)) {
+        console.warn(
+          `[tours] ${tour.id}: no catalog system matched hostname "${name}"`
+        );
+      }
     }
   }
 }

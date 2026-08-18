@@ -9,6 +9,8 @@ export class Hud {
     this.note = els.note;
     this.noteBlock = els.noteBlock;
     this.noteNext = els.noteNext;
+    this.tourMeta = els.tourMeta;
+    this.changeTour = els.changeTour;
     this.timeSpeed = els.timeSpeed;
     this.simClock = els.simClock;
     this.exposureInput = els.exposure;
@@ -23,6 +25,7 @@ export class Hud {
     this.exposure = Number(this.exposureInput?.value ?? 1);
     this.trailLengthScale = Number(this.trailLengthInput?.value ?? 1);
     this.cameraSpeed = Number(this.cameraSpeedInput?.value ?? 1);
+    this._tourActive = false;
     /** @type {((v: number) => void) | null} */
     this.onExposureChange = null;
     /** @type {((v: number) => void) | null} */
@@ -31,6 +34,8 @@ export class Hud {
     this.onCameraSpeedChange = null;
     /** @type {(() => void) | null} */
     this.onNextNotable = null;
+    /** @type {(() => void) | null} */
+    this.onChangeTour = null;
 
     this.timeSpeed.addEventListener("change", () => {
       this.speed = Number(this.timeSpeed.value);
@@ -39,6 +44,11 @@ export class Hud {
       e.preventDefault();
       e.stopPropagation();
       this.onNextNotable?.();
+    });
+    this.changeTour?.addEventListener("click", (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      this.onChangeTour?.();
     });
     this.photo?.addEventListener("error", () => {
       this.photo.classList.add("hidden");
@@ -114,11 +124,45 @@ export class Hud {
     this.photo.classList.remove("hidden");
   }
 
+  /**
+   * @param {{ active: boolean, title?: string, index?: number, total?: number }} state
+   */
+  setTourState(state) {
+    this._tourActive = !!state?.active;
+    const title = state?.title || "";
+    const total = Number(state?.total) || 0;
+    const index = Number(state?.index) || 0;
+    if (this.tourMeta) {
+      if (this._tourActive && title && total > 0) {
+        this.tourMeta.textContent = `${title} · ${index + 1} / ${total}`;
+        this.tourMeta.classList.remove("hidden");
+      } else {
+        this.tourMeta.textContent = "";
+        this.tourMeta.classList.add("hidden");
+      }
+    }
+    if (this.noteNext) {
+      this.noteNext.setAttribute(
+        "aria-label",
+        title ? `Next stop on ${title} tour` : "Next tour stop"
+      );
+    }
+    this.syncNoteBlock();
+  }
+
   /** @param {string|null|undefined} text */
   setNote(text) {
     const body = text && String(text).trim();
-    if (this.note) this.note.textContent = body || "";
-    this.noteBlock?.classList.toggle("hidden", !body);
+    if (this.note) {
+      this.note.textContent = body || "";
+      this.note.classList.toggle("hidden", !body);
+    }
+    this.syncNoteBlock();
+  }
+
+  syncNoteBlock() {
+    const hasNote = !!(this.note?.textContent && this.note.textContent.trim());
+    this.noteBlock?.classList.toggle("hidden", !this._tourActive && !hasNote);
   }
 
   tick(dtSec) {

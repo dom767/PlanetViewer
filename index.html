@@ -58,6 +58,13 @@
         <h2 class="sheet-title">Settings</h2>
       </div>
       <div class="sheet-body">
+        <div id="settings-tours" class="settings-group">
+          <span class="settings-group-label">Tours</span>
+          <p id="settings-tour-name" class="hud-hint">No tour selected</p>
+          <button type="button" id="settings-change-tour" class="settings-btn">
+            Change tour
+          </button>
+        </div>
         <div id="hud-time" class="settings-group">
           <label for="time-speed">Orbit time</label>
           <select id="time-speed" title="How fast orbital time advances relative to real time">
@@ -160,10 +167,16 @@
       <span id="hud-selection">Free flight</span>
       <span id="hud-distance"></span>
       <div id="hud-note-block" class="hidden">
+        <p id="hud-tour-meta" class="hud-tour-meta hidden"></p>
         <p id="hud-note"></p>
-        <button type="button" id="hud-note-next" aria-label="Next bookmarked star">
-          Next
-        </button>
+        <div id="hud-tour-actions">
+          <button type="button" id="hud-note-next" aria-label="Next tour stop">
+            Next
+          </button>
+          <button type="button" id="hud-change-tour" aria-label="Change tour">
+            Change tour
+          </button>
+        </div>
       </div>
     </div>
 
@@ -200,6 +213,28 @@
     </nav>
 
     <div id="loading">Loading catalog…</div>
+
+    <div
+      id="tour-picker"
+      class="tour-picker hidden"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="tour-picker-title"
+      aria-hidden="true"
+    >
+      <div class="tour-picker-backdrop"></div>
+      <div class="tour-picker-panel">
+        <button type="button" id="tour-picker-close" class="tour-picker-close hidden" aria-label="Close">
+          &times;
+        </button>
+        <p class="tour-picker-eyebrow">Exoplanet Viewer</p>
+        <h2 id="tour-picker-title">Choose a tour</h2>
+        <p class="tour-picker-lead">
+          Ten systems each. Next walks the route; amber bookmarks mark the stops.
+        </p>
+        <div id="tour-picker-list" class="tour-picker-list"></div>
+      </div>
+    </div>
   </div>
 
   <script type="module" src="js/main.js"></script>

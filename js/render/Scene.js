@@ -66,7 +66,12 @@ export class Scene {
     }));
     this.starPass.upload(stars);
     this.mapPlanetsPass.upload(catalog);
-    this.notablePass.setSystems(catalog.notableSystems || []);
+    this.setNotableSystems(catalog.notableSystems);
+  }
+
+  /** @param {object[]|null|undefined} systems */
+  setNotableSystems(systems) {
+    this.notablePass.setSystems(systems || []);
   }
 
   /** @param {Array<{x:number,y:number,z:number,color:number[],size:number,brightness:number}>} stars */

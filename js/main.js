@@ -10,7 +10,9 @@ import { Hud } from "./ui/Hud.js";
 import { SystemSearch } from "./ui/SystemSearch.js";
 import { AppChrome } from "./ui/AppChrome.js";
 import { CanvasSizeSettings } from "./ui/CanvasSizeSettings.js";
+import { TourPicker } from "./ui/TourPicker.js";
 import { setSystemImages } from "./content/systemImages.js";
+import { TOURS, allTourStopNames } from "./content/tours.js";
 import { FOCUS_ORBIT_RADIUS_PC } from "./render/PlanetPass.js";
 import { length3, projectToNdc, ndcToScreen } from "./astro/coords.js";
 
@@ -58,6 +60,8 @@ async function main() {
     note: document.getElementById("hud-note"),
     noteBlock: document.getElementById("hud-note-block"),
     noteNext: document.getElementById("hud-note-next"),
+    tourMeta: document.getElementById("hud-tour-meta"),
+    changeTour: document.getElementById("hud-change-tour"),
     timeSpeed: document.getElementById("time-speed"),
     simClock: document.getElementById("hud-sim-clock"),
     exposure: document.getElementById("exposure"),
@@ -74,11 +78,11 @@ async function main() {
   hud.onCameraSpeedChange = (v) => camera.setPathSpeed(v);
   camera.setPathSpeed(hud.cameraSpeed);
 
-  function goNextNotable() {
-    const next = catalog.nextNotable(focused);
+  function goNextTourStop() {
+    const next = catalog.nextTourStop();
     if (next) selectSystem(next, { openInfo: !!chrome?.isWide });
   }
-  hud.onNextNotable = goNextNotable;
+  hud.onNextNotable = goNextTourStop;
 
   const canvasSize = new CanvasSizeSettings({
     canvas,
@@ -102,6 +106,8 @@ async function main() {
   let chrome = null;
   /** @type {SystemSearch | null} */
   let search = null;
+  /** @type {TourPicker | null} */
+  let tourPicker = null;
 
   function pickAtCss(sx, sy) {
     const rect = canvas.getBoundingClientRect();
@@ -180,12 +186,14 @@ async function main() {
   function selectSystem(system, { openInfo = true } = {}) {
     const fromStar = focused;
     focused = system;
+    catalog.syncTourIndex(system);
     const focusDist = system.isSol
       ? Math.max(FOCUS_ORBIT_RADIUS_PC * 2.6, 2.2)
       : Math.max(FOCUS_ORBIT_RADIUS_PC * 2.2, 1.5);
     camera.focusOn(system, focusDist, fromStar);
     scene.setFocusedSystem(system, camera.getOrbitBasis());
     hud.setSelection(system.label ?? system.name, system.distPc, true, system.note?.text, system.name);
+    updateTourHud();
 
     // On mobile, map taps focus only; Info opens via the nav tab (or when
     // already open, refresh contents for the newly focused system).
@@ -195,6 +203,36 @@ async function main() {
       if (chrome) chrome.openInfo(system);
       else panel.open(system);
     }
+  }
+
+  function updateTourHud() {
+    const tour = catalog.getActiveTour();
+    hud.setTourState({
+      active: !!tour,
+      title: tour?.title ?? "",
+      index: catalog.tourIndex,
+      total: catalog.notableSystems.length,
+    });
+    const nameEl = document.getElementById("settings-tour-name");
+    if (nameEl) nameEl.textContent = tour ? tour.title : "No tour selected";
+  }
+
+  function startTour(id) {
+    const first = catalog.setActiveTour(id);
+    scene.setNotableSystems(catalog.notableSystems);
+    updateTourHud();
+    chrome?.closeSettings();
+    chrome?.closeSearch();
+    if (first) selectSystem(first, { openInfo: !!chrome?.isWide });
+  }
+
+  function openTourPicker({ blocking = false } = {}) {
+    chrome?.closeSettings();
+    chrome?.closeSearch();
+    tourPicker?.open({
+      blocking,
+      activeId: catalog.activeTourId,
+    });
   }
 
   try {
@@ -211,10 +249,17 @@ async function main() {
     minimap.setSystems(catalog.systems);
     minimap.fitToCatalog(catalog.systems);
 
+    const tourStopNames = allTourStopNames();
     const normalizeName = (name) =>
       String(name).toUpperCase().replace(/\s+/g, "");
     systemSearchIndex = catalog.systems
-      .filter((s) => s.isSol || (s.planets?.length ?? 0) > 0 || s.notable)
+      .filter(
+        (s) =>
+          s.isSol ||
+          (s.planets?.length ?? 0) > 0 ||
+          s.note ||
+          tourStopNames.has(s.name)
+      )
       .flatMap((s) => {
         const names = [s.name, s.label, ...(s.aliases || [])].filter(Boolean);
         return names.map((name) => ({ system: s, normName: normalizeName(name) }));
@@ -278,7 +323,23 @@ async function main() {
 
     panel.onDismiss = () => chrome?.closeInfo();
 
+    tourPicker = new TourPicker({
+      overlay: document.getElementById("tour-picker"),
+      list: document.getElementById("tour-picker-list"),
+      closeBtn: document.getElementById("tour-picker-close"),
+      titleEl: document.getElementById("tour-picker-title"),
+      tours: TOURS,
+      onChoose: startTour,
+    });
+    hud.onChangeTour = () => openTourPicker({ blocking: false });
+    document.getElementById("settings-change-tour")?.addEventListener("click", (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      openTourPicker({ blocking: false });
+    });
+
     loading.classList.add("hidden");
+    openTourPicker({ blocking: true });
     console.info(`Loaded ${starCount} host systems / ${planetCount} planets (WebGPU)`);
   } catch (err) {
     console.error(err);
@@ -335,6 +396,10 @@ async function main() {
 
   window.addEventListener("keydown", (e) => {
     if (e.code !== "Escape") return;
+    if (tourPicker?.isOpen()) {
+      if (!tourPicker.isBlocking()) tourPicker.dismiss();
+      return;
+    }
     if (chrome?.handleEscape()) return;
   });
 
