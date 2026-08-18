@@ -113,9 +113,8 @@ export class TourPicker {
         : "Change tour";
     }
     if (this.leadEl) {
-      this.leadEl.textContent = blocking
-        ? "Take a tour of some notable stars, or explore the galaxy on your own."
-        : "Pick a guided tour, or explore the galaxy on your own.";
+      this.leadEl.textContent =
+        "Take a tour of some notable exoplanets, or explore the galaxy for yourself in free flight.";
     }
     for (const btn of this.list.querySelectorAll(".tour-card")) {
       const active = btn.dataset.tourId === activeId;
