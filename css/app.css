@@ -436,7 +436,8 @@ body.view-fixed #app {
 #hud-system-photo {
   position: fixed;
   top: calc(12px + env(safe-area-inset-top, 0px));
-  right: clamp(0.75rem, 4vw, 1rem);
+  left: 50%;
+  transform: translateX(-50%);
   z-index: 5;
   display: block;
   width: 120px;
