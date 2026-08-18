@@ -434,15 +434,19 @@ body.view-fixed #app {
 }
 
 #hud-system-photo {
+  position: fixed;
+  top: calc(12px + env(safe-area-inset-top, 0px));
+  left: clamp(0.75rem, 4vw, 1rem);
+  z-index: 5;
   display: block;
   width: 80px;
   height: 80px;
-  margin: 0 0 8px;
   object-fit: cover;
   border-radius: var(--radius-sm);
   border: 1px solid var(--border);
   background: #000;
   box-shadow: var(--shadow);
+  pointer-events: none;
 }
 
 #hud-system-photo.hidden {
@@ -562,9 +566,9 @@ body.view-fixed #app {
     bottom: calc(16px + var(--nav-height) + 12px);
   }
 
+  /* Desktop: still lives in the info panel only */
   #hud-system-photo {
-    width: 96px;
-    height: 96px;
+    display: none !important;
   }
 }
 
