@@ -433,6 +433,22 @@ body.view-fixed #app {
   pointer-events: none;
 }
 
+#hud-system-photo {
+  display: block;
+  width: 80px;
+  height: 80px;
+  margin: 0 0 8px;
+  object-fit: cover;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border);
+  background: #000;
+  box-shadow: var(--shadow);
+}
+
+#hud-system-photo.hidden {
+  display: none;
+}
+
 #hud-selection {
   display: block;
   font-family: var(--font-display);
@@ -544,6 +560,11 @@ body.view-fixed #app {
 
   #scene-status {
     bottom: calc(16px + var(--nav-height) + 12px);
+  }
+
+  #hud-system-photo {
+    width: 96px;
+    height: 96px;
   }
 }
 

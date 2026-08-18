@@ -53,6 +53,7 @@ async function main() {
   const minimap = new Minimap(document.getElementById("minimap"));
   const hud = new Hud({
     selection: document.getElementById("hud-selection"),
+    photo: document.getElementById("hud-system-photo"),
     distance: document.getElementById("hud-distance"),
     note: document.getElementById("hud-note"),
     noteBlock: document.getElementById("hud-note-block"),
@@ -184,7 +185,7 @@ async function main() {
       : Math.max(FOCUS_ORBIT_RADIUS_PC * 2.2, 1.5);
     camera.focusOn(system, focusDist, fromStar);
     scene.setFocusedSystem(system, camera.getOrbitBasis());
-    hud.setSelection(system.label ?? system.name, system.distPc, true, system.note?.text);
+    hud.setSelection(system.label ?? system.name, system.distPc, true, system.note?.text, system.name);
 
     // On mobile, map taps focus only; Info opens via the nav tab (or when
     // already open, refresh contents for the newly focused system).

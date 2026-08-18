@@ -1,8 +1,10 @@
 import { daysSinceJ2000, formatUtcDate, j2000DaysToDate } from "../astro/epoch.js";
+import { getSystemImage } from "../content/systemImages.js";
 
 export class Hud {
   constructor(els) {
     this.selection = els.selection;
+    this.photo = els.photo;
     this.distance = els.distance;
     this.note = els.note;
     this.noteBlock = els.noteBlock;
@@ -37,6 +39,9 @@ export class Hud {
       e.preventDefault();
       e.stopPropagation();
       this.onNextNotable?.();
+    });
+    this.photo?.addEventListener("error", () => {
+      this.photo.classList.add("hidden");
     });
 
     const syncExposure = () => {
@@ -75,8 +80,9 @@ export class Hud {
    * @param {number|null|undefined} distPc
    * @param {boolean} focused
    * @param {string|null|undefined} [noteText]
+   * @param {string|null|undefined} [catalogName] system.name for image lookup
    */
-  setSelection(name, distPc, focused, noteText = null) {
+  setSelection(name, distPc, focused, noteText = null, catalogName = null) {
     this.selection.textContent = name;
     if (name === "Sol") {
       this.distance.textContent = "";
@@ -88,6 +94,24 @@ export class Hud {
       this.distance.textContent = "";
     }
     this.setNote(focused ? noteText : null);
+    this.setPhoto(focused ? catalogName : null);
+  }
+
+  /** @param {string|null|undefined} catalogName */
+  setPhoto(catalogName) {
+    if (!this.photo) return;
+    const img = catalogName ? getSystemImage(catalogName) : null;
+    if (!img?.src) {
+      this.photo.classList.add("hidden");
+      this.photo.removeAttribute("src");
+      this.photo.alt = "";
+      return;
+    }
+    if (this.photo.getAttribute("src") !== img.src) {
+      this.photo.src = img.src;
+    }
+    this.photo.alt = img.alt || "";
+    this.photo.classList.remove("hidden");
   }
 
   /** @param {string|null|undefined} text */
