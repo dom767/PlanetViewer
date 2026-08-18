@@ -6,6 +6,8 @@ node_modules/
 tools/system-image-probe/results.json
 tools/system-image-probe/wiki-table.json
 tools/system-image-probe/thumbs/
+tools/system-image-probe/previews/
+data/system-images-report.json
 Export/
 Exports/
 .cursor/*

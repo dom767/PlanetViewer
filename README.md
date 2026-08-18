@@ -36,7 +36,7 @@ Open [http://localhost:8080](http://localhost:8080).
 
 ## Data
 
-Catalog snapshot: [`data/exoplanets.json`](data/exoplanets.json) from the [NASA Exoplanet Archive](https://exoplanetarchive.ipac.caltech.edu/) **PSCompPars** table (TAP).
+Catalog snapshot: [`data/exoplanets.json`](data/exoplanets.json) from the [NASA Exoplanet Archive](https://exoplanetarchive.ipac.caltech.edu/) **PSCompPars** table (TAP). Directly imaged hosts may show a telescope still from [`data/system-images.json`](data/system-images.json) (curated via the probe dashboard; refresh with `npm run fetch-system-images`).
 
 Refresh the snapshots (requires network; separate from packaging):
 
@@ -75,6 +75,9 @@ js/data/loader.js
 js/render/         # WebGL2 Scene, StarPass, PlanetPass
 js/ui/             # InfoPanel, Minimap, Hud
 data/exoplanets.json
+data/nearby-stars.json
+data/system-images.json
+images/systems/
 scripts/fetch-exoplanets.mjs
 ```
 

@@ -42,7 +42,7 @@ const PREVIEW_SIZE = 300;
 const THUMB_SIZE = 64;
 
 /** Bump when probe server behavior or result schema changes. */
-export const PROBE_SERVER_VERSION = "1.2.0";
+export const PROBE_SERVER_VERSION = "1.3.0";
 
 /** Explicit “use no image in the app” selection (not a probe source). */
 export const NO_IMAGE_SOURCE = "none";

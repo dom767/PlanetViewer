@@ -12,6 +12,13 @@ import {
   mentionsHostInFields,
   parseCoordinateDesignation,
 } from "./host-aliases.mjs";
+import {
+  commonsDownloadUrl,
+  commonsSearchRank,
+  isConvertibleImage,
+  isSkippedImageName,
+  stripImageExtension,
+} from "./image-convert.mjs";
 
 export {
   coordinateSearchAliases,
@@ -329,7 +336,7 @@ export function commonsLicenseOk(shortName, usage) {
 }
 
 function commonsCaption(fileTitle, desc) {
-  const name = fileTitle.replace(/^File:/i, "").replace(/\.(jpe?g|png)$/i, "");
+  const name = stripImageExtension(fileTitle);
   if (!desc) return name;
   if (
     desc.length > 220 ||
@@ -338,6 +345,28 @@ function commonsCaption(fileTitle, desc) {
     return name;
   }
   return desc.slice(0, 180);
+}
+
+function commonsHitFromInfo(fileTitle, info, { score, desc = "", artist = "" } = {}) {
+  if (!info || !isConvertibleImage({ mime: info.mime, fileTitle })) return null;
+  const meta = info.extmetadata || {};
+  const license = meta.LicenseShortName?.value || meta.License?.value || "";
+  const usage = meta.UsageTerms?.value || "";
+  if (!commonsLicenseOk(license, usage)) return null;
+  const downloadUrl = commonsDownloadUrl(info);
+  if (!downloadUrl) return null;
+  const captionDesc = desc || stripHtml(meta.ImageDescription?.value || "");
+  const credit = artist || stripHtml(meta.Artist?.value || meta.Credit?.value || "") || "Wikimedia Commons";
+  return {
+    source: "commons",
+    score,
+    title: commonsCaption(fileTitle, captionDesc),
+    credit,
+    sourceUrl: `https://commons.wikimedia.org/wiki/${fileTitle.replace(/ /g, "_")}`,
+    license: stripHtml(license) || "see source",
+    downloadUrl,
+    alt: commonsCaption(fileTitle, captionDesc),
+  };
 }
 
 async function commonsImageInfo(title) {
@@ -365,14 +394,11 @@ export async function probeCommons(name, aliases, { delay = DELAY_MS } = {}) {
       if (!best) best = { error: err.message };
       continue;
     }
-    hits.sort((a, b) => {
-      const rank = (t) => (/\.jpe?g$/i.test(t) ? 0 : /\.png$/i.test(t) ? 1 : 2);
-      return rank(a.title) - rank(b.title);
-    });
+    hits.sort((a, b) => commonsSearchRank(a.title) - commonsSearchRank(b.title));
     for (const hit of hits) {
       const fileTitle = hit.title || "";
-      if (/\.(gif|tiff?|svg|pdf|djvu|webp)$/i.test(fileTitle)) continue;
-      if (!/\.(jpe?g|png)$/i.test(fileTitle)) continue;
+      if (isSkippedImageName(fileTitle)) continue;
+      if (!isConvertibleImage({ fileTitle })) continue;
       const preview = `${fileTitle} ${hit.snippet || ""}`;
       if (REJECT_RE.test(preview)) continue;
       const titleMatch = mentionsHostInFields([fileTitle], name, aliases);
@@ -385,14 +411,10 @@ export async function probeCommons(name, aliases, { delay = DELAY_MS } = {}) {
         continue;
       }
       if (!info) continue;
-      const mime = info.mime || "";
-      if (mime !== "image/jpeg" && mime !== "image/png") continue;
-      const meta = info.extmetadata || {};
-      const license = meta.LicenseShortName?.value || meta.License?.value || "";
-      const usage = meta.UsageTerms?.value || "";
-      if (!commonsLicenseOk(license, usage)) continue;
-      const desc = stripHtml(meta.ImageDescription?.value || "");
-      const artist = stripHtml(meta.Artist?.value || meta.Credit?.value || "");
+      const desc = stripHtml(info.extmetadata?.ImageDescription?.value || "");
+      const artist = stripHtml(
+        info.extmetadata?.Artist?.value || info.extmetadata?.Credit?.value || ""
+      );
       const blob = `${fileTitle} ${hit.snippet || ""} ${desc} ${artist}`;
       if (!mentionsHostInFields([fileTitle, hit.snippet || "", desc], name, aliases)) {
         if (!matchHostToFile(name, fileTitle, aliases)) continue;
@@ -401,20 +423,9 @@ export async function probeCommons(name, aliases, { delay = DELAY_MS } = {}) {
       let sc = scoreTitle(fileTitle, `${hit.snippet || ""} ${desc}`);
       if (titleMatch) sc = Math.max(sc, MIN_SCORE + 1);
       if (sc < MIN_SCORE) continue;
-      const downloadUrl = info.thumburl || info.url;
-      if (!downloadUrl) continue;
-      if (!best || !best.score || sc > best.score) {
-        best = {
-          source: "commons",
-          score: sc,
-          title: commonsCaption(fileTitle, desc),
-          credit: artist || "Wikimedia Commons",
-          sourceUrl: `https://commons.wikimedia.org/wiki/${fileTitle.replace(/ /g, "_")}`,
-          license: stripHtml(license) || "see source",
-          downloadUrl,
-          alt: commonsCaption(fileTitle, desc),
-        };
-      }
+      const candidate = commonsHitFromInfo(fileTitle, info, { score: sc, desc, artist });
+      if (!candidate) continue;
+      if (!best || !best.score || sc > best.score) best = candidate;
     }
     if (best?.score >= GOOD_SCORE) break;
   }
@@ -496,29 +507,16 @@ export async function probeWikiList(name, aliases, wikiTable, { delay = DELAY_MS
   try {
     const info = await commonsImageInfo(fileTitle);
     if (!info) return null;
-    const mime = info.mime || "";
-    if (mime !== "image/jpeg" && mime !== "image/png") return null;
-    const meta = info.extmetadata || {};
-    const license = meta.LicenseShortName?.value || meta.License?.value || "";
-    const usage = meta.UsageTerms?.value || "";
-    if (!commonsLicenseOk(license, usage)) return null;
-    const desc = stripHtml(meta.ImageDescription?.value || "");
-    const artist = stripHtml(meta.Artist?.value || meta.Credit?.value || "");
+    const desc = stripHtml(info.extmetadata?.ImageDescription?.value || "");
+    const artist = stripHtml(
+      info.extmetadata?.Artist?.value || info.extmetadata?.Credit?.value || ""
+    );
     let sc = scoreTitle(fileTitle, desc);
     // Curated directly-imaged list: trust the row once host/file matching succeeded.
     if (sc < MIN_SCORE) sc = MIN_SCORE + 2;
-    const downloadUrl = info.thumburl || info.url;
-    if (!downloadUrl) return null;
-    return {
-      source: "wikiList",
-      score: sc,
-      title: commonsCaption(fileTitle, desc),
-      credit: artist || "Wikimedia Commons",
-      sourceUrl: `https://commons.wikimedia.org/wiki/${fileTitle.replace(/ /g, "_")}`,
-      license: stripHtml(license) || "see source",
-      downloadUrl,
-      alt: commonsCaption(fileTitle, desc),
-    };
+    const hit = commonsHitFromInfo(fileTitle, info, { score: sc, desc, artist });
+    if (!hit) return null;
+    return { ...hit, source: "wikiList" };
   } catch (err) {
     return { error: err.message };
   }
@@ -599,7 +597,7 @@ export function pickBestFromHits(hits) {
   return best;
 }
 
-/** Cascade used by fetch-system-images (ESO → Commons → NASA, early exit on good score). */
+/** Fast cascade (ESO → Commons → NASA). Full five-source probe is probeHost(). */
 export async function pickBest(name, aliases, { delay = DELAY_MS } = {}) {
   let best = await probeEsoTitle(name, aliases, { delay });
   if (!best || best.score < GOOD_SCORE) {

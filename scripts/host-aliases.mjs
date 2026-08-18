@@ -7,10 +7,10 @@ import { constellationGenitive, pressLabel } from "./star-label.mjs";
 /** @typedef {{ prefix: string, raKey: string, decKey: string, decSign: number }} CoordDesignation */
 
 const COORD_PREFIX_RE =
-  /^(VHS|WISEP?|CWISEP?|2MASS|2M|ULAS|SDSS|SOHO|TYC|Oph|Cha|USco|CT|ISO|CFHTWIR)\s+/i;
+  /^(VHS|WISEP?|CWISEP?|2MASS|2M|ULAS|SDSS|SOHO|TYC|Oph|Cha|USco|CT|ISO|CFHTWIR|CFBDSIR|CFBDS|DENIS|SCR)\s+/i;
 
-const ASSOCIATION_COORD_IN_TEXT_RE =
-  /\b(Oph|Cha|USco|CT|ISO|CFHTWIR)\s+(\d{6})[\d.-]*([+\-−–—])(\d{4,6})/gi;
+const SURVEY_COORD_IN_TEXT_RE =
+  /\b(VHS|WISEP?|CWISEP?|2MASS|2M|ULAS|CFBDSIR|CFBDS|DENIS|Oph|Cha|USco|CT|ISO|CFHTWIR)\s+(\d{4,6})[\d.-]*([+\-−–—])(\d{2,6})/gi;
 
 function normalizeDash(s) {
   return String(s)
@@ -24,6 +24,7 @@ function normalizeCoordPrefix(raw) {
   if (p === "2m") return "2mass";
   if (p === "wisep" || p.startsWith("cwise")) return "wise";
   if (p === "cfhtwir") return "cfhtwir";
+  if (p === "cfbds") return "cfbds";
   return p;
 }
 
@@ -169,7 +170,21 @@ function prefixLabel(prefix) {
   if (prefix === "wise") return "WISE";
   if (prefix === "cfhtwir") return "CFHTWIR";
   if (prefix === "usco") return "USco";
+  if (prefix === "cfbdsir") return "CFBDSIR";
+  if (prefix === "cfbds") return "CFBDS";
+  if (prefix === "denis") return "DENIS";
   return prefix.charAt(0).toUpperCase() + prefix.slice(1);
+}
+
+function shortDecAliases(parsed, withPrefix) {
+  if (!parsed.decKey || parsed.decKey.length < 2) return [];
+  const sign = parsed.decSign < 0 ? "-" : "+";
+  const ra = parsed.raKey;
+  const decDeg = parsed.decKey.slice(0, 2);
+  return [
+    withPrefix(`${ra}${sign}${decDeg}`),
+    withPrefix(`${ra}-${decDeg}`),
+  ];
 }
 
 /** Human-readable coordinate aliases for search and metadata matching. */
@@ -187,9 +202,12 @@ export function coordinateSearchAliases(raw) {
     withPrefix(`J${ra}-${dec}`),
     withPrefix(`${ra}-${dec}`),
   ];
-  if (label && ra && /^(Oph|Cha|USco|CT|ISO|CFHTWIR)$/i.test(label)) {
-    aliases.push(withPrefix(ra));
-    if (dec) aliases.push(withPrefix(`${ra}-${dec}`));
+  if (label && ra) {
+    aliases.push(...shortDecAliases(parsed, withPrefix));
+    if (/^(Oph|Cha|USco|CT|ISO|CFHTWIR)$/i.test(label) && dec) {
+      aliases.push(withPrefix(ra));
+      aliases.push(withPrefix(`${ra}-${dec}`));
+    }
   }
   return [...new Set(aliases.filter(Boolean))];
 }
@@ -198,9 +216,12 @@ function coordinateSubstringsInText(text) {
   const found = [];
   const blob = normalizeDash(String(text || ""));
   let m;
-  ASSOCIATION_COORD_IN_TEXT_RE.lastIndex = 0;
-  while ((m = ASSOCIATION_COORD_IN_TEXT_RE.exec(blob))) {
+  SURVEY_COORD_IN_TEXT_RE.lastIndex = 0;
+  while ((m = SURVEY_COORD_IN_TEXT_RE.exec(blob))) {
     found.push(`${m[1]} ${m[2]}${m[3]}${m[4]}`);
+    if (m[2].length >= 4 && m[4].length >= 2) {
+      found.push(`${m[1]} ${m[2].slice(0, 4)}${m[3]}${m[4].slice(0, 2)}`);
+    }
   }
   return found;
 }

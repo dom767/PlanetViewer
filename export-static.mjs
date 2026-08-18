@@ -30,6 +30,7 @@ const ROOT = __dirname;
 const EXPORT_ROOT = join(ROOT, "Export");
 const EXOPLANETS = join(ROOT, "data", "exoplanets.json");
 const NEARBY = join(ROOT, "data", "nearby-stars.json");
+const SYSTEM_IMAGES = join(ROOT, "data", "system-images.json");
 
 async function requireSnapshot(path) {
   try {
@@ -96,6 +97,7 @@ async function build(outDir, version) {
   console.log("Compressing catalog data (gzip)…");
   await writeGzippedJson(EXOPLANETS, join(outDir, "data", "exoplanets.json.gz"));
   await writeGzippedJson(NEARBY, join(outDir, "data", "nearby-stars.json.gz"));
+  await writeGzippedJson(SYSTEM_IMAGES, join(outDir, "data", "system-images.json.gz"));
 
   console.log("Copying system images…");
   await cp(join(ROOT, "images", "systems"), join(outDir, "images", "systems"), {
@@ -118,6 +120,7 @@ async function build(outDir, version) {
 async function main() {
   await requireSnapshot(EXOPLANETS);
   await requireSnapshot(NEARBY);
+  await requireSnapshot(SYSTEM_IMAGES);
 
   const { n, dir } = await nextVersionDir();
   console.log(`Using existing data/ snapshots (run npm run fetch-data to refresh).`);

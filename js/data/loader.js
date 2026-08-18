@@ -69,3 +69,21 @@ export async function loadNearbyStars(url = "data/nearby-stars.json") {
   if (Array.isArray(data.stars)) return data.stars;
   throw new Error("Nearby-stars JSON must be an array or { stars: [] }");
 }
+
+/**
+ * Load telescope stills keyed by catalog system.name.
+ * Missing file (local, before first fetch) yields an empty map.
+ * @returns {Promise<Record<string, {src:string, alt:string, credit:string, sourceUrl:string, license:string}>>}
+ */
+export async function loadSystemImages(url = "data/system-images.json") {
+  try {
+    const data = await loadCatalogPayload(url);
+    if (data && typeof data === "object" && data.images && typeof data.images === "object") {
+      return data.images;
+    }
+    if (data && typeof data === "object" && !Array.isArray(data)) return data;
+    return {};
+  } catch {
+    return {};
+  }
+}

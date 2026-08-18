@@ -45,7 +45,8 @@ Results are cached locally in `tools/system-image-probe/results.json` and `thumb
 - Source columns: **Queried** (in progress), **Nothing found** (queried but no match), or **Successful** (match found). Hover for title, score, errors.
 - **Winner** = best hit across all five sources (`pickBestFromHits` scoring).
 - Each host record stores **`probeServerVersion`** — the probe server version that ran the query.
-- The fetch pipeline (`npm run fetch-system-images`) still uses ESO → Commons → NASA only; wiki/OEC are for evaluation here.
+- Clicking a preview (or **No image**) writes the app catalog: `data/system-images.json` plus `images/systems/{slug}.jpg`.
+- `npm run fetch-system-images` reapplies those selections into the app. Pass `--search` to live-probe hosts that still have no selection.
 
 ## Dev smoke test
 

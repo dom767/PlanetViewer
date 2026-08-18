@@ -1,26 +1,22 @@
 /**
- * Curated telescope images of planetary systems (where a public photo exists).
- * Keys must match system.name exactly.
- *
- * Images are local 300×300 crops. Credit must stay visible (ESO CC BY 4.0).
+ * Telescope stills for catalog hosts. Map is filled at startup from
+ * data/system-images.json (see loadSystemImages / fetch-system-images.mjs).
  *
  * @typedef {{ src: string, alt: string, credit: string, sourceUrl: string, license: string }} SystemImage
- * @type {Record<string, SystemImage>}
  */
-export const SYSTEM_IMAGES = {
-  "PDS 70": {
-    src: "images/systems/pds-70.jpg",
-    alt: "SPHERE / VLT image of PDS 70: a protoplanetary disk with planet b as a bright point to the right of the coronagraph",
-    credit: "ESO/A. Müller et al.",
-    sourceUrl: "https://www.eso.org/public/images/eso1821a/",
-    license: "CC BY 4.0",
-  },
-};
+
+/** @type {Record<string, SystemImage>} */
+let images = {};
+
+/** @param {Record<string, SystemImage>|null|undefined} map */
+export function setSystemImages(map) {
+  images = map && typeof map === "object" ? map : {};
+}
 
 /**
  * @param {string} name
  * @returns {SystemImage|null}
  */
 export function getSystemImage(name) {
-  return SYSTEM_IMAGES[name] ?? null;
+  return images[name] ?? null;
 }
