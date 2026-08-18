@@ -7,17 +7,21 @@ export class TourPicker {
    * @param {HTMLElement} opts.overlay
    * @param {HTMLElement} opts.list
    * @param {HTMLElement|null} opts.closeBtn
+   * @param {HTMLElement|null} [opts.eyebrowEl]
    * @param {HTMLElement|null} opts.titleEl
+   * @param {HTMLElement|null} [opts.leadEl]
    * @param {import("../content/tours.js").Tour[]} opts.tours
    * @param {{ id: string, title: string, blurb: string }|null} [opts.freeFlight]
    * @param {(id: string) => void} opts.onChoose
    * @param {(() => void)|null} [opts.onDismiss]
    */
-  constructor({ overlay, list, closeBtn, titleEl, tours, freeFlight, onChoose, onDismiss }) {
+  constructor({ overlay, list, closeBtn, eyebrowEl, titleEl, leadEl, tours, freeFlight, onChoose, onDismiss }) {
     this.overlay = overlay;
     this.list = list;
     this.closeBtn = closeBtn;
+    this.eyebrowEl = eyebrowEl ?? null;
     this.titleEl = titleEl;
+    this.leadEl = leadEl ?? null;
     this.tours = tours;
     this.freeFlight = freeFlight ?? null;
     this.onChoose = onChoose;
@@ -102,8 +106,16 @@ export class TourPicker {
     this.overlay.setAttribute("aria-hidden", "false");
     this.overlay.classList.toggle("is-blocking", blocking);
     this.closeBtn?.classList.toggle("hidden", blocking);
+    this.eyebrowEl?.classList.toggle("hidden", blocking);
     if (this.titleEl) {
-      this.titleEl.textContent = blocking ? "Choose a tour" : "Change tour";
+      this.titleEl.textContent = blocking
+        ? "Welcome to the Exoplanet Viewer"
+        : "Change tour";
+    }
+    if (this.leadEl) {
+      this.leadEl.textContent = blocking
+        ? "Take a tour of some notable stars, or explore the galaxy on your own."
+        : "Pick a guided tour, or explore the galaxy on your own.";
     }
     for (const btn of this.list.querySelectorAll(".tour-card")) {
       const active = btn.dataset.tourId === activeId;
