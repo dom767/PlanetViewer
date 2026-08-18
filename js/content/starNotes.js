@@ -27,6 +27,9 @@ export const STAR_NOTES = {
   "Proxima Cen": {
     text: "Humanity’s nearest stellar neighbour, and the alien home system in The Three-Body Problem.",
   },
+  "KOI-351": {
+    text: "Kepler-90 (KOI-351), the extrasolar system with the most confirmed planets in this catalog: eight worlds, matching Sol, packed inside about one Earth’s orbit.",
+  },
   "Kepler-186": {
     text: "Host of Kepler-186f, among the first Earth-sized planets found in a star's habitable zone.",
   },

@@ -52,13 +52,13 @@ export const TOURS = [
   {
     id: "standout",
     title: "Record holders",
-    blurb: "Firsts and extremes: smallest, largest, farthest, fastest.",
+    blurb: "Firsts and extremes: most planets, smallest, largest, farthest, fastest.",
     stops: [
       "Sol",
+      "KOI-351",
       "PSR B1257+12",
       "51 Peg",
       "HD 209458",
-      "Kepler-186",
       "Kepler-37",
       "HD 100546",
       "SWEEPS-11",
