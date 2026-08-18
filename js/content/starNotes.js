@@ -25,7 +25,7 @@ export const STAR_NOTES = {
     text: "An ultra-cool dwarf with seven Earth-sized planets, several in or near the habitable zone.",
   },
   "Proxima Cen": {
-    text: "Our nearest stellar neighbour, and host to the closest known exoplanet. It's the faint third star of Alpha Centauri, the real triple system behind Avatar's Pandora and The Three-Body Problem's Trisolaris.",
+    text: "Humanity’s nearest stellar neighbour, and the alien home system in The Three-Body Problem.",
   },
   "Kepler-186": {
     text: "Host of Kepler-186f, among the first Earth-sized planets found in a star's habitable zone.",
@@ -46,22 +46,31 @@ export const STAR_NOTES = {
     text: "Home to COCONUTS-2 b, a Jupiter-sized world on a vast orbit: a single year here lasts around a million Earth years.",
   },
   "tau Cet": {
-    text: "A nearby Sun-like star with several super-Earths, and the destination of Project Hail Mary. In the story, Tau Ceti is where Grace meets Rocky and hunts a cure for astrophage.",
+    text: "A nearby Sun-like star with several super-Earths, and a science-fiction favourite: Project Hail Mary, Barbarella, and Kim Stanley Robinson’s Aurora all send stories here.",
   },
   "eps Eri": {
-    text: "One of the nearest Sun-like stars with a confirmed Jupiter analog (eps Eri b). Babylon 5 is set here, orbiting the fictional world Epsilon III.",
+    text: "Home to Reach in Halo, and the Babylon 5 station orbiting the fictional world Epsilon III. In our sky it is one of the nearest Sun-like stars with a confirmed Jupiter analog.",
   },
   "Kepler-22": {
-    text: "Host of Kepler-22 b, the first Kepler planet found in a habitable zone, and the colony world in Ridley Scott's Raised by Wolves.",
+    text: "Host of Kepler-22 b, the first Kepler planet found in a habitable zone — and humanity’s new home in Ridley Scott’s Raised by Wolves.",
   },
   "40 Eri A": {
-    text: "Rocky’s home star in Project Hail Mary, and Vulcan in Star Trek. No exoplanet is confirmed, a 2018 candidate was stellar activity, not a world.",
+    text: "Vulcan in Star Trek, and Erid, home of Rocky in Project Hail Mary. No exoplanet is confirmed; a 2018 candidate was stellar activity, not a world.",
   },
   "zet 2 Ret": {
-    text: "Zeta 2 Reticuli, the real star behind Alien’s LV-426. There are no confirmed exoplanets here.",
+    text: "Zeta Reticuli, the Alien system: LV-426 and LV-223, settings for Alien, Aliens, and Prometheus. There are no confirmed exoplanets here.",
   },
   "Barnard's star": {
-    text: "Barnard's Star, one of the nearest red dwarfs, now with four known planets — and a classic science-fiction destination, from The Hitchhiker's Guide to countless stories of Earth's closest neighbours.",
+    text: "Destination of humanity’s first interstellar expedition in Robert L. Forward’s Rocheworld. A nearby red dwarf, now with four known planets.",
+  },
+  "GJ 581": {
+    text: "A real multi-planet red dwarf, and the system humanity signals in the alien-invasion film Battleship.",
+  },
+  "HD 69830": {
+    text: "In Halo, real exoplanet HD 69830 d is orbited by Eayn, homeworld of the Kig-Yar. The star actually hosts a compact system of Neptune-mass worlds and a debris disk.",
+  },
+  "47 UMa": {
+    text: "Setting for Allen Steele’s Coyote, where colonists settle a habitable moon of a giant planet. 47 Ursae Majoris is a nearby Sun-like star with several confirmed giants.",
   },
   "Kepler-16": {
     text: "A binary star with a circumbinary planet, Kepler-16b: a real Tatooine-style world that orbits both suns.",
