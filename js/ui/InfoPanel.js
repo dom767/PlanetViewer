@@ -81,6 +81,9 @@ function renderSystem(s) {
         size && mass ? `${size} · ${mass}` : size || mass || "—";
       const period =
         p.periodDays != null ? fmt(p.periodDays, 1, "days") : "—";
+      const kind = p.planetTypeLabel
+        ? `<div>${escapeHtml(p.planetTypeLabel)}</div>`
+        : "";
       const hz = p.habitableZone
         ? `<div class="hz-tag">Goldilocks zone</div>`
         : "";
@@ -89,6 +92,7 @@ function renderSystem(s) {
         <div class="name">${escapeHtml(p.name)}</div>
         ${hz}
         <div class="meta">
+          ${kind}
           <div>Orbit ${orbit}</div>
           <div>${sizeMass}</div>
           <div>Period ${period}</div>

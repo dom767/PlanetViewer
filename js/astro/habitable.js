@@ -1,8 +1,5 @@
 /** Approximate habitable (Goldilocks) zone helpers. Distances in AU. */
 
-/** Distinct gold for HZ planets in the renderer. */
-export const GOLDILOCKS_COLOR = [1.0, 0.82, 0.28];
-
 /**
  * Stellar luminosity in linear L☉ from catalog fields.
  * Catalog stores linear solar units (NASA st_lum is converted from log10 on fetch).
@@ -46,13 +43,12 @@ export function isInGoldilocksZone(semiMajorAu, star) {
 }
 
 /**
- * Tag planets with habitableZone and gold color when inside the HZ.
+ * Tag planets that fall in the star's Goldilocks zone (info panel only).
+ * Renderer colour is NASA size-class, not gold.
  */
-export function applyGoldilocksColors(system) {
+export function applyGoldilocksZone(system) {
   for (const p of system.planets || []) {
-    const hz = isInGoldilocksZone(p.a, system);
-    p.habitableZone = hz;
-    if (hz) p.color = [...GOLDILOCKS_COLOR];
+    p.habitableZone = isInGoldilocksZone(p.a, system);
   }
   return system;
 }

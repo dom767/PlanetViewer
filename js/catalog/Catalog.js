@@ -2,7 +2,8 @@ import { equatorialToCartesian, projectToNdc, ndcToScreen } from "../astro/coord
 import { starBrightness, starColor, starPointSize } from "../astro/spectrum.js";
 import { estimateSemiMajorAxis, estimateOrbitalPeriodDays } from "../astro/orbits.js";
 import { createSolSystem } from "../astro/sol.js";
-import { applyGoldilocksColors } from "../astro/habitable.js";
+import { applyGoldilocksZone } from "../astro/habitable.js";
+import { applyPlanetColors } from "../astro/planetType.js";
 import { STAR_NOTES, getStarNote } from "../content/starNotes.js";
 import { TOURS, getTour } from "../content/tours.js";
 import { LANDMARK_STARS } from "../content/landmarkStars.js";
@@ -44,7 +45,8 @@ export class Catalog {
 
     this.sol = createSolSystem();
     this.sol.id = 0;
-    applyGoldilocksColors(this.sol);
+    applyPlanetColors(this.sol);
+    applyGoldilocksZone(this.sol);
     attachStarNote(this.sol);
     this.systems.push(this.sol);
     this.byName.set(this.sol.name, this.sol);
@@ -199,7 +201,8 @@ function ingestRawSystem(catalog, raw) {
     aliases: Array.isArray(raw.aliases) ? raw.aliases : [],
   };
 
-  applyGoldilocksColors(system);
+  applyPlanetColors(system);
+  applyGoldilocksZone(system);
   attachStarNote(system);
 
   catalog.systems.push(system);
@@ -216,14 +219,6 @@ function normalizePlanet(p, starMass, idx) {
     periodDays = estimateOrbitalPeriodDays(a, starMass ?? 1);
   }
 
-  const palette = [
-    [0.55, 0.75, 1.0],
-    [0.9, 0.7, 0.45],
-    [0.6, 0.9, 0.7],
-    [0.85, 0.55, 0.85],
-    [0.95, 0.85, 0.5],
-  ];
-
   return {
     name: p.name || `Planet ${idx + 1}`,
     a,
@@ -239,7 +234,6 @@ function normalizePlanet(p, starMass, idx) {
     discoveryMethod: p.discoveryMethod ?? null,
     discoveryYear: p.discoveryYear ?? null,
     discoveryFacility: p.discoveryFacility ?? null,
-    color: palette[idx % palette.length],
   };
 }
 

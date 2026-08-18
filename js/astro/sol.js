@@ -6,7 +6,6 @@
  * ω = ϖ − Ω,  M0 = L − ϖ  (degrees, normalized).
  */
 
-import { GOLDILOCKS_COLOR } from "./habitable.js";
 import { starBrightness } from "./spectrum.js";
 
 const PLANET_COLORS = {
@@ -141,14 +140,6 @@ export function createSolSystem() {
       massEarth: 17.1,
     }),
   ];
-
-  // Earth is in the Goldilocks zone; color applied again by catalog, but set here too
-  for (const p of planets) {
-    if (p.name === "Earth" || p.name === "Mars") {
-      p.color = [...GOLDILOCKS_COLOR];
-      p.habitableZone = true;
-    }
-  }
 
   return {
     id: -1,
