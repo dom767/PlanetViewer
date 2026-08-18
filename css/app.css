@@ -439,11 +439,11 @@ body.view-fixed #app {
   left: clamp(0.75rem, 4vw, 1rem);
   z-index: 5;
   display: block;
-  width: 80px;
-  height: 80px;
+  width: 120px;
+  height: 120px;
   object-fit: cover;
   border-radius: var(--radius-sm);
-  border: 1px solid var(--border);
+  border: 1px solid var(--border-strong);
   background: #000;
   box-shadow: var(--shadow);
   pointer-events: none;
