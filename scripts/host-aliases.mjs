@@ -4,7 +4,7 @@
 
 import { constellationGenitive, pressLabel } from "./star-label.mjs";
 
-/** @typedef {{ prefix: string, raKey: string, decKey: string, decSign: number }} CoordDesignation */
+/** @typedef {{ prefix: string, raKey: string, raDigits: string, decKey: string, decSign: number }} CoordDesignation */
 
 /**
  * Survey prefix at the start of a designation.
@@ -16,8 +16,9 @@ const COORD_PREFIX_RE =
 const SURVEY_COORD_IN_TEXT_RE =
   /\b(VHS|WISEP?|CWISEP?|2MASSW?|2M|ULAS|CFBDSIR|CFBDS|DENIS|Oph|Cha|USco|CT|ISO|CFHTWIR)\s+(?:J)?(\d{4,6})[\d.-]*([+\-−–—])(\d{2,6})/gi;
 
-/** Glued 2MASS nicknames in captions/filenames: 2M1207, 2M1207b, 2M0437-26. */
-const GLUED_2MASS_IN_TEXT_RE = /\b2M(?:ASSW?)?(\d{4})(?:([+\-−–—])(\d{2,4}))?[a-z]?\b/gi;
+/** Glued or J-spaced 2MASS nicknames: 2M1207, 2M J044144, 2M0437-26. */
+const GLUED_2MASS_IN_TEXT_RE =
+  /\b2M(?:ASSW?)?\s*J?(\d{4,8})(?:([+\-−–—])(\d{2,6}))?[a-z]?\b/gi;
 
 function normalizeDash(s) {
   return String(s)
@@ -84,9 +85,20 @@ export function associationSerialAliases(name) {
   return out;
 }
 
+function designation(prefix, raDigits, decKey, decSign) {
+  const digits = String(raDigits);
+  return {
+    prefix: prefix || "coord",
+    raKey: digits.slice(0, 4),
+    raDigits: digits,
+    decKey: decKey || "",
+    decSign,
+  };
+}
+
 /**
  * Parse survey- and association-style coordinate designations.
- * e.g. VHS J125601.92-125723.9, Oph 162225-240515, Oph 1622-2405
+ * e.g. VHS J125601.92-125723.9, Oph 162225-240515, 2M J044144, 2M1207
  * @returns {CoordDesignation|null}
  */
 export function parseCoordinateDesignation(raw) {
@@ -100,52 +112,38 @@ export function parseCoordinateDesignation(raw) {
 
   let m = s.match(/^(\d{4})\s*([+\-])\s*(\d{4})/);
   if (m) {
-    return {
-      prefix: prefix || "coord",
-      raKey: m[1],
-      decKey: m[3],
-      decSign: m[2] === "-" ? -1 : 1,
-    };
+    return designation(prefix || "coord", m[1], m[3], m[2] === "-" ? -1 : 1);
   }
 
   m = s.match(/^(\d{2})(\d{2})(\d{2})[\d.]*([+\-])(\d{1,2})(\d{2})[\d.]*/);
   if (m) {
-    return {
-      prefix: prefix || "coord",
-      raKey: m[1] + m[2],
-      decKey: String(m[5]).padStart(2, "0") + m[6],
-      decSign: m[4] === "-" ? -1 : 1,
-    };
+    return designation(
+      prefix || "coord",
+      m[1] + m[2] + m[3],
+      String(m[5]).padStart(2, "0") + m[6],
+      m[4] === "-" ? -1 : 1
+    );
   }
 
   m = s.match(/^(\d{2})(\d{2})(\d{2})[\d.]*([+\-])(\d{2})(\d{2})(\d{2})[\d.]*/);
   if (m) {
-    return {
-      prefix: prefix || "coord",
-      raKey: m[1] + m[2],
-      decKey: m[5] + m[6],
-      decSign: m[4] === "-" ? -1 : 1,
-    };
+    return designation(
+      prefix || "coord",
+      m[1] + m[2] + m[3],
+      m[5] + m[6],
+      m[4] === "-" ? -1 : 1
+    );
   }
 
   m = s.match(/^(\d{4})[\d.-]*([+\-])(\d{4})/);
   if (m && prefix) {
-    return {
-      prefix,
-      raKey: m[1],
-      decKey: m[3],
-      decSign: m[2] === "-" ? -1 : 1,
-    };
+    return designation(prefix, m[1], m[3], m[2] === "-" ? -1 : 1);
   }
 
-  m = s.match(/^(\d{4})$/);
+  // RA-only nicknames: 2M1207 (4 digits) or 2M J044144 (6-digit HHMMSS)
+  m = s.match(/^(\d{4,8})$/);
   if (m && prefix) {
-    return {
-      prefix,
-      raKey: m[1],
-      decKey: "",
-      decSign: 1,
-    };
+    return designation(prefix, m[1], "", 1);
   }
 
   return null;
@@ -199,6 +197,18 @@ function shortDecAliases(parsed, withPrefix) {
   ];
 }
 
+function twoMassNicknames(parsed) {
+  if (parsed.prefix !== "2mass") return [];
+  const digits = parsed.raDigits || parsed.raKey;
+  const out = [];
+  for (const n of [4, 6]) {
+    if (digits.length < n) continue;
+    const slice = digits.slice(0, n);
+    out.push(`2M${slice}`, `2M ${slice}`, `2M J${slice}`, `2MASS J${slice}`);
+  }
+  return out;
+}
+
 /** Human-readable coordinate aliases for search and metadata matching. */
 export function coordinateSearchAliases(raw) {
   const parsed = parseCoordinateDesignation(raw);
@@ -208,27 +218,24 @@ export function coordinateSearchAliases(raw) {
   const ra = parsed.raKey;
   const dec = parsed.decKey;
   const withPrefix = (body) => (label ? `${label} ${body}` : body);
-  const aliases = [
-    withPrefix(`J${ra}${sign}${dec}`),
-    withPrefix(`${ra}${sign}${dec}`),
-    withPrefix(`J${ra}-${dec}`),
-    withPrefix(`${ra}-${dec}`),
-  ];
-  if (label && ra) {
+  const aliases = [];
+  if (dec) {
+    aliases.push(
+      withPrefix(`J${ra}${sign}${dec}`),
+      withPrefix(`${ra}${sign}${dec}`),
+      withPrefix(`J${ra}-${dec}`),
+      withPrefix(`${ra}-${dec}`)
+    );
     aliases.push(...shortDecAliases(parsed, withPrefix));
+  } else if (label && ra) {
+    aliases.push(withPrefix(`J${ra}`), withPrefix(ra));
+  }
+  if (label && ra) {
     if (/^(Oph|Cha|USco|CT|ISO|CFHTWIR)$/i.test(label) && dec) {
       aliases.push(withPrefix(ra));
       aliases.push(withPrefix(`${ra}-${dec}`));
     }
-    if (parsed.prefix === "2mass") {
-      aliases.push(`2M${ra}`);
-      aliases.push(`2M ${ra}`);
-      if (parsed.decKey) {
-        const d2 = parsed.decKey.slice(0, 2);
-        aliases.push(`2M${ra}${sign}${d2}`);
-        aliases.push(`2M${ra}-${d2}`);
-      }
-    }
+    aliases.push(...twoMassNicknames(parsed));
   }
   return [...new Set(aliases.filter(Boolean))];
 }
@@ -247,6 +254,7 @@ function coordinateSubstringsInText(text) {
   GLUED_2MASS_IN_TEXT_RE.lastIndex = 0;
   while ((m = GLUED_2MASS_IN_TEXT_RE.exec(blob))) {
     found.push(`2M${m[1]}`);
+    found.push(`2M J${m[1]}`);
     if (m[2] && m[3]) found.push(`2M${m[1]}${m[2]}${m[3]}`);
   }
   return found;
