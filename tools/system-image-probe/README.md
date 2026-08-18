@@ -35,7 +35,7 @@ Search uses the **host name**, **press aliases**, **planet names**, and **survey
 - **Check missing** runs only hosts with no selected image (same as the “no selection” count in the stats bar).
 - **↻** on a row reruns a single host.
 - **Attribution** ✓ when the winning hit has usable credit and license for the app.
-- **Preview** shows every successful source thumb side by side; click one to select it for the app. Double-click to view 300×300.
+- **Preview** shows a **No image** blank plus every successful source thumb; click one to select it for the app. Double-click a preview to view 300×300. **Successful** in source columns links to that source’s image.
 - **Live status** overlay opens when probing starts; shows host/source progress and a log. **Close** is enabled when the run finishes.
 
 Results are cached locally in `tools/system-image-probe/results.json` and `thumbs/` (not committed).

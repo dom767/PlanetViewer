@@ -384,6 +384,17 @@
     }
     .source-status.successful { color: var(--green); }
     .source-status.queried { color: var(--accent); }
+    a.source-image-link {
+      color: var(--green);
+      text-decoration: underline;
+      text-underline-offset: 2px;
+      cursor: pointer;
+    }
+    a.source-image-link:hover { color: #56d364; }
+    .preview-item.blank .preview {
+      object-fit: contain;
+      background: var(--surface);
+    }
   </style>
 </head>
 <body>
@@ -392,7 +403,7 @@
     <p style="margin:0;color:var(--muted);font-size:13px;">
       Five sources per directly imaged host — ESO, Commons, NASA, Wikipedia list, OEC.
     </p>
-    <p class="hint">Click a preview to choose the app image. Double-click a preview to view it at 300×300.</p>
+    <p class="hint">Click a preview to choose the app image (including “No image”). Double-click a preview to view 300×300. “Successful” links open the source image.</p>
     <div class="controls">
       <button id="checkAll" type="button">Check all</button>
       <button id="checkMissing" type="button">Check missing</button>
@@ -447,7 +458,17 @@
       successful: { label: "Successful", title: "Match found" },
     };
 
-    let state = { hosts: [], results: { hosts: {} }, sourceKeys: [], probing: false, probeServerVersion: null };
+    const NO_IMAGE_SOURCE = "none";
+    const BLANK_IMAGE = "/blank.svg";
+
+    let state = {
+      hosts: [],
+      results: { hosts: {} },
+      sourceKeys: [],
+      probing: false,
+      probeServerVersion: null,
+      noImageSource: NO_IMAGE_SOURCE,
+    };
     let pollTimer = null;
     let statusOverlayOpen = false;
 
@@ -490,6 +511,12 @@
     document.addEventListener("click", (e) => {
       if (e.target.closest("[data-close]")) {
         closeLightbox();
+        return;
+      }
+      const link = e.target.closest(".view-image");
+      if (link) {
+        e.preventDefault();
+        openLightbox(link.getAttribute("href"), link.dataset.caption || link.title || "");
       }
     });
 
@@ -529,21 +556,56 @@
       return parts.join(" · ");
     }
 
+    function sourceImageHref(cell) {
+      if (!cell?.ok) return null;
+      if (cell.preview) return `/${cell.preview}`;
+      if (cell.sourceUrl) return cell.sourceUrl;
+      if (cell.downloadUrl) return cell.downloadUrl;
+      return null;
+    }
+
     function sourceCellHtml(name, sourceKey, cell, selectedSource, probing) {
       const isActive = probing && state.progress?.sourceKey === sourceKey &&
         (state.progress?.phase === "source" || state.progress?.phase === "assets");
       const live = state.probing ? state.progress?.liveSources?.[sourceKey] : null;
-      const status = resolveCellStatus(live || cell, isActive);
+      const resolved = cell || live;
+      const status = resolveCellStatus(resolved, isActive);
       const meta = statusMeta(status);
-      const statusHtml = `<span class="source-status ${status}">${esc(meta.label)}</span>`;
+      let statusHtml;
+      if (status === "successful" && resolved?.ok) {
+        const href = sourceImageHref(resolved);
+        const useLightbox = !!resolved.preview;
+        statusHtml = href
+          ? `<a class="source-status successful source-image-link${useLightbox ? " view-image" : ""}"
+              href="${esc(href)}"
+              ${useLightbox ? "" : 'target="_blank" rel="noopener"'}
+              data-caption="${esc(tooltipCell(resolved))}"
+              title="${esc(tooltipCell(resolved))}">${esc(meta.label)}</a>`
+          : `<span class="source-status successful">${esc(meta.label)}</span>`;
+      } else {
+        statusHtml = `<span class="source-status ${status}">${esc(meta.label)}</span>`;
+      }
       const selected = selectedSource === sourceKey;
-      const star = selected && cell?.ok
+      const star = selected && resolved?.ok
         ? `<span class="source-star" title="Selected for app">★</span>`
         : "";
       return `
-        <td class="source-cell${selected ? " selected" : ""}" title="${esc(tooltipCell(cell || live))}">
+        <td class="source-cell${selected ? " selected" : ""}" title="${esc(tooltipCell(resolved))}">
           <span class="source-cell-inner">${statusHtml}${star}</span>
         </td>`;
+    }
+
+    function blankPreviewItem(name, selectedSource, probing) {
+      const selected = selectedSource === NO_IMAGE_SOURCE;
+      return `
+        <button type="button" class="preview-item blank${selected ? " selected" : ""}"
+          data-name="${encodeURIComponent(name)}"
+          data-source="${NO_IMAGE_SOURCE}"
+          title="${esc(selected ? "No image · selected for app" : "Use no image in the app")}"
+          ${probing ? "disabled" : ""}>
+          <img class="preview" src="${BLANK_IMAGE}" alt="No image" width="64" height="64" />
+          <span class="preview-label">No image</span>
+        </button>`;
     }
 
     function previewColumnHtml(name, sources, keys, selectedSource, probing) {
@@ -551,28 +613,27 @@
         .map((key) => ({ key, cell: sources[key] }))
         .filter(({ cell }) => cell?.ok && cell?.thumb);
 
-      if (!hits.length) {
-        return `<td class="preview-cell"><div class="placeholder">—</div></td>`;
-      }
-
-      const items = hits.map(({ key, cell }) => {
-        const selected = key === selectedSource;
-        const label = SOURCE_LABELS[key] || key;
-        const caption = `${name} · ${label} · ${tooltipCell(cell)}`;
-        const previewPath = cell.preview ? `/${cell.preview}` : "";
-        return `
-          <button type="button" class="preview-item${selected ? " selected" : ""}"
-            data-name="${encodeURIComponent(name)}"
-            data-source="${key}"
-            data-preview="${esc(previewPath)}"
-            data-caption="${esc(caption)}"
-            title="${esc(selected ? `${label} · selected for app` : `Select ${label} for the app`)}"
-            ${probing ? "disabled" : ""}>
-            <img class="preview" src="/${cell.thumb}" alt="${esc(label)}" width="64" height="64" />
-            <span class="preview-label">${esc(label)}</span>
-          </button>
-        `;
-      }).join("");
+      const items = [
+        blankPreviewItem(name, selectedSource, probing),
+        ...hits.map(({ key, cell }) => {
+          const selected = key === selectedSource;
+          const label = SOURCE_LABELS[key] || key;
+          const caption = `${name} · ${label} · ${tooltipCell(cell)}`;
+          const previewPath = cell.preview ? `/${cell.preview}` : "";
+          return `
+            <button type="button" class="preview-item${selected ? " selected" : ""}"
+              data-name="${encodeURIComponent(name)}"
+              data-source="${key}"
+              data-preview="${esc(previewPath)}"
+              data-caption="${esc(caption)}"
+              title="${esc(selected ? `${label} · selected for app` : `Select ${label} for the app`)}"
+              ${probing ? "disabled" : ""}>
+              <img class="preview" src="/${cell.thumb}" alt="${esc(label)}" width="64" height="64" />
+              <span class="preview-label">${esc(label)}</span>
+            </button>
+          `;
+        }),
+      ].join("");
 
       return `<td class="preview-cell"><div class="preview-row">${items}</div></td>`;
     }
@@ -672,7 +733,7 @@
           continue;
         }
         selected++;
-        if (!row.attributionOk) attrMissing++;
+        if (row.selectedSource !== NO_IMAGE_SOURCE && !row.attributionOk) attrMissing++;
       }
       return { selected, noSelection, attrMissing, total: hosts.length };
     }
@@ -734,13 +795,19 @@
         const row = resultsHosts[name] || {};
         const sources = row.sources || {};
         const selectedSource = row.selectedSource;
-        const selectedCell = selectedSource ? sources[selectedSource] : null;
-        const attrTip = selectedCell
-          ? `${selectedCell.credit || ""} · ${selectedCell.license || ""}`
-          : "No selection";
-        const selectedLabel = selectedSource
-          ? `<span class="selected-source"><strong>${SOURCE_LABELS[selectedSource] || selectedSource}</strong></span>`
-          : `<span class="selected-source">—</span>`;
+        const selectedCell = selectedSource && selectedSource !== NO_IMAGE_SOURCE
+          ? sources[selectedSource]
+          : null;
+        const attrTip = selectedSource === NO_IMAGE_SOURCE
+          ? "No image selected for the app"
+          : selectedCell
+            ? `${selectedCell.credit || ""} · ${selectedCell.license || ""}`
+            : "No selection";
+        const selectedLabel = selectedSource === NO_IMAGE_SOURCE
+          ? `<span class="selected-source"><strong>No image</strong></span>`
+          : selectedSource
+            ? `<span class="selected-source"><strong>${SOURCE_LABELS[selectedSource] || selectedSource}</strong></span>`
+            : `<span class="selected-source">—</span>`;
         return `
           <tr data-name="${encodeURIComponent(name)}">
             <td class="rerun">
@@ -748,7 +815,7 @@
             </td>
             <td class="host" title="${esc([name, row.checkedAt ? `Checked ${new Date(row.checkedAt).toLocaleString()}` : "", row.probeServerVersion ? `Probe server v${row.probeServerVersion}` : ""].filter(Boolean).join(" · "))}">${esc(name)}</td>
             ${keys.map((k) => sourceCellHtml(name, k, sources[k], selectedSource, probing)).join("")}
-            <td title="${esc(attrTip)}">${row.attributionOk ? '<span class="attr-ok">✓</span>' : '<span class="attr-no">✗</span>'}</td>
+            <td title="${esc(attrTip)}">${selectedSource === NO_IMAGE_SOURCE ? '<span class="attr-no">—</span>' : row.attributionOk ? '<span class="attr-ok">✓</span>' : '<span class="attr-no">✗</span>'}</td>
             <td>${selectedLabel}</td>
             ${previewColumnHtml(name, sources, keys, selectedSource, probing)}
           </tr>
@@ -775,7 +842,7 @@
       });
 
       document.querySelectorAll(".preview-item").forEach((el) => {
-        el.addEventListener("click", async (e) => {
+        el.addEventListener("click", async () => {
           if (el.disabled || el.classList.contains("selected")) return;
           el.disabled = true;
           try {
@@ -787,6 +854,7 @@
           el.disabled = false;
         });
         el.addEventListener("dblclick", (e) => {
+          if (el.dataset.source === NO_IMAGE_SOURCE) return;
           e.preventDefault();
           const preview = el.dataset.preview;
           if (!preview) return;

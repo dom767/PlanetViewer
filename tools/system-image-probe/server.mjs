@@ -42,7 +42,12 @@ const PREVIEW_SIZE = 300;
 const THUMB_SIZE = 64;
 
 /** Bump when probe server behavior or result schema changes. */
-export const PROBE_SERVER_VERSION = "1.1.0";
+export const PROBE_SERVER_VERSION = "1.2.0";
+
+/** Explicit “use no image in the app” selection (not a probe source). */
+export const NO_IMAGE_SOURCE = "none";
+
+const BLANK_SVG = join(__dirname, "blank.svg");
 
 const SOURCE_LABELS = {
   esoTitle: "ESO title",
@@ -70,6 +75,7 @@ let probeProgress = {
 };
 
 function sourceLabel(key) {
+  if (key === NO_IMAGE_SOURCE) return "No image";
   return SOURCE_LABELS[key] || key;
 }
 
@@ -226,11 +232,34 @@ function cellAttributionOk(cell, sourceKey) {
 
 function applySelectionToRecord(record) {
   const key = record.selectedSource;
+  if (key === NO_IMAGE_SOURCE) {
+    record.attributionOk = false;
+    record.thumb = null;
+    record.preview = null;
+    return record;
+  }
   const cell = key ? record.sources[key] : null;
   record.attributionOk = cell ? cellAttributionOk(cell, key) : false;
   record.thumb = cell?.thumb || null;
   record.preview = cell?.preview || null;
   return record;
+}
+
+async function clearSelectionFromApp(name) {
+  const slug = slugFromName(name);
+  let payload = { fetchedAt: new Date().toISOString(), images: {} };
+  try {
+    payload = JSON.parse(await readFile(SYSTEM_IMAGES_JSON, "utf8"));
+    if (!payload.images) payload.images = {};
+  } catch {
+    payload.images = {};
+  }
+  if (Object.prototype.hasOwnProperty.call(payload.images, name)) {
+    delete payload.images[name];
+    payload.fetchedAt = new Date().toISOString();
+    await writeFile(SYSTEM_IMAGES_JSON, JSON.stringify(payload, null, 2) + "\n");
+  }
+  await unlink(join(SYSTEM_IMAGES_DIR, `${slug}.jpg`)).catch(() => {});
 }
 
 async function applySelectionToApp(name, cell, sourceKey) {
@@ -282,7 +311,7 @@ async function buildHostRecord(name, probeResult, previousRecord = null, options
 
   const winner = winnerFromProbe(probeResult);
   let selectedSource = previousRecord?.selectedSource ?? null;
-  if (!selectedSource || !sources[selectedSource]?.ok) {
+  if (selectedSource !== NO_IMAGE_SOURCE && (!selectedSource || !sources[selectedSource]?.ok)) {
     selectedSource = winner?.sourceKey || null;
   }
 
@@ -294,7 +323,11 @@ async function buildHostRecord(name, probeResult, previousRecord = null, options
     selectedSource,
   });
 
-  if (record.selectedSource && record.sources[record.selectedSource]?.preview) {
+  if (
+    record.selectedSource &&
+    record.selectedSource !== NO_IMAGE_SOURCE &&
+    record.sources[record.selectedSource]?.preview
+  ) {
     try {
       await applySelectionToApp(name, record.sources[record.selectedSource], record.selectedSource);
     } catch (err) {
@@ -353,11 +386,29 @@ async function probeOneHost(name, { hostIndex = 1, hostTotal = 1 } = {}) {
 }
 
 async function selectHostSource(name, sourceKey) {
-  if (!SOURCE_KEYS.includes(sourceKey)) {
+  if (sourceKey !== NO_IMAGE_SOURCE && !SOURCE_KEYS.includes(sourceKey)) {
     throw new Error(`Unknown source: ${sourceKey}`);
   }
   const results = await readResults();
-  const row = results.hosts[name];
+  let row = results.hosts[name];
+  if (sourceKey === NO_IMAGE_SOURCE) {
+    if (!row) {
+      row = {
+        checkedAt: null,
+        probeServerVersion: null,
+        sources: Object.fromEntries(
+          SOURCE_KEYS.map((k) => [k, { ok: false, status: "not_found" }])
+        ),
+        winner: null,
+      };
+    }
+    row.selectedSource = NO_IMAGE_SOURCE;
+    applySelectionToRecord(row);
+    await clearSelectionFromApp(name);
+    results.hosts[name] = row;
+    await writeResults(results);
+    return row;
+  }
   if (!row) throw new Error("Host not probed yet");
   const cell = row.sources[sourceKey];
   if (!cell?.ok) throw new Error("Source has no usable image");
@@ -467,6 +518,7 @@ async function handleRequest(req, res) {
       progress: probeProgress,
       sourceKeys: SOURCE_KEYS,
       probeServerVersion: PROBE_SERVER_VERSION,
+      noImageSource: NO_IMAGE_SOURCE,
     });
   }
 
@@ -539,6 +591,10 @@ async function handleRequest(req, res) {
       probeProgress.phase = "idle";
       return jsonResponse(res, 500, { error: err.message });
     }
+  }
+
+  if (req.method === "GET" && pathname === "/blank.svg") {
+    return serveFile(res, BLANK_SVG, "image/svg+xml");
   }
 
   if (req.method === "GET" && pathname.startsWith("/previews/")) {
