@@ -5,6 +5,14 @@
  * @typedef {{ id: string, title: string, blurb: string, stops: string[] }} Tour
  */
 
+export const FREE_FLIGHT_ID = "freeflight";
+
+export const FREE_FLIGHT = {
+  id: FREE_FLIGHT_ID,
+  title: "Free flight",
+  blurb: "Wander the catalogue with no guided route. Pick a tour later anytime.",
+};
+
 /** @type {Tour[]} */
 export const TOURS = [
   {

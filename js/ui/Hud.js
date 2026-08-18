@@ -26,6 +26,7 @@ export class Hud {
     this.trailLengthScale = Number(this.trailLengthInput?.value ?? 1);
     this.cameraSpeed = Number(this.cameraSpeedInput?.value ?? 1);
     this._tourActive = false;
+    this._freeFlight = false;
     /** @type {((v: number) => void) | null} */
     this.onExposureChange = null;
     /** @type {((v: number) => void) | null} */
@@ -125,10 +126,11 @@ export class Hud {
   }
 
   /**
-   * @param {{ active: boolean, title?: string, index?: number, total?: number }} state
+   * @param {{ active: boolean, freeFlight?: boolean, title?: string, index?: number, total?: number }} state
    */
   setTourState(state) {
     this._tourActive = !!state?.active;
+    this._freeFlight = !!state?.freeFlight && !this._tourActive;
     const title = state?.title || "";
     const total = Number(state?.total) || 0;
     const index = Number(state?.index) || 0;
@@ -136,11 +138,15 @@ export class Hud {
       if (this._tourActive && title && total > 0) {
         this.tourMeta.textContent = `${title} · ${index + 1} / ${total}`;
         this.tourMeta.classList.remove("hidden");
+      } else if (this._freeFlight) {
+        this.tourMeta.textContent = "Free flight";
+        this.tourMeta.classList.remove("hidden");
       } else {
         this.tourMeta.textContent = "";
         this.tourMeta.classList.add("hidden");
       }
     }
+    this.noteNext?.classList.toggle("hidden", !this._tourActive);
     if (this.noteNext) {
       this.noteNext.setAttribute(
         "aria-label",
@@ -162,7 +168,10 @@ export class Hud {
 
   syncNoteBlock() {
     const hasNote = !!(this.note?.textContent && this.note.textContent.trim());
-    this.noteBlock?.classList.toggle("hidden", !this._tourActive && !hasNote);
+    this.noteBlock?.classList.toggle(
+      "hidden",
+      !this._tourActive && !this._freeFlight && !hasNote
+    );
   }
 
   tick(dtSec) {

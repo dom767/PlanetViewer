@@ -9,15 +9,17 @@ export class TourPicker {
    * @param {HTMLElement|null} opts.closeBtn
    * @param {HTMLElement|null} opts.titleEl
    * @param {import("../content/tours.js").Tour[]} opts.tours
+   * @param {{ id: string, title: string, blurb: string }|null} [opts.freeFlight]
    * @param {(id: string) => void} opts.onChoose
    * @param {(() => void)|null} [opts.onDismiss]
    */
-  constructor({ overlay, list, closeBtn, titleEl, tours, onChoose, onDismiss }) {
+  constructor({ overlay, list, closeBtn, titleEl, tours, freeFlight, onChoose, onDismiss }) {
     this.overlay = overlay;
     this.list = list;
     this.closeBtn = closeBtn;
     this.titleEl = titleEl;
     this.tours = tours;
+    this.freeFlight = freeFlight ?? null;
     this.onChoose = onChoose;
     this.onDismiss = onDismiss ?? null;
     this._blocking = true;
@@ -40,30 +42,55 @@ export class TourPicker {
   render() {
     this.list.replaceChildren();
     for (const tour of this.tours) {
-      const btn = document.createElement("button");
-      btn.type = "button";
-      btn.className = "tour-card";
-      btn.dataset.tourId = tour.id;
-
-      const eyebrow = document.createElement("span");
-      eyebrow.className = "tour-card-eyebrow";
-      eyebrow.textContent = `${tour.stops.length} stops`;
-
-      const title = document.createElement("span");
-      title.className = "tour-card-title";
-      title.textContent = tour.title;
-
-      const blurb = document.createElement("span");
-      blurb.className = "tour-card-blurb";
-      blurb.textContent = tour.blurb;
-
-      btn.append(eyebrow, title, blurb);
-      btn.addEventListener("click", (e) => {
-        e.preventDefault();
-        this.choose(tour.id);
-      });
-      this.list.appendChild(btn);
+      this.list.appendChild(
+        this.makeCard({
+          id: tour.id,
+          title: tour.title,
+          blurb: tour.blurb,
+          eyebrow: `${tour.stops.length} stops`,
+        })
+      );
     }
+    if (this.freeFlight) {
+      this.list.appendChild(
+        this.makeCard({
+          id: this.freeFlight.id,
+          title: this.freeFlight.title,
+          blurb: this.freeFlight.blurb,
+          eyebrow: "No route",
+          freeFlight: true,
+        })
+      );
+    }
+  }
+
+  /**
+   * @param {{ id: string, title: string, blurb: string, eyebrow: string, freeFlight?: boolean }} opts
+   */
+  makeCard({ id, title, blurb, eyebrow, freeFlight = false }) {
+    const btn = document.createElement("button");
+    btn.type = "button";
+    btn.className = freeFlight ? "tour-card is-free-flight" : "tour-card";
+    btn.dataset.tourId = id;
+
+    const eyebrowEl = document.createElement("span");
+    eyebrowEl.className = "tour-card-eyebrow";
+    eyebrowEl.textContent = eyebrow;
+
+    const titleEl = document.createElement("span");
+    titleEl.className = "tour-card-title";
+    titleEl.textContent = title;
+
+    const blurbEl = document.createElement("span");
+    blurbEl.className = "tour-card-blurb";
+    blurbEl.textContent = blurb;
+
+    btn.append(eyebrowEl, titleEl, blurbEl);
+    btn.addEventListener("click", (e) => {
+      e.preventDefault();
+      this.choose(id);
+    });
+    return btn;
   }
 
   /**

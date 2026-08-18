@@ -18,7 +18,7 @@ npx --yes serve -p 8080
 
 Open [http://localhost:8080](http://localhost:8080).
 
-On first load, pick one of three **guided tours** (ten systems each): science fiction, directly imaged worlds, or record holders. Amber bookmarks mark the active tour; **Next** hops along it. Change tour from the HUD or Settings.
+On first load, pick one of three **guided tours** (ten systems each) or **Free flight**. Amber bookmarks mark the active tour; **Next** hops along it. Change tour from the HUD or Settings.
 
 ## Controls
 

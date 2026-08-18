@@ -85,6 +85,16 @@ export class Catalog {
     return this.notableSystems[0] ?? null;
   }
 
+  /** Leave guided mode: no bookmarks, no Next playlist. */
+  clearActiveTour() {
+    for (const s of this.systems) {
+      s.notable = false;
+    }
+    this.notableSystems = [];
+    this.activeTourId = null;
+    this.tourIndex = 0;
+  }
+
   /** @returns {import("../content/tours.js").Tour|null} */
   getActiveTour() {
     return getTour(this.activeTourId);

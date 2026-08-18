@@ -12,7 +12,7 @@ import { AppChrome } from "./ui/AppChrome.js";
 import { CanvasSizeSettings } from "./ui/CanvasSizeSettings.js";
 import { TourPicker } from "./ui/TourPicker.js";
 import { setSystemImages } from "./content/systemImages.js";
-import { TOURS, allTourStopNames } from "./content/tours.js";
+import { TOURS, FREE_FLIGHT, FREE_FLIGHT_ID, allTourStopNames } from "./content/tours.js";
 import { FOCUS_ORBIT_RADIUS_PC } from "./render/PlanetPass.js";
 import { length3, projectToNdc, ndcToScreen } from "./astro/coords.js";
 
@@ -108,6 +108,7 @@ async function main() {
   let search = null;
   /** @type {TourPicker | null} */
   let tourPicker = null;
+  let exploringFreely = false;
 
   function pickAtCss(sx, sy) {
     const rect = canvas.getBoundingClientRect();
@@ -209,15 +210,32 @@ async function main() {
     const tour = catalog.getActiveTour();
     hud.setTourState({
       active: !!tour,
+      freeFlight: !tour && exploringFreely,
       title: tour?.title ?? "",
       index: catalog.tourIndex,
       total: catalog.notableSystems.length,
     });
     const nameEl = document.getElementById("settings-tour-name");
-    if (nameEl) nameEl.textContent = tour ? tour.title : "No tour selected";
+    if (nameEl) {
+      nameEl.textContent = tour
+        ? tour.title
+        : exploringFreely
+          ? "Free flight"
+          : "No tour selected";
+    }
   }
 
   function startTour(id) {
+    if (id === FREE_FLIGHT_ID) {
+      exploringFreely = true;
+      catalog.clearActiveTour();
+      scene.setNotableSystems([]);
+      updateTourHud();
+      chrome?.closeSettings();
+      chrome?.closeSearch();
+      return;
+    }
+    exploringFreely = false;
     const first = catalog.setActiveTour(id);
     scene.setNotableSystems(catalog.notableSystems);
     updateTourHud();
@@ -231,7 +249,7 @@ async function main() {
     chrome?.closeSearch();
     tourPicker?.open({
       blocking,
-      activeId: catalog.activeTourId,
+      activeId: catalog.activeTourId || (exploringFreely ? FREE_FLIGHT_ID : null),
     });
   }
 
@@ -329,6 +347,7 @@ async function main() {
       closeBtn: document.getElementById("tour-picker-close"),
       titleEl: document.getElementById("tour-picker-title"),
       tours: TOURS,
+      freeFlight: FREE_FLIGHT,
       onChoose: startTour,
     });
     hud.onChangeTour = () => openTourPicker({ blocking: false });

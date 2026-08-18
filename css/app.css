@@ -567,6 +567,10 @@ body.view-fixed #app {
   transform: translateY(1px);
 }
 
+#hud-note-next.hidden {
+  display: none;
+}
+
 /* Bottom navigation */
 #app-nav {
   position: fixed;
@@ -1216,6 +1220,28 @@ body.view-fixed #app {
   font-size: 0.82rem;
   line-height: 1.4;
   color: var(--text-muted);
+}
+
+.tour-card.is-free-flight {
+  min-height: 0;
+}
+
+@media (min-width: 768px) {
+  .tour-card.is-free-flight {
+    grid-column: 1 / -1;
+    flex-direction: row;
+    flex-wrap: wrap;
+    align-items: baseline;
+    gap: 8px 16px;
+  }
+
+  .tour-card.is-free-flight .tour-card-title {
+    margin-right: 4px;
+  }
+
+  .tour-card.is-free-flight .tour-card-blurb {
+    flex: 1 1 16rem;
+  }
 }
 
 .tour-picker.is-blocking {
