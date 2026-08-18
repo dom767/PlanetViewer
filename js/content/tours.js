@@ -56,9 +56,11 @@ export const TOURS = [
     stops: [
       "Sol",
       "KOI-351",
+      "TRAPPIST-1",
       "PSR B1257+12",
       "51 Peg",
       "HD 209458",
+      "Kepler-186",
       "Kepler-37",
       "HD 100546",
       "SWEEPS-11",
