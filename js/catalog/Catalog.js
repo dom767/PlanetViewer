@@ -1,6 +1,6 @@
 import { equatorialToCartesian, projectToNdc, ndcToScreen } from "../astro/coords.js";
 import { starBrightness, starColor, starPointSize } from "../astro/spectrum.js";
-import { estimateSemiMajorAxis } from "../astro/orbits.js";
+import { estimateSemiMajorAxis, estimateOrbitalPeriodDays } from "../astro/orbits.js";
 import { createSolSystem } from "../astro/sol.js";
 import { applyGoldilocksColors } from "../astro/habitable.js";
 import { STAR_NOTES, getStarNote } from "../content/starNotes.js";
@@ -208,9 +208,12 @@ function ingestRawSystem(catalog, raw) {
 
 function normalizePlanet(p, starMass, idx) {
   let a = p.a ?? null;
-  const periodDays = p.periodDays ?? null;
+  let periodDays = p.periodDays ?? null;
   if ((a == null || a <= 0) && periodDays) {
     a = estimateSemiMajorAxis(periodDays, starMass ?? 1);
+  }
+  if ((periodDays == null || periodDays <= 0) && a && a > 0) {
+    periodDays = estimateOrbitalPeriodDays(a, starMass ?? 1);
   }
 
   const palette = [

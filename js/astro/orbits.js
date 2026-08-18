@@ -27,6 +27,17 @@ export function estimateSemiMajorAxis(periodDays, starMassSolar = 1) {
 }
 
 /**
+ * Inverse of estimateSemiMajorAxis. Used when imaging detections publish
+ * a (AU) but not an orbital period.
+ */
+export function estimateOrbitalPeriodDays(aAu, starMassSolar = 1) {
+  if (!aAu || aAu <= 0) return null;
+  const m = starMassSolar > 0 ? starMassSolar : 1;
+  const pYears = Math.sqrt((aAu * aAu * aAu) / m);
+  return pYears * 365.25;
+}
+
+/**
  * Solve Kepler's equation for eccentric anomaly.
  */
 export function eccentricAnomaly(M, e, iterations = 8) {
@@ -101,10 +112,10 @@ export function meanAnomalyAt(planet, tDays) {
 export function planetOffsetAu(planet, tDays) {
   const a = planet.a;
   const e = planet.e ?? 0;
-  const period = planet.periodDays;
-  if (!a || a <= 0 || !period || period <= 0) return null;
+  if (!a || a <= 0) return null;
 
-  const M = meanAnomalyAt(planet, tDays);
+  const period = planet.periodDays;
+  const M = period && period > 0 ? meanAnomalyAt(planet, tDays) : 0;
   const E = eccentricAnomaly(M, e);
   const cosE = Math.cos(E);
   const sinE = Math.sin(E);
