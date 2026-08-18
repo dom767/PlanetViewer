@@ -13,6 +13,7 @@ import { CanvasSizeSettings } from "./ui/CanvasSizeSettings.js";
 import { TourPicker } from "./ui/TourPicker.js";
 import { setSystemImages } from "./content/systemImages.js";
 import { TOURS, FREE_FLIGHT, FREE_FLIGHT_ID, allTourStopNames } from "./content/tours.js";
+import { getStarNote } from "./content/starNotes.js";
 import { FOCUS_ORBIT_RADIUS_PC } from "./render/PlanetPass.js";
 import { length3, projectToNdc, ndcToScreen } from "./astro/coords.js";
 
@@ -193,7 +194,8 @@ async function main() {
       : Math.max(FOCUS_ORBIT_RADIUS_PC * 2.2, 1.5);
     camera.focusOn(system, focusDist, fromStar);
     scene.setFocusedSystem(system, camera.getOrbitBasis());
-    hud.setSelection(system.label ?? system.name, system.distPc, true, system.note?.text, system.name);
+    const note = getStarNote(system.name, catalog.activeTourId) ?? system.note;
+    hud.setSelection(system.label ?? system.name, system.distPc, true, note?.text, system.name);
     updateTourHud();
 
     // On mobile, map taps focus only; Info opens via the nav tab (or when

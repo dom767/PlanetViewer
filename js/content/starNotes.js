@@ -4,8 +4,9 @@
  * Tour order lives in tours.js — this file is copy only.
  *
  * To add a fact: look up the host in Search, then add an entry here.
+ * Optional `tours[tourId]` overrides `text` while that guided tour is active.
  *
- * @typedef {{ text: string }} StarNote
+ * @typedef {{ text: string, tours?: Record<string, string> }} StarNote
  * @type {Record<string, StarNote>}
  */
 export const STAR_NOTES = {
@@ -23,15 +24,27 @@ export const STAR_NOTES = {
   },
   "TRAPPIST-1": {
     text: "An ultra-cool dwarf with seven Earth-sized planets, several in or near the habitable zone.",
+    tours: {
+      goldilocks:
+        "TRAPPIST-1 e is this system's best Earth analog: about 0.92 Earth radii and 0.69 Earth masses, with ~0.65× Earth's sunlight. Several siblings sit in or near the Goldilocks zone too.",
+    },
   },
   "Proxima Cen": {
     text: "Humanity’s nearest stellar neighbour, and the alien home system in The Three-Body Problem.",
+    tours: {
+      goldilocks:
+        "Proxima b is the closest known exoplanet: ~1.02 Earth radii and ~1.05 Earth masses, with about 0.6× Earth's sunlight. It sits on the cool edge of the habitable zone around our nearest star.",
+    },
   },
   "KOI-351": {
     text: "Kepler-90 (KOI-351), the extrasolar system with the most confirmed planets in this catalog: eight worlds, matching Sol, packed inside about one Earth’s orbit.",
   },
   "Kepler-186": {
     text: "Host of Kepler-186f, among the first Earth-sized planets found in a star's habitable zone.",
+    tours: {
+      goldilocks:
+        "Kepler-186 f was among the first Earth-sized planets found in a habitable zone (~1.17 Earth radii). It gets only ~0.22× Earth's sunlight, so it is a cooler, longer-year cousin rather than a twin.",
+    },
   },
   "HD 100546": {
     text: "Home to HD 100546 b, the largest planet in this catalog, a bloated young giant about seven times Jupiter's radius, still gathering gas from its star's disk.",
@@ -123,12 +136,35 @@ export const STAR_NOTES = {
   "HD 95086": {
     text: "HD 95086 b, a textbook GPI/SPHERE imaged planet: a young giant in a dusty disk, photographed well outside its star.",
   },
+  "Teegarden's Star": {
+    text: "Teegarden's Star b is among the closest Earth twins here: about 1.05 Earth radii and 1.16 Earth masses, with roughly Earth's sunlight on a 5-day orbit around this tiny red dwarf.",
+  },
+  "TOI-700": {
+    text: "TOI-700 d is an Earth-sized world (~1.07 Earth radii) in the habitable zone; inner neighbour e (~0.95 Earth radii) is a bit warmer. Both match Earth closely in size and sunlight.",
+  },
+  "Kepler-1649": {
+    text: "Kepler-1649 c is about 1.06 Earth radii and 1.2 Earth masses, with ~1.2× Earth's sunlight — one of Kepler's closest rocky habitable-zone matches.",
+  },
+  "GJ 1002": {
+    text: "GJ 1002 b is essentially Earth-sized (~1.03 Earth radii, ~1.08 Earth masses) around a nearby red dwarf, with about two-thirds Earth's sunlight — a slightly cooler cousin.",
+  },
+  "Ross 128": {
+    text: "Ross 128 b is a nearby Earth-sized world (~1.11 Earth radii, ~1.4 Earth masses) around a quiet red dwarf, receiving about 1.5× Earth's sunlight — a little warmer, but similar in bulk.",
+  },
+  "Kepler-452": {
+    text: "Kepler-452 b orbits a Sun-like star with a ~385-day year and Earth-like sunlight, but it is larger (~1.6 Earth radii) — a super-Earth on an Earth-like orbit, not a true twin.",
+  },
 };
 
 /**
  * @param {string} name
+ * @param {string|null|undefined} [tourId]
  * @returns {StarNote|null}
  */
-export function getStarNote(name) {
-  return STAR_NOTES[name] ?? null;
+export function getStarNote(name, tourId) {
+  const note = STAR_NOTES[name];
+  if (!note) return null;
+  const tourText = tourId ? note.tours?.[tourId] : null;
+  const text = tourText || note.text;
+  return text ? { text } : null;
 }

@@ -1163,7 +1163,7 @@ body.view-fixed #app {
 
 @media (min-width: 768px) {
   .tour-picker-list {
-    grid-template-columns: repeat(3, 1fr);
+    grid-template-columns: repeat(2, 1fr);
   }
 }
 

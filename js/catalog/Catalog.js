@@ -67,7 +67,7 @@ export class Catalog {
   }
 
   /**
-   * Activate a tour: notable ribbons follow its 10 stops, index resets to 0.
+   * Activate a tour: notable ribbons follow its stops, index resets to 0.
    * @param {string} id
    * @returns {SystemRecord|null} first stop, or null if unknown / unmatched
    */

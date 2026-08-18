@@ -18,7 +18,7 @@ npx --yes serve -p 8080
 
 Open [http://localhost:8080](http://localhost:8080).
 
-On first load, pick one of three **guided tours** or **Free flight**. Amber bookmarks mark the active tour; **Next** hops along it. Change tour from the HUD or Settings.
+On first load, pick one of four **guided tours** or **Free flight**. Amber bookmarks mark the active tour; **Next** hops along it. Change tour from the HUD or Settings.
 
 ## Controls
 
@@ -35,7 +35,7 @@ On first load, pick one of three **guided tours** or **Free flight**. Amber book
 | Minimap click | Jump toward that XY position |
 | Time dropdown | Orbit simulation speed |
 | Home | Return to Sol |
-| Next | Next stop on the active tour (wraps after 10) |
+| Next | Next stop on the active tour (wraps) |
 | Change tour | Reopen the tour picker (also in Settings) |
 
 ## Data

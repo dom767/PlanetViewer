@@ -75,6 +75,22 @@ export const TOURS = [
       "COCONUTS-2 A",
     ],
   },
+  {
+    id: "goldilocks",
+    title: "Goldilocks",
+    blurb: "Worlds closest to Earth in size, mass, and sunlight — and why they made the cut.",
+    stops: [
+      "Teegarden's Star",
+      "TOI-700",
+      "Kepler-1649",
+      "GJ 1002",
+      "Proxima Cen",
+      "TRAPPIST-1",
+      "Ross 128",
+      "Kepler-186",
+      "Kepler-452",
+    ],
+  },
 ];
 
 /**
