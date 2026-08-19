@@ -71,6 +71,7 @@ function renderSystem(s) {
     ? "G2V · Our solar system (origin)"
     : `${s.spectype ? escapeHtml(s.spectype) : "Spectral type unknown"} · ${fmt(s.distPc, 2, "pc")} from Sol`;
   const photo = renderSystemImage(s.name);
+  const anyEstimated = (s.planets || []).some((p) => p.radiusEstimated);
 
   const planets = (s.planets || [])
     .map((p) => {
@@ -118,6 +119,7 @@ function renderSystem(s) {
     </dl>
     <h3>Planets</h3>
     <ul class="planet-list">${planets || "<li><div class='meta'>No confirmed exoplanets</div></li>"}</ul>
+    ${anyEstimated ? `<p class="est-note">* Radius estimated from mass</p>` : ""}
   `;
 }
 
@@ -142,11 +144,18 @@ function escapeHtml(str) {
     .replace(/"/g, "&quot;");
 }
 
-/** Size in Earth units (Sol-system reference). */
+/** Size in Earth units (Sol-system reference). Asterisk = mass-based estimate. */
 function planetSizeSols(p) {
-  if (p.radiusEarth != null) return fmt(p.radiusEarth, 2, "R⊕");
-  if (p.radiusJupiter != null) return fmt(p.radiusJupiter * 11.209, 2, "R⊕");
-  return null;
+  let r = null;
+  if (p.radiusEarth != null) r = p.radiusEarth;
+  else if (p.radiusJupiter != null) r = p.radiusJupiter * 11.209;
+  if (r == null) return null;
+  const mark = p.radiusEstimated ? "*" : "";
+  const text = `${fmt(r, 2, "R⊕")}${mark}`;
+  if (p.radiusEstimated) {
+    return `<span title="Estimated from mass">${text}</span>`;
+  }
+  return text;
 }
 
 /** Mass in Earth units (Sol-system reference). */

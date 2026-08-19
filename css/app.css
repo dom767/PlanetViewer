@@ -395,6 +395,12 @@ body.view-fixed #app {
   line-height: 1.45;
 }
 
+#panel-content .est-note {
+  margin-top: 10px;
+  font-size: 0.72rem;
+  color: var(--text-faint);
+}
+
 .planet-list li.planet-hz {
   border-color: rgba(242, 165, 68, 0.4);
   background: var(--accent-amber-soft);

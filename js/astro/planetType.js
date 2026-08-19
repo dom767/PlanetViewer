@@ -7,6 +7,11 @@
  */
 
 const RJUP_TO_REARTH = 11.209;
+const MJUP_TO_MEARTH = 317.83;
+/** Chen & Kipping 2017 terran → neptunian break (M⊕). */
+const M_TERRAN_MAX = 2.04;
+/** Chen & Kipping 2017 neptunian → jovian break (0.414 MJup). */
+const M_NEPTUNE_MAX = 0.414 * MJUP_TO_MEARTH;
 
 /** Close-in gas giant: typical hot-Jupiter cut (a ≲ 0.1 AU or P ≲ 10 d). */
 const HOT_JUPITER_AU = 0.1;
@@ -43,6 +48,29 @@ export function planetRadiusEarth(planet) {
     return planet.radiusJupiter * RJUP_TO_REARTH;
   }
   return null;
+}
+
+/**
+ * Mass–radius estimate when the archive has mass but no radius (Chen & Kipping 2017
+ * piecewise power laws). Young imaged giants land near ~1 RJup instead of 1 R⊕.
+ * @param {number|null|undefined} massEarth
+ * @returns {number|null} R / R⊕
+ */
+export function estimateRadiusEarthFromMass(massEarth) {
+  const m = Number(massEarth);
+  if (!Number.isFinite(m) || m <= 0) return null;
+
+  if (m <= M_TERRAN_MAX) {
+    return Math.pow(m, 0.279);
+  }
+  // Continuity at the terran/neptunian join.
+  const rJoin = Math.pow(M_TERRAN_MAX, 0.279);
+  const aNep = rJoin / Math.pow(M_TERRAN_MAX, 0.589);
+  if (m <= M_NEPTUNE_MAX) {
+    return aNep * Math.pow(m, 0.589);
+  }
+  const rJovJoin = aNep * Math.pow(M_NEPTUNE_MAX, 0.589);
+  return rJovJoin * Math.pow(m / M_NEPTUNE_MAX, -0.044);
 }
 
 /**

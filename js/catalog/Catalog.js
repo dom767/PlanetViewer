@@ -3,7 +3,7 @@ import { starBrightness, starColor, starPointSize } from "../astro/spectrum.js";
 import { estimateSemiMajorAxis, estimateOrbitalPeriodDays } from "../astro/orbits.js";
 import { createSolSystem } from "../astro/sol.js";
 import { applyGoldilocksZone } from "../astro/habitable.js";
-import { applyPlanetColors } from "../astro/planetType.js";
+import { applyPlanetColors, estimateRadiusEarthFromMass } from "../astro/planetType.js";
 import { STAR_NOTES, getStarNote } from "../content/starNotes.js";
 import { TOURS, getTour } from "../content/tours.js";
 import { LANDMARK_STARS } from "../content/landmarkStars.js";
@@ -219,6 +219,20 @@ function normalizePlanet(p, starMass, idx) {
     periodDays = estimateOrbitalPeriodDays(a, starMass ?? 1);
   }
 
+  let radiusEarth = p.radiusEarth ?? null;
+  let radiusJupiter = p.radiusJupiter ?? null;
+  let radiusEstimated = false;
+  const hasRadius =
+    (radiusEarth != null && radiusEarth > 0) ||
+    (radiusJupiter != null && radiusJupiter > 0);
+  if (!hasRadius) {
+    const est = estimateRadiusEarthFromMass(p.massEarth);
+    if (est != null) {
+      radiusEarth = est;
+      radiusEstimated = true;
+    }
+  }
+
   return {
     name: p.name || `Planet ${idx + 1}`,
     a,
@@ -228,8 +242,9 @@ function normalizePlanet(p, starMass, idx) {
     inclDeg: p.inclDeg != null ? p.inclDeg : 90,
     omegaDeg: p.omegaDeg ?? 0,
     nodeDeg: p.nodeDeg ?? null,
-    radiusEarth: p.radiusEarth ?? null,
-    radiusJupiter: p.radiusJupiter ?? null,
+    radiusEarth,
+    radiusJupiter,
+    radiusEstimated,
     massEarth: p.massEarth ?? null,
     discoveryMethod: p.discoveryMethod ?? null,
     discoveryYear: p.discoveryYear ?? null,
