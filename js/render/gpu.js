@@ -202,7 +202,7 @@ fn vs_main(
   let clip = frame.viewProj * vec4f(worldPos, 1.0);
   let dist = max(clip.w, 0.05);
 
-  let phase = hash31(worldPos) * 6.2831853;
+  let phase = hash31(color + vec3(sizeBright.x, sizeBright.y, 0.0)) * 6.2831853;
   let t = frame.time;
   // Oscillate around 1 so intensity tracks catalog brightness, not a dimmed mean.
   let twinkle =
