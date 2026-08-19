@@ -434,21 +434,22 @@ body.view-fixed #app {
   pointer-events: none;
 }
 
-/* Scene status strip above nav */
+/* Scene status strip above nav — leave room for the still on the right */
 #scene-status {
   position: fixed;
   left: clamp(1rem, 4vw, 1.25rem);
   bottom: calc(var(--nav-height) + env(safe-area-inset-bottom, 0px) + 12px);
   z-index: 5;
-  max-width: min(420px, calc(100vw - 32px));
+  max-width: calc(
+    100vw - 120px - 12px - clamp(0.75rem, 4vw, 1rem) - clamp(1rem, 4vw, 1.25rem)
+  );
   pointer-events: none;
 }
 
 #hud-system-photo {
   position: fixed;
-  top: calc(12px + env(safe-area-inset-top, 0px));
-  left: 50%;
-  transform: translateX(-50%);
+  right: clamp(0.75rem, 4vw, 1rem);
+  bottom: calc(var(--nav-height) + env(safe-area-inset-bottom, 0px) + 12px);
   z-index: 5;
   display: block;
   width: 120px;
@@ -468,7 +469,7 @@ body.view-fixed #app {
 #hud-selection {
   display: block;
   font-family: var(--font-display);
-  font-size: 0.95rem;
+  font-size: 0.85rem;
   font-weight: 600;
   letter-spacing: -0.01em;
   color: var(--accent-amber);
@@ -476,14 +477,14 @@ body.view-fixed #app {
 
 #hud-distance {
   display: block;
-  font-size: 0.8rem;
+  font-size: 0.72rem;
   color: var(--text-muted);
   margin-top: 2px;
 }
 
 #hud-note-block {
-  margin-top: 6px;
-  max-width: min(320px, calc(100vw - 40px));
+  margin-top: 4px;
+  max-width: 100%;
 }
 
 #hud-note-block.hidden {
@@ -506,12 +507,12 @@ body.view-fixed #app {
 #hud-note {
   display: -webkit-box;
   -webkit-box-orient: vertical;
-  -webkit-line-clamp: 4;
-  line-clamp: 4;
+  -webkit-line-clamp: 3;
+  line-clamp: 3;
   overflow: hidden;
   margin: 0;
-  font-size: 0.78rem;
-  line-height: 1.35;
+  font-size: 0.72rem;
+  line-height: 1.3;
   color: var(--text-muted);
 }
 
@@ -620,6 +621,27 @@ body.view-fixed #app {
 
   #scene-status {
     bottom: calc(16px + var(--nav-height) + 12px);
+    max-width: min(420px, calc(100vw - 32px));
+  }
+
+  #hud-selection {
+    font-size: 0.95rem;
+  }
+
+  #hud-distance {
+    font-size: 0.8rem;
+  }
+
+  #hud-note-block {
+    margin-top: 6px;
+    max-width: min(320px, calc(100vw - 40px));
+  }
+
+  #hud-note {
+    -webkit-line-clamp: 4;
+    line-clamp: 4;
+    font-size: 0.78rem;
+    line-height: 1.35;
   }
 
   /* Desktop: still lives in the info panel only */
