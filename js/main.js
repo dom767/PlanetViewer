@@ -223,14 +223,6 @@ async function main() {
       index: catalog.tourIndex,
       total: catalog.notableSystems.length,
     });
-    const nameEl = document.getElementById("settings-tour-name");
-    if (nameEl) {
-      nameEl.textContent = tour
-        ? tour.title
-        : exploringFreely
-          ? "Free flight"
-          : "No tour selected";
-    }
   }
 
   function startTour(id) {
@@ -362,11 +354,6 @@ async function main() {
       onChoose: startTour,
     });
     hud.onChangeTour = () => openTourPicker({ blocking: false });
-    document.getElementById("settings-change-tour")?.addEventListener("click", (e) => {
-      e.preventDefault();
-      e.stopPropagation();
-      openTourPicker({ blocking: false });
-    });
 
     loading.classList.add("hidden");
     openTourPicker({ blocking: true });
