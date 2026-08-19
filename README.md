@@ -37,6 +37,7 @@ On first load, pick one of five **guided tours** or **Free flight**. Amber bookm
 | Home | Return to Sol |
 | Next | Next stop on the active tour (wraps) |
 | Change tour | Reopen the tour picker (also in Settings) |
+| Fullscreen | Settings toggle (hidden if the browser cannot fullscreen; Esc exits) |
 
 ## Data
 

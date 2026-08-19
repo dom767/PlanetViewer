@@ -10,6 +10,7 @@ import { Hud } from "./ui/Hud.js";
 import { SystemSearch } from "./ui/SystemSearch.js";
 import { AppChrome } from "./ui/AppChrome.js";
 import { CanvasSizeSettings } from "./ui/CanvasSizeSettings.js";
+import { FullscreenSettings } from "./ui/FullscreenSettings.js";
 import { TourPicker } from "./ui/TourPicker.js";
 import { setSystemImages } from "./content/systemImages.js";
 import { TOURS, FREE_FLIGHT, FREE_FLIGHT_ID, allTourStopNames } from "./content/tours.js";
@@ -95,6 +96,11 @@ async function main() {
     hintEl: document.getElementById("canvas-size-hint"),
   });
   canvasSize.init();
+  new FullscreenSettings({
+    wrap: document.getElementById("toggle-fullscreen-wrap"),
+    input: document.getElementById("toggle-fullscreen"),
+    onEnter: () => canvasSize.fillWindow(),
+  }).init();
 
   let focused = null;
   /** @type {{ system: object, normName: string }[]} */

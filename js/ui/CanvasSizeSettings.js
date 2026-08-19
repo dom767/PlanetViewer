@@ -135,6 +135,11 @@ export class CanvasSizeSettings {
     this.root.classList.add("view-fixed");
   }
 
+  /** Drop letterboxing so the canvas fills the current window (e.g. fullscreen). */
+  fillWindow() {
+    this._clearLetterbox();
+  }
+
   _clearLetterbox() {
     this.root.classList.remove("view-fixed");
     this.root.style.removeProperty("--view-w");
