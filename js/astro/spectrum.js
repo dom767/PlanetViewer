@@ -85,14 +85,19 @@ export function starPointSize(star) {
 
 /** Sun absolute V magnitude — used when converting vmag + distance → L/L☉. */
 const SUN_ABS_VMAG = 4.83;
+const SUN_TEFF = 5772;
 
 /**
- * Estimate luminosity in L☉ from catalog fields.
- * @param {{luminosity?: number|null, vmag?: number|null, distPc?: number|null}} star
+ * Estimate luminosity in L☉ from catalog fields (L, then R²T⁴, then vmag).
+ * @param {{luminosity?: number|null, radius?: number|null, teff?: number|null, vmag?: number|null, distPc?: number|null}} star
  * @returns {number|null}
  */
-function luminositySolar(star) {
+export function luminositySolar(star) {
   if (star.luminosity && star.luminosity > 0) return star.luminosity;
+  if (star.radius > 0 && star.teff > 0) {
+    const t = star.teff / SUN_TEFF;
+    return star.radius * star.radius * t * t * t * t;
+  }
   if (star.vmag == null || !Number.isFinite(star.vmag)) return null;
   if (star.distPc != null && star.distPc > 0) {
     const absMag =
@@ -101,6 +106,27 @@ function luminositySolar(star) {
   }
   // Apparent mag alone is a weak stand-in; still better than a flat default.
   return Math.pow(10, -0.4 * (star.vmag - SUN_ABS_VMAG));
+}
+
+/**
+ * Focused-view star billboard size: radius plus luminosity so A and B
+ * stay distinct instead of both slamming the screen clamp.
+ * @param {{radius?: number|null, luminosity?: number|null, teff?: number|null, vmag?: number|null, distPc?: number|null}} star
+ */
+export function focusStarPointSize(star) {
+  const lum = luminositySolar(star);
+  const rad =
+    star.radius && star.radius > 0
+      ? star.radius
+      : lum != null
+        ? Math.sqrt(Math.max(lum, 1e-6))
+        : 1;
+  const fromR = 6 + 10 * Math.sqrt(Math.max(rad, 0.05));
+  const fromL =
+    lum != null
+      ? Math.max(0.42, 1 + 0.55 * Math.log10(Math.max(lum, 1e-6) * 10))
+      : 1;
+  return fromR * fromL;
 }
 
 /**

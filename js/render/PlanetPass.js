@@ -1,10 +1,14 @@
 import {
   createQuadBuffer,
   createFocusPlanetPipeline,
+  createSoftParticlePipeline,
   FOCUS_PLANET_PARTICLE_WGSL,
+  FOCUS_STAR_WGSL,
   LINE_WGSL,
   BLEND_PREMULTIPLIED,
+  BLEND_ADDITIVE,
   packLitPlanetInstances,
+  packInstances,
   writeInstanceBuffer,
 } from "./gpu.js";
 import {
@@ -17,6 +21,7 @@ import {
 } from "../astro/orbits.js";
 import { cross3, length3, normalize3, sub3 } from "../astro/coords.js";
 import { planetRadiusEarth } from "../astro/planetType.js";
+import { focusStarPointSize, starBrightness } from "../astro/spectrum.js";
 
 /** Dual-scale: AU orbits mapped into a local focus radius around the star (parsecs). */
 export const FOCUS_ORBIT_RADIUS_PC = 0.85;
@@ -54,12 +59,6 @@ function orbitStretchBoost(maxA) {
   return Math.min(SIZE_BOOST_MAX, Math.pow(stretch, SIZE_BOOST_EXP));
 }
 
-/** Billboard size from R / R☉ so A and B stay larger than planets and distinct. */
-function starDiscSize(radiusSolar, sizeBoost) {
-  const r = Math.max(radiusSolar || 1, 0.08);
-  return (12 + 22 * Math.sqrt(r)) * Math.max(sizeBoost, 1);
-}
-
 /** Arrival overlook elevation above the system's mean planetary plane. */
 export const SYSTEM_VIEW_ELEVATION = (35 * Math.PI) / 180;
 
@@ -91,6 +90,17 @@ export class PlanetPass {
     );
     this.planetBindGroup = gpu.device.createBindGroup({
       layout: this.planetPipeline.getBindGroupLayout(0),
+      entries: [{ binding: 0, resource: { buffer: frameBuffer } }],
+    });
+
+    this.starPipeline = createSoftParticlePipeline(
+      gpu.device,
+      gpu.format,
+      FOCUS_STAR_WGSL,
+      BLEND_ADDITIVE
+    );
+    this.starBindGroup = gpu.device.createBindGroup({
+      layout: this.starPipeline.getBindGroupLayout(0),
       entries: [{ binding: 0, resource: { buffer: frameBuffer } }],
     });
 
@@ -144,6 +154,9 @@ export class PlanetPass {
 
     this.instanceBuffer = null;
     this.capacity = { value: 0 };
+    this.starInstanceBuffer = null;
+    this.starCapacity = { value: 0 };
+    this.starCount = 0;
     /** @type {Array<{ buffer: GPUBuffer, local: Float32Array, count: number }>} */
     this.orbits = [];
     this.planetCount = 0;
@@ -200,6 +213,7 @@ export class PlanetPass {
     for (const o of this.orbits) o.buffer.destroy();
     this.orbits = [];
     this.planetCount = 0;
+    this.starCount = 0;
   }
 
   /** @param {object|null} system */
@@ -318,6 +332,7 @@ export class PlanetPass {
     const frame = this._refFrame;
     if (!system || !frame) {
       this.planetCount = 0;
+      this.starCount = 0;
       return;
     }
 
@@ -376,6 +391,7 @@ export class PlanetPass {
     const posA = starOff ? toWorld(starOff.A) : { x: system.x, y: system.y, z: system.z };
     const posB = starOff ? toWorld(starOff.B) : null;
 
+    const starItems = [];
     if (starOff && system.binary?.stars) {
       const pair = [system.binary.stars[0], system.binary.stars[1]];
       const pos = [posA, posB];
@@ -383,16 +399,24 @@ export class PlanetPass {
         const star = pair[i];
         const p = pos[i];
         if (!star || !p) continue;
-        items.push({
+        starItems.push({
           x: p.x,
           y: p.y,
           z: p.z,
           color: star.color || [1, 0.95, 0.8],
-          size: starDiscSize(star.radius, this.sizeBoost),
-          brightness: bright,
-          lightDir: { x: 0, y: 0, z: 1 },
+          size: focusStarPointSize(star),
+          brightness: (star.brightness ?? starBrightness(star)) * bright,
         });
       }
+    }
+    this.starCount = starItems.length;
+    if (this.starCount) {
+      this.starInstanceBuffer = writeInstanceBuffer(
+        this.device,
+        this.starInstanceBuffer,
+        packInstances(starItems),
+        this.starCapacity
+      );
     }
 
     for (const planet of system.planets) {
@@ -436,14 +460,15 @@ export class PlanetPass {
     }
 
     this.planetCount = items.length;
-    if (!this.planetCount) return;
-    const data = packLitPlanetInstances(items);
-    this.instanceBuffer = writeInstanceBuffer(
-      this.device,
-      this.instanceBuffer,
-      data,
-      this.capacity
-    );
+    if (this.planetCount) {
+      const data = packLitPlanetInstances(items);
+      this.instanceBuffer = writeInstanceBuffer(
+        this.device,
+        this.instanceBuffer,
+        data,
+        this.capacity
+      );
+    }
   }
 
   /** @param {GPURenderPassEncoder} pass */
@@ -458,6 +483,14 @@ export class PlanetPass {
         pass.setVertexBuffer(0, orbit.buffer);
         pass.draw(orbit.count);
       }
+    }
+
+    if (this.starCount && this.starInstanceBuffer && this._opacity > 0.004) {
+      pass.setPipeline(this.starPipeline);
+      pass.setBindGroup(0, this.starBindGroup);
+      pass.setVertexBuffer(0, this.quad);
+      pass.setVertexBuffer(1, this.starInstanceBuffer);
+      pass.draw(6, this.starCount);
     }
 
     if (this.planetCount && this.instanceBuffer && this._opacity > 0.004) {

@@ -1,5 +1,5 @@
 import { equatorialToCartesian, projectToNdc, ndcToScreen } from "../astro/coords.js";
-import { starBrightness, starColor, starPointSize } from "../astro/spectrum.js";
+import { luminositySolar, starBrightness, starColor, starPointSize } from "../astro/spectrum.js";
 import { estimateSemiMajorAxis, estimateOrbitalPeriodDays } from "../astro/orbits.js";
 import { createSolSystem } from "../astro/sol.js";
 import { applyGoldilocksZone } from "../astro/habitable.js";
@@ -290,13 +290,26 @@ function attachBinary(system, raw) {
     const radius = s.radius ?? (i === 0 ? system.radius : null);
     const mass = s.mass ?? (i === 0 ? system.mass : null);
     const spectype = s.spectype ?? (i === 0 ? system.spectype : null);
+    const luminosity =
+      s.luminosity ??
+      luminositySolar({
+        luminosity: s.luminosity,
+        radius,
+        teff,
+        vmag: i === 0 ? system.vmag : null,
+        distPc: system.distPc,
+      });
+    const meta = { teff, spectype, radius, luminosity, vmag: i === 0 ? system.vmag : null, distPc: system.distPc };
     return {
       letter,
       teff,
       radius,
       mass,
       spectype,
-      color: starColor({ teff, spectype }),
+      luminosity,
+      color: starColor(meta),
+      pointSize: starPointSize(meta),
+      brightness: starBrightness(meta),
     };
   });
   if (stars[1].mass == null && stars[1].radius == null && stars[1].teff == null) {
