@@ -67,6 +67,26 @@ export class Catalog {
   }
 
   /**
+   * Attach ≤5 AU stellar companions after load(). Map hosts stay single stars.
+   * @param {object[]|object|null|undefined} payload binaries array or { binaries: [] }
+   */
+  attachCloseBinaries(payload) {
+    const list = Array.isArray(payload)
+      ? payload
+      : Array.isArray(payload?.binaries)
+        ? payload.binaries
+        : [];
+    for (const raw of list) {
+      const name = raw?.hostname;
+      if (!name) continue;
+      const system = this.byName.get(name);
+      if (!system || system.isSol) continue;
+      attachBinary(system, raw);
+    }
+    return this;
+  }
+
+  /**
    * Activate a tour: notable ribbons follow its stops, index resets to 0.
    * @param {string} id
    * @returns {SystemRecord|null} first stop, or null if unknown / unmatched
@@ -249,7 +269,69 @@ function normalizePlanet(p, starMass, idx) {
     discoveryMethod: p.discoveryMethod ?? null,
     discoveryYear: p.discoveryYear ?? null,
     discoveryFacility: p.discoveryFacility ?? null,
+    cbFlag: p.cbFlag === true || p.cb_flag === 1,
+    around: "bary",
   };
+}
+
+/**
+ * @param {object} system
+ * @param {object} raw
+ */
+function attachBinary(system, raw) {
+  const a = raw.a;
+  if (!a || a <= 0 || a > 5) return;
+
+  const curatedStars = Array.isArray(raw.stars) ? raw.stars : [];
+  const stars = [0, 1].map((i) => {
+    const s = curatedStars[i] || {};
+    const letter = s.letter || (i === 0 ? "A" : "B");
+    const teff = s.teff ?? (i === 0 ? system.teff : null);
+    const radius = s.radius ?? (i === 0 ? system.radius : null);
+    const mass = s.mass ?? (i === 0 ? system.mass : null);
+    const spectype = s.spectype ?? (i === 0 ? system.spectype : null);
+    return {
+      letter,
+      teff,
+      radius,
+      mass,
+      spectype,
+      color: starColor({ teff, spectype }),
+    };
+  });
+  if (stars[1].mass == null && stars[1].radius == null && stars[1].teff == null) {
+    return;
+  }
+
+  const hostNode = system.planets[0]?.nodeDeg ?? hashAngleDeg(system.name);
+  const binary = {
+    a,
+    periodDays: raw.periodDays ?? null,
+    e: raw.e ?? 0,
+    inclDeg: raw.inclDeg ?? system.planets[0]?.inclDeg ?? 90,
+    omegaDeg: raw.omegaDeg ?? 0,
+    nodeDeg: raw.nodeDeg ?? hostNode,
+    orbitInferred: !!raw.orbitInferred,
+    circumbinary: !!raw.circumbinary,
+    stars,
+  };
+
+  if ((binary.periodDays == null || binary.periodDays <= 0) && stars[0].mass && stars[1].mass) {
+    binary.periodDays = estimateOrbitalPeriodDays(a, stars[0].mass + stars[1].mass);
+    binary.orbitInferred = true;
+  }
+
+  const anyCb = binary.circumbinary || system.planets.some((p) => p.cbFlag);
+  const heuristicCb = system.planets.some((p) => p.a != null && p.a > 2 * a);
+  binary.circumbinary = anyCb || heuristicCb;
+
+  for (const p of system.planets) {
+    if (binary.circumbinary) p.around = "bary";
+    else if (p.a != null && p.a < 0.5 * a) p.around = "A";
+    else p.around = "bary";
+  }
+
+  system.binary = binary;
 }
 
 function clamp(v, lo, hi) {
@@ -330,6 +412,7 @@ function warnUnmatchedTourStops(byName) {
  * @property {number} pointSize
  * @property {number} brightness
  * @property {object[]} planets
+ * @property {object} [binary]
  * @property {string[]} [aliases]
  * @property {{text: string}|null} [note]
  * @property {boolean} [notable]

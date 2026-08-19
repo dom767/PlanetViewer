@@ -67,6 +67,7 @@ export class Scene {
     this.starPass.upload(stars);
     this.mapPlanetsPass.upload(catalog);
     this.setNotableSystems(catalog.notableSystems);
+    this._applyFocusStarSuppress();
   }
 
   /** @param {object[]|null|undefined} systems */
@@ -90,7 +91,14 @@ export class Scene {
   setFocusedSystem(system, orbitBasis = null) {
     this.focusedSystem = system || null;
     this.planetPass.setFocusedSystem(system, orbitBasis);
+    this._applyFocusStarSuppress();
     this._syncHighlight();
+  }
+
+  _applyFocusStarSuppress() {
+    const s = this.focusedSystem;
+    const hide = !!(s && s.binary && !s.isSol);
+    this.starPass.setSuppressedIndex(hide ? s.id : null);
   }
 
   setHoverTarget(system) {
@@ -135,13 +143,18 @@ export class Scene {
       viewMatrix: frame.viewMatrix,
     });
     const highlightTarget = this.hoverTarget || this.focusedSystem;
+    const skipFocusRing =
+      !!this.focusedSystem?.binary &&
+      highlightTarget === this.focusedSystem;
     const highlightingFocus =
       !!highlightTarget &&
       !!this.focusedSystem &&
       highlightTarget === this.focusedSystem;
-    const highlightOpacity = highlightingFocus
-      ? Math.max(0, Math.min(1, frame.focusHighlightOpacity ?? 1))
-      : 1;
+    const highlightOpacity = skipFocusRing
+      ? 0
+      : highlightingFocus
+        ? Math.max(0, Math.min(1, frame.focusHighlightOpacity ?? 1))
+        : 1;
     this.highlightPass.prepare(this.viewProj, frame.width, highlightOpacity);
     this.notablePass.prepare(this.viewProj, frame.width);
 

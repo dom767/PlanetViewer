@@ -71,6 +71,21 @@ export async function loadNearbyStars(url = "data/nearby-stars.json") {
 }
 
 /**
+ * Load ≤5 AU close-binary snapshot. Missing file yields an empty list.
+ * @returns {Promise<object[]>}
+ */
+export async function loadCloseBinaries(url = "data/close-binaries.json") {
+  try {
+    const data = await loadCatalogPayload(url);
+    if (Array.isArray(data)) return data;
+    if (Array.isArray(data?.binaries)) return data.binaries;
+    return [];
+  } catch {
+    return [];
+  }
+}
+
+/**
  * Load telescope stills keyed by catalog system.name.
  * Missing file (local, before first fetch) yields an empty map.
  * @returns {Promise<Record<string, {src:string, alt:string, credit:string, sourceUrl:string, license:string}>>}

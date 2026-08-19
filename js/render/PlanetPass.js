@@ -9,6 +9,7 @@ import {
 } from "./gpu.js";
 import {
   applyKeplerFrame,
+  binaryStarOffsetsAu,
   keplerReferenceFrame,
   planetOffsetAu,
   planetaryOrbitBasis,
@@ -51,6 +52,12 @@ function orbitStretchBoost(maxA) {
   const stretch = SIZE_BOOST_REFERENCE_AU / Math.max(maxA, 1e-4);
   if (stretch <= 1) return 1;
   return Math.min(SIZE_BOOST_MAX, Math.pow(stretch, SIZE_BOOST_EXP));
+}
+
+/** Billboard size from R / R☉ so A and B stay larger than planets and distinct. */
+function starDiscSize(radiusSolar, sizeBoost) {
+  const r = Math.max(radiusSolar || 1, 0.08);
+  return (12 + 22 * Math.sqrt(r)) * Math.max(sizeBoost, 1);
 }
 
 /** Arrival overlook elevation above the system's mean planetary plane. */
@@ -210,25 +217,52 @@ export class PlanetPass {
     for (const p of system.planets) {
       if (p.a && p.a > maxA) maxA = p.a;
     }
+    if (system.binary?.a) maxA = Math.max(maxA, system.binary.a);
     maxA = Math.max(maxA, 0.05);
     this.auToPc = FOCUS_ORBIT_RADIUS_PC / maxA;
     this.sizeBoost = orbitStretchBoost(maxA);
 
     for (const planet of system.planets) {
       if (!planet.a) continue;
-      const path = sampleOrbitPath(planet, 160);
-      const local = new Float32Array(path.length + 3);
-      local.set(path);
-      local[path.length] = path[0];
-      local[path.length + 1] = path[1];
-      local[path.length + 2] = path[2];
-
-      const buffer = this.device.createBuffer({
-        size: local.byteLength,
-        usage: GPUBufferUsage.VERTEX | GPUBufferUsage.COPY_DST,
+      this._pushOrbit(sampleOrbitPath(planet, 160), {
+        originKey: planet.around === "A" ? "A" : "bary",
+        scale: 1,
       });
-      this.orbits.push({ buffer, local, count: local.length / 3 });
     }
+
+    const binary = system.binary;
+    if (binary?.a) {
+      const m1 = binary.stars[0]?.mass > 0 ? binary.stars[0].mass : 1;
+      const m2 = binary.stars[1]?.mass > 0 ? binary.stars[1].mass : 0.5;
+      const q = m2 / (m1 + m2);
+      const path = sampleOrbitPath(binary, 160);
+      this._pushOrbit(path, { originKey: "bary", scale: -q });
+      this._pushOrbit(path, { originKey: "bary", scale: 1 - q });
+    }
+  }
+
+  /**
+   * @param {Float32Array} path
+   * @param {{originKey: string, scale: number}} opts
+   */
+  _pushOrbit(path, opts) {
+    if (!path.length) return;
+    const local = new Float32Array(path.length + 3);
+    local.set(path);
+    local[path.length] = path[0];
+    local[path.length + 1] = path[1];
+    local[path.length + 2] = path[2];
+    const buffer = this.device.createBuffer({
+      size: local.byteLength,
+      usage: GPUBufferUsage.VERTEX | GPUBufferUsage.COPY_DST,
+    });
+    this.orbits.push({
+      buffer,
+      local,
+      count: local.length / 3,
+      originKey: opts.originKey,
+      scale: opts.scale,
+    });
   }
 
   _writeOpacity() {
@@ -287,13 +321,26 @@ export class PlanetPass {
       return;
     }
 
+    const starOff = system.binary
+      ? binaryStarOffsetsAu(system.binary, tDays)
+      : null;
+
     for (const orbit of this.orbits) {
+      let ox = 0;
+      let oy = 0;
+      let oz = 0;
+      if (orbit.originKey === "A" && starOff) {
+        ox = starOff.A.x;
+        oy = starOff.A.y;
+        oz = starOff.A.z;
+      }
+      const sc = orbit.scale ?? 1;
       const world = new Float32Array(orbit.local.length);
       for (let i = 0; i < orbit.local.length; i += 3) {
         const w = applyKeplerFrame(frame, {
-          x: orbit.local[i] * this.auToPc,
-          y: orbit.local[i + 1] * this.auToPc,
-          z: orbit.local[i + 2] * this.auToPc,
+          x: (orbit.local[i] * sc + ox) * this.auToPc,
+          y: (orbit.local[i + 1] * sc + oy) * this.auToPc,
+          z: (orbit.local[i + 2] * sc + oz) * this.auToPc,
         });
         world[i] = system.x + w.x;
         world[i + 1] = system.y + w.y;
@@ -316,21 +363,56 @@ export class PlanetPass {
 
     const items = [];
     const bright = this._opacity;
+
+    const toWorld = (offAu) => {
+      const w = applyKeplerFrame(frame, {
+        x: offAu.x * this.auToPc,
+        y: offAu.y * this.auToPc,
+        z: offAu.z * this.auToPc,
+      });
+      return { x: system.x + w.x, y: system.y + w.y, z: system.z + w.z };
+    };
+
+    const posA = starOff ? toWorld(starOff.A) : { x: system.x, y: system.y, z: system.z };
+    const posB = starOff ? toWorld(starOff.B) : null;
+
+    if (starOff && system.binary?.stars) {
+      const pair = [system.binary.stars[0], system.binary.stars[1]];
+      const pos = [posA, posB];
+      for (let i = 0; i < 2; i++) {
+        const star = pair[i];
+        const p = pos[i];
+        if (!star || !p) continue;
+        items.push({
+          x: p.x,
+          y: p.y,
+          z: p.z,
+          color: star.color || [1, 0.95, 0.8],
+          size: starDiscSize(star.radius, this.sizeBoost),
+          brightness: bright,
+          lightDir: { x: 0, y: 0, z: 1 },
+        });
+      }
+    }
+
     for (const planet of system.planets) {
       const off = planetOffsetAu(planet, tDays);
       if (!off) continue;
-      const w = applyKeplerFrame(frame, {
-        x: off.x * this.auToPc,
-        y: off.y * this.auToPc,
-        z: off.z * this.auToPc,
+      const origin =
+        planet.around === "A" && starOff ? starOff.A : { x: 0, y: 0, z: 0 };
+      const wpos = toWorld({
+        x: origin.x + off.x,
+        y: origin.y + off.y,
+        z: origin.z + off.z,
       });
-      const px = system.x + w.x;
-      const py = system.y + w.y;
-      const pz = system.z + w.z;
-      // Light direction toward the host star, in billboard/view space.
-      let lx = system.x - px;
-      let ly = system.y - py;
-      let lz = system.z - pz;
+      const px = wpos.x;
+      const py = wpos.y;
+      const pz = wpos.z;
+      const light =
+        planet.around === "A" && starOff ? posA : { x: system.x, y: system.y, z: system.z };
+      let lx = light.x - px;
+      let ly = light.y - py;
+      let lz = light.z - pz;
       const llen = Math.hypot(lx, ly, lz) || 1;
       lx /= llen;
       ly /= llen;

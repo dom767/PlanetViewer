@@ -3,7 +3,7 @@ import { Scene } from "./render/Scene.js";
 import { FlyCamera } from "./camera/FlyCamera.js";
 import { Catalog } from "./catalog/Catalog.js";
 import { buildFieldStars, FIELD_STAR_RADIUS_PC } from "./catalog/FieldStars.js";
-import { loadExoplanetCatalog, loadNearbyStars, loadSystemImages } from "./data/loader.js";
+import { loadExoplanetCatalog, loadNearbyStars, loadSystemImages, loadCloseBinaries } from "./data/loader.js";
 import { InfoPanel } from "./ui/InfoPanel.js";
 import { Minimap } from "./ui/Minimap.js";
 import { Hud } from "./ui/Hud.js";
@@ -259,6 +259,7 @@ async function main() {
     loading.textContent = "Loading catalog…";
     const raw = await loadExoplanetCatalog();
     catalog.load(raw);
+    catalog.attachCloseBinaries(await loadCloseBinaries());
     const imageMap = await loadSystemImages();
     setSystemImages(imageMap);
     const starCount = catalog.systems.filter((s) => (s.planets?.length ?? 0) > 0).length;

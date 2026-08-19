@@ -1,0 +1,278 @@
+{
+  "source": "curated Keplerian orbits + NASA Exoplanet Archive stellarhosts",
+  "fetchedAt": "2026-08-19T08:56:26.866Z",
+  "maxSepAu": 5,
+  "binaryCount": 10,
+  "binaries": [
+    {
+      "hostname": "Kepler-16",
+      "a": 0.22431,
+      "periodDays": 41.07922,
+      "e": 0.15944,
+      "inclDeg": 90.3401,
+      "omegaDeg": 263.464,
+      "nodeDeg": null,
+      "orbitInferred": false,
+      "circumbinary": true,
+      "stars": [
+        {
+          "letter": "A",
+          "teff": 4450,
+          "radius": 0.6489,
+          "mass": 0.6897,
+          "spectype": "K7"
+        },
+        {
+          "letter": "B",
+          "teff": 3311,
+          "radius": 0.22623,
+          "mass": 0.20255,
+          "spectype": "M"
+        }
+      ]
+    },
+    {
+      "hostname": "Kepler-34",
+      "a": 0.22768,
+      "periodDays": 27.79581,
+      "e": 0.52087,
+      "inclDeg": 89.8584,
+      "omegaDeg": 71.4,
+      "nodeDeg": null,
+      "orbitInferred": false,
+      "circumbinary": true,
+      "stars": [
+        {
+          "letter": "A",
+          "teff": 5913,
+          "radius": 1.1618,
+          "mass": 1.0479,
+          "spectype": "G"
+        },
+        {
+          "letter": "B",
+          "teff": 5867,
+          "radius": 1.0927,
+          "mass": 1.0208,
+          "spectype": "G"
+        }
+      ]
+    },
+    {
+      "hostname": "Kepler-35",
+      "a": 0.17617,
+      "periodDays": 20.73375,
+      "e": 0.1421,
+      "inclDeg": 90.4238,
+      "omegaDeg": 84.53,
+      "nodeDeg": null,
+      "orbitInferred": false,
+      "circumbinary": true,
+      "stars": [
+        {
+          "letter": "A",
+          "teff": 5606,
+          "radius": 1.0284,
+          "mass": 0.8877,
+          "spectype": "G"
+        },
+        {
+          "letter": "B",
+          "teff": 5202,
+          "radius": 0.7861,
+          "mass": 0.8094,
+          "spectype": "G"
+        }
+      ]
+    },
+    {
+      "hostname": "Kepler-38",
+      "a": 0.1469,
+      "periodDays": 18.79537,
+      "e": 0.1032,
+      "inclDeg": 89.446,
+      "omegaDeg": 291.46,
+      "nodeDeg": null,
+      "orbitInferred": false,
+      "circumbinary": true,
+      "stars": [
+        {
+          "letter": "A",
+          "teff": 5623,
+          "radius": 1.757,
+          "mass": 0.949,
+          "spectype": "G"
+        },
+        {
+          "letter": "B",
+          "teff": 3310,
+          "radius": 0.2724,
+          "mass": 0.249,
+          "spectype": "M"
+        }
+      ]
+    },
+    {
+      "hostname": "Kepler-47",
+      "a": 0.0836,
+      "periodDays": 7.44837695,
+      "e": 0.0234,
+      "inclDeg": 89.34,
+      "omegaDeg": 212.3,
+      "nodeDeg": null,
+      "orbitInferred": false,
+      "circumbinary": true,
+      "stars": [
+        {
+          "letter": "A",
+          "teff": 5636,
+          "radius": 0.964,
+          "mass": 1.043,
+          "spectype": "G"
+        },
+        {
+          "letter": "B",
+          "teff": 3357,
+          "radius": 0.3507,
+          "mass": 0.362,
+          "spectype": "M"
+        }
+      ]
+    },
+    {
+      "hostname": "Kepler-413",
+      "a": 0.10148,
+      "periodDays": 10.116146,
+      "e": 0.0372,
+      "inclDeg": 87.325,
+      "omegaDeg": 279.54,
+      "nodeDeg": null,
+      "orbitInferred": false,
+      "circumbinary": true,
+      "stars": [
+        {
+          "letter": "A",
+          "teff": 4700,
+          "radius": 0.7761,
+          "mass": 0.82,
+          "spectype": "K"
+        },
+        {
+          "letter": "B",
+          "teff": 3463,
+          "radius": 0.484,
+          "mass": 0.5423,
+          "spectype": "M"
+        }
+      ]
+    },
+    {
+      "hostname": "Kepler-453",
+      "a": 0.18539,
+      "periodDays": 27.322,
+      "e": 0.051,
+      "inclDeg": 90.266,
+      "omegaDeg": 263.05,
+      "nodeDeg": null,
+      "orbitInferred": false,
+      "circumbinary": true,
+      "stars": [
+        {
+          "letter": "A",
+          "teff": 5527,
+          "radius": 0.833,
+          "mass": 0.944,
+          "spectype": "G"
+        },
+        {
+          "letter": "B",
+          "teff": 3226,
+          "radius": 0.215,
+          "mass": 0.1951,
+          "spectype": "M"
+        }
+      ]
+    },
+    {
+      "hostname": "Kepler-1647",
+      "a": 0.1276,
+      "periodDays": 11.2588,
+      "e": 0.1593,
+      "inclDeg": 87.9164,
+      "omegaDeg": 300.83,
+      "nodeDeg": null,
+      "orbitInferred": false,
+      "circumbinary": true,
+      "stars": [
+        {
+          "letter": "A",
+          "teff": 6210,
+          "radius": 1.7903,
+          "mass": 1.2207,
+          "spectype": "F"
+        },
+        {
+          "letter": "B",
+          "teff": 5770,
+          "radius": 0.9663,
+          "mass": 0.9678,
+          "spectype": "G"
+        }
+      ]
+    },
+    {
+      "hostname": "TOI-1338 A",
+      "a": 0.1288,
+      "periodDays": 14.608559,
+      "e": 0.156,
+      "inclDeg": 89.7,
+      "omegaDeg": 117.54,
+      "nodeDeg": null,
+      "orbitInferred": false,
+      "circumbinary": true,
+      "stars": [
+        {
+          "letter": "A",
+          "teff": 5990,
+          "radius": 1.331,
+          "mass": 1.038,
+          "spectype": "F8"
+        },
+        {
+          "letter": "B",
+          "teff": 3310,
+          "radius": 0.3013,
+          "mass": 0.3079,
+          "spectype": "M"
+        }
+      ]
+    },
+    {
+      "hostname": "TIC 172900988 Aa",
+      "a": 0.191,
+      "periodDays": 19.65815,
+      "e": 0.4479,
+      "inclDeg": 85.57,
+      "omegaDeg": 68.12,
+      "nodeDeg": null,
+      "orbitInferred": false,
+      "circumbinary": true,
+      "stars": [
+        {
+          "letter": "A",
+          "teff": 6050,
+          "radius": 1.385,
+          "mass": 1.238,
+          "spectype": "F9"
+        },
+        {
+          "letter": "B",
+          "teff": 5980,
+          "radius": 1.315,
+          "mass": 1.202,
+          "spectype": "G0"
+        }
+      ]
+    }
+  ]
+}

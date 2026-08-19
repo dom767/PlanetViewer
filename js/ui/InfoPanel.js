@@ -67,11 +67,15 @@ export class InfoPanel {
 }
 
 function renderSystem(s) {
+  const typeLabel = s.spectype
+    ? escapeHtml(s.spectype)
+    : "Spectral type unknown";
   const subtitle = s.isSol
     ? "G2V · Our solar system (origin)"
-    : `${s.spectype ? escapeHtml(s.spectype) : "Spectral type unknown"} · ${fmt(s.distPc, 2, "pc")} from Sol`;
+    : `${s.binary ? "Binary · " : ""}${typeLabel} · ${fmt(s.distPc, 2, "pc")} from Sol`;
   const photo = renderSystemImage(s.name);
   const anyEstimated = (s.planets || []).some((p) => p.radiusEstimated);
+  const orbitInferred = !!s.binary?.orbitInferred;
 
   const planets = (s.planets || [])
     .map((p) => {
@@ -103,24 +107,47 @@ function renderSystem(s) {
     })
     .join("");
 
+  const notes = [];
+  if (anyEstimated) notes.push("* Radius estimated from mass");
+  if (orbitInferred) notes.push("* Binary orbit inferred from masses and separation");
+
   return `
     <h2>${escapeHtml(s.label ?? s.name)}</h2>
     <div class="subtitle">${subtitle}</div>
     ${photo}
     <dl>
-      <dt>Effective temperature</dt><dd>${fmt(s.teff, 0, "K")}</dd>
-      <dt>Radius</dt><dd>${fmt(s.radius, 2, "R☉")}</dd>
-      <dt>Luminosity</dt><dd>${fmt(s.luminosity, 3, "L☉")}</dd>
-      <dt>V magnitude</dt><dd>${fmt(s.vmag, 2)}</dd>
-      <dt>Stellar mass</dt><dd>${fmt(s.mass, 2, "M☉")}</dd>
+      ${renderStarBlock(s)}
       ${s.isSol ? "" : `<dt>RA / Dec</dt><dd>${fmt(s.ra, 3)}° / ${fmt(s.dec, 3)}°</dd>`}
       <dt>Planets</dt><dd>${s.planets?.length ?? 0}${s.pnum != null && !s.isSol && s.pnum > 0 ? ` (archive: ${s.pnum})` : ""}</dd>
       ${discoverySummary(s.planets)}
     </dl>
     <h3>Planets</h3>
     <ul class="planet-list">${planets || "<li><div class='meta'>No confirmed exoplanets</div></li>"}</ul>
-    ${anyEstimated ? `<p class="est-note">* Radius estimated from mass</p>` : ""}
+    ${notes.length ? `<p class="est-note">${notes.join("<br />")}</p>` : ""}
   `;
+}
+
+function renderStarBlock(s) {
+  if (s.binary?.stars?.length >= 2) {
+    const stars = s.binary.stars
+      .map((star) => {
+        const spec = star.spectype ? escapeHtml(star.spectype) : "—";
+        return `<dt>Star ${escapeHtml(star.letter || "")}</dt>
+        <dd>${spec} · ${fmt(star.teff, 0, "K")} · ${fmt(star.mass, 2, "M☉")} · ${fmt(star.radius, 2, "R☉")}</dd>`;
+      })
+      .join("");
+    const inf = s.binary.orbitInferred ? "*" : "";
+    const period =
+      s.binary.periodDays != null ? fmt(s.binary.periodDays, 2, "days") : "—";
+    return `${stars}
+      <dt>Binary</dt><dd>${fmt(s.binary.a, 3, "AU")}${inf} · ${period}${inf}</dd>
+      <dt>V magnitude</dt><dd>${fmt(s.vmag, 2)}</dd>`;
+  }
+  return `<dt>Effective temperature</dt><dd>${fmt(s.teff, 0, "K")}</dd>
+      <dt>Radius</dt><dd>${fmt(s.radius, 2, "R☉")}</dd>
+      <dt>Luminosity</dt><dd>${fmt(s.luminosity, 3, "L☉")}</dd>
+      <dt>V magnitude</dt><dd>${fmt(s.vmag, 2)}</dd>
+      <dt>Stellar mass</dt><dd>${fmt(s.mass, 2, "M☉")}</dd>`;
 }
 
 /** @param {string} name */

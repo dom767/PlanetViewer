@@ -1,0 +1,145 @@
+{
+  "source": "Literature Keplerian elements for exoplanet hosts with stellar companions at a ≤ 5 AU",
+  "binaries": [
+    {
+      "hostname": "Kepler-16",
+      "a": 0.22431,
+      "periodDays": 41.07922,
+      "e": 0.15944,
+      "inclDeg": 90.3401,
+      "omegaDeg": 263.464,
+      "circumbinary": true,
+      "ref": "Doyle et al. 2011",
+      "stars": [
+        { "letter": "A", "mass": 0.6897, "radius": 0.6489, "teff": 4450, "spectype": "K7" },
+        { "letter": "B", "mass": 0.20255, "radius": 0.22623, "teff": 3311, "spectype": "M" }
+      ]
+    },
+    {
+      "hostname": "Kepler-34",
+      "a": 0.22768,
+      "periodDays": 27.79581,
+      "e": 0.52087,
+      "inclDeg": 89.8584,
+      "omegaDeg": 71.4,
+      "circumbinary": true,
+      "ref": "Welsh et al. 2012",
+      "stars": [
+        { "letter": "A", "mass": 1.0479, "radius": 1.1618, "teff": 5913, "spectype": "G" },
+        { "letter": "B", "mass": 1.0208, "radius": 1.0927, "teff": 5867, "spectype": "G" }
+      ]
+    },
+    {
+      "hostname": "Kepler-35",
+      "a": 0.17617,
+      "periodDays": 20.73375,
+      "e": 0.1421,
+      "inclDeg": 90.4238,
+      "omegaDeg": 84.53,
+      "circumbinary": true,
+      "ref": "Welsh et al. 2012",
+      "stars": [
+        { "letter": "A", "mass": 0.8877, "radius": 1.0284, "teff": 5606, "spectype": "G" },
+        { "letter": "B", "mass": 0.8094, "radius": 0.7861, "teff": 5202, "spectype": "G" }
+      ]
+    },
+    {
+      "hostname": "Kepler-38",
+      "a": 0.1469,
+      "periodDays": 18.79537,
+      "e": 0.1032,
+      "inclDeg": 89.446,
+      "omegaDeg": 291.46,
+      "circumbinary": true,
+      "ref": "Orosz et al. 2012",
+      "stars": [
+        { "letter": "A", "mass": 0.949, "radius": 1.757, "teff": 5623, "spectype": "G" },
+        { "letter": "B", "mass": 0.249, "radius": 0.2724, "teff": 3310, "spectype": "M" }
+      ]
+    },
+    {
+      "hostname": "Kepler-47",
+      "a": 0.0836,
+      "periodDays": 7.44837695,
+      "e": 0.0234,
+      "inclDeg": 89.34,
+      "omegaDeg": 212.3,
+      "circumbinary": true,
+      "ref": "Orosz et al. 2012",
+      "stars": [
+        { "letter": "A", "mass": 1.043, "radius": 0.964, "teff": 5636, "spectype": "G" },
+        { "letter": "B", "mass": 0.362, "radius": 0.3507, "teff": 3357, "spectype": "M" }
+      ]
+    },
+    {
+      "hostname": "Kepler-413",
+      "a": 0.10148,
+      "periodDays": 10.116146,
+      "e": 0.0372,
+      "inclDeg": 87.325,
+      "omegaDeg": 279.54,
+      "circumbinary": true,
+      "ref": "Kostov et al. 2014",
+      "stars": [
+        { "letter": "A", "mass": 0.82, "radius": 0.7761, "teff": 4700, "spectype": "K" },
+        { "letter": "B", "mass": 0.5423, "radius": 0.484, "teff": 3463, "spectype": "M" }
+      ]
+    },
+    {
+      "hostname": "Kepler-453",
+      "a": 0.18539,
+      "periodDays": 27.322,
+      "e": 0.051,
+      "inclDeg": 90.266,
+      "omegaDeg": 263.05,
+      "circumbinary": true,
+      "ref": "Welsh et al. 2015",
+      "stars": [
+        { "letter": "A", "mass": 0.944, "radius": 0.833, "teff": 5527, "spectype": "G" },
+        { "letter": "B", "mass": 0.1951, "radius": 0.215, "teff": 3226, "spectype": "M" }
+      ]
+    },
+    {
+      "hostname": "Kepler-1647",
+      "a": 0.1276,
+      "periodDays": 11.2588,
+      "e": 0.1593,
+      "inclDeg": 87.9164,
+      "omegaDeg": 300.83,
+      "circumbinary": true,
+      "ref": "Kostov et al. 2016",
+      "stars": [
+        { "letter": "A", "mass": 1.2207, "radius": 1.7903, "teff": 6210, "spectype": "F" },
+        { "letter": "B", "mass": 0.9678, "radius": 0.9663, "teff": 5770, "spectype": "G" }
+      ]
+    },
+    {
+      "hostname": "TOI-1338 A",
+      "a": 0.1288,
+      "periodDays": 14.608559,
+      "e": 0.156,
+      "inclDeg": 89.7,
+      "omegaDeg": 117.54,
+      "circumbinary": true,
+      "ref": "Kostov et al. 2020",
+      "stars": [
+        { "letter": "A", "mass": 1.038, "radius": 1.331, "teff": 5990, "spectype": "F8" },
+        { "letter": "B", "mass": 0.3079, "radius": 0.3013, "teff": 3310, "spectype": "M" }
+      ]
+    },
+    {
+      "hostname": "TIC 172900988 Aa",
+      "a": 0.191,
+      "periodDays": 19.65815,
+      "e": 0.4479,
+      "inclDeg": 85.57,
+      "omegaDeg": 68.12,
+      "circumbinary": true,
+      "ref": "Kostov et al. 2021",
+      "stars": [
+        { "letter": "A", "mass": 1.238, "radius": 1.385, "teff": 6050, "spectype": "F9" },
+        { "letter": "B", "mass": 1.202, "radius": 1.315, "teff": 5980, "spectype": "G0" }
+      ]
+    }
+  ]
+}

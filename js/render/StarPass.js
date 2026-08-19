@@ -44,6 +44,10 @@ export class StarPass {
     this.instanceBuffer = null;
     this.capacity = { value: 0 };
     this.count = 0;
+    /** Packed instance data so a focused close-binary can zero one host. */
+    this._packed = null;
+    /** @type {number|null} */
+    this._suppressedIndex = null;
   }
 
   /**
@@ -51,7 +55,34 @@ export class StarPass {
    */
   upload(stars) {
     this.count = stars.length;
-    const data = packInstances(stars);
+    this._packed = packInstances(stars);
+    this._suppressedIndex = null;
+    this.instanceBuffer = writeInstanceBuffer(
+      this.device,
+      this.instanceBuffer,
+      this._packed,
+      this.capacity
+    );
+  }
+
+  /**
+   * Hide one map star (focused close binary) without rebuilding the catalog GPU buffer.
+   * @param {number|null} index
+   */
+  setSuppressedIndex(index) {
+    if (!this._packed || this.count <= 0) {
+      this._suppressedIndex = null;
+      return;
+    }
+    const next = index != null && index >= 0 && index < this.count ? index : null;
+    if (next === this._suppressedIndex) return;
+    this._suppressedIndex = next;
+    const data = this._packed.slice();
+    if (next != null) {
+      const o = next * 8;
+      data[o + 6] = 0;
+      data[o + 7] = 0;
+    }
     this.instanceBuffer = writeInstanceBuffer(
       this.device,
       this.instanceBuffer,

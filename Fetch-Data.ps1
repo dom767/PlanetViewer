@@ -15,6 +15,12 @@ try {
     throw "fetch-exoplanets.mjs failed with exit code $LASTEXITCODE"
   }
 
+  Write-Host "Refreshing close-binary orbits (curated + stellarhosts)..." -ForegroundColor Cyan
+  & node "scripts/fetch-close-binaries.mjs"
+  if ($LASTEXITCODE -ne 0) {
+    throw "fetch-close-binaries.mjs failed with exit code $LASTEXITCODE"
+  }
+
   if ($SkipNearby) {
     Write-Host "SkipNearby set - leaving data/nearby-stars.json unchanged." -ForegroundColor Yellow
   }

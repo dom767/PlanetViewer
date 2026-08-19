@@ -17,6 +17,7 @@ const COLUMNS = [
   "pl_name",
   "sy_snum",
   "sy_pnum",
+  "cb_flag",
   "ra",
   "dec",
   "sy_dist",
@@ -134,6 +135,7 @@ for (const row of rows) {
     discoveryMethod: str(row.discoverymethod),
     discoveryYear: num(row.disc_year),
     discoveryFacility: str(row.disc_facility),
+    cbFlag: num(row.cb_flag) === 1,
   });
 }
 

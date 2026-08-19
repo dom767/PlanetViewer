@@ -107,6 +107,26 @@ export function meanAnomalyAt(planet, tDays) {
 }
 
 /**
+ * Relative A–B vector treated as a Keplerian orbit, then split by mass so
+ * A and B orbit the barycenter.
+ * @param {{a:number, periodDays?:number, e?:number, inclDeg?:number, omegaDeg?:number, nodeDeg?:number, stars: Array<{mass?:number|null}>}} binary
+ * @returns {{A:{x:number,y:number,z:number}, B:{x:number,y:number,z:number}, q:number}|null}
+ */
+export function binaryStarOffsetsAu(binary, tDays) {
+  const rel = planetOffsetAu(binary, tDays);
+  if (!rel) return null;
+  const m1 = binary.stars?.[0]?.mass > 0 ? binary.stars[0].mass : 1;
+  const m2 = binary.stars?.[1]?.mass > 0 ? binary.stars[1].mass : 0.5;
+  const tot = m1 + m2;
+  const q = tot > 0 ? m2 / tot : 0.5;
+  return {
+    A: { x: -q * rel.x, y: -q * rel.y, z: -q * rel.z },
+    B: { x: (1 - q) * rel.x, y: (1 - q) * rel.y, z: (1 - q) * rel.z },
+    q,
+  };
+}
+
+/**
  * Planet offset (AU) in the Kepler reference frame at simulation time tDays.
  */
 export function planetOffsetAu(planet, tDays) {
