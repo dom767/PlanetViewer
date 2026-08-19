@@ -24,7 +24,7 @@ On first load, pick one of five **guided tours** or **Free flight**. Amber bookm
 
 | Input | Action |
 | --- | --- |
-| WASD | Move |
+| WASD | Move (leaves a focused system in free flight, keeping the current view) |
 | Q / E | Down / up |
 | Shift | Faster |
 | Space | Slower |

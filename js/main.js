@@ -103,6 +103,11 @@ async function main() {
   }).init();
 
   let focused = null;
+  camera.onEnterFreeFlight = () => {
+    focused = null;
+    scene.setFocusedSystem(null);
+    hud.setSelection("Free flight", length3(camera.position), false);
+  };
   /** @type {{ system: object, normName: string }[]} */
   let systemSearchIndex = [];
   let viewProj = new Float32Array(16);

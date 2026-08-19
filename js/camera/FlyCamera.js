@@ -103,7 +103,7 @@ export class FlyCamera {
     /** @type {'free'|'travel'|'orbit'} */
     this._flightMode = "free";
     /** @type {'free'|'depart'|'cruise'|'arrive'|'orbit'} */
-    this._phase = "orbit";
+    this._phase = "free";
     /** 0→1 during travel arrive; used to fade the focus highlight into orbit. */
     this._arriveBlend = 0;
 
@@ -152,6 +152,8 @@ export class FlyCamera {
     this.touchPanSpeed = 0.012;
     /** @type {null | (() => object|null)} */
     this.resolveOrbitTarget = null;
+    /** @type {null | (() => void)} */
+    this.onEnterFreeFlight = null;
   }
 
   didDrag() {
@@ -175,6 +177,7 @@ export class FlyCamera {
 
   /** True once orbits should be shown (late travel / overlook). */
   shouldRevealOrbits() {
+    if (this._flightMode === "free" || !this._slot) return false;
     return this._phase === "arrive" || this._phase === "orbit";
   }
 
@@ -286,6 +289,13 @@ export class FlyCamera {
       const sensLook =
         e.pointerType === "touch" ? this.touchLookSensitivity : this.lookSensitivity;
 
+      // WASD free flight: look around in place. Do not snap back onto a sun
+      // until the user clicks one (selectSystem → focusOn).
+      if (this._flightMode === "free" && !this._slot) {
+        this._applyFreeLook(dx, dy, sensLook);
+        return;
+      }
+
       if (this._pendingOrbitTarget && !this._orbitDragging) {
         this.cancelTravel();
         this._ensureSlot(this._pendingOrbitTarget);
@@ -327,13 +337,7 @@ export class FlyCamera {
       } else {
         this._flightMode = "free";
       }
-      this.yaw += dx * sensLook;
-      this.pitch -= dy * sensLook;
-      const lim = Math.PI / 2 - 0.05;
-      this.pitch = Math.max(-lim, Math.min(lim, this.pitch));
-      this._setBasisFromDir(this.forwardFromYawPitch(), WORLD_UP);
-      this._angVel = { x: 0, y: 0, z: 0 };
-      this._prevTargetBasis = null;
+      this._applyFreeLook(dx, dy, sensLook);
     };
 
     const applyTwoFingerMove = () => {
@@ -547,11 +551,8 @@ export class FlyCamera {
    * @param {{x:number,y:number,z:number}|null} [fromStar]
    */
   focusOn(target, distance = 2.5, fromStar = null) {
-    if (this._flightMode === "free") {
-      // Free look tracks yaw/pitch; adopt it as the basis we spring away from
-      this._setBasisFromDir(this.forwardFromYawPitch(), WORLD_UP);
-    }
-    // New destination: the desired basis jumps, so drop the drift estimate
+    // Keep the current basis; travel springs toward the destination. Do not
+    // rebuild from yaw/pitch + world-up or the view rolls at the start of a hop.
     this._prevTargetBasis = null;
 
     const dest = { x: target.x, y: target.y, z: target.z };
@@ -677,17 +678,30 @@ export class FlyCamera {
     }
   }
 
-  clearOrbit() {
+  /**
+   * Leave travel/orbit and keep the current heading and roll, so WASD does
+   * not snap the horizon to world-up. Stays free until {@link focusOn}.
+   */
+  enterFreeFlight() {
+    const leaving =
+      !!this._slot || this._flightMode !== "free" || !!this._travel;
     this._slot = null;
     this._travel = null;
     this._reattachCooldown = 0;
     this._flightMode = "free";
-    this._phase = "orbit";
+    this._phase = "free";
     this._arriveBlend = 0;
-    this._setBasisFromDir(this.forwardFromYawPitch(), WORLD_UP);
+    this._orbitDragging = false;
+    this._pendingOrbitTarget = null;
     this._angVel = { x: 0, y: 0, z: 0 };
     this._prevTargetBasis = null;
     this._velocity = { x: 0, y: 0, z: 0 };
+    this._syncYawPitchFromDir(this._fwd);
+    if (leaving) this.onEnterFreeFlight?.();
+  }
+
+  clearOrbit() {
+    this.enterFreeFlight();
   }
 
   /** Resume the overlook orbit after a drag / zoom pause. */
@@ -738,10 +752,7 @@ export class FlyCamera {
   }
 
   forward() {
-    if (this._flightMode === "travel" || this._flightMode === "orbit") {
-      return this._fwd;
-    }
-    return this.forwardFromYawPitch();
+    return this._fwd;
   }
 
   right() {
@@ -749,10 +760,28 @@ export class FlyCamera {
   }
 
   _viewUp() {
-    if (this._flightMode === "travel" || this._flightMode === "orbit") {
-      return this._upBody;
+    return this._upBody;
+  }
+
+  /**
+   * Mouse/touch look in free flight: yaw around current up, pitch around
+   * right, so roll from the previous overlook is preserved.
+   */
+  _applyFreeLook(dx, dy, sens) {
+    const yaw = dx * sens;
+    const pitch = -dy * sens;
+    if (Math.abs(yaw) > 1e-9) {
+      this._fwd = rotateAroundAxis(this._fwd, this._upBody, yaw);
     }
-    return this.up;
+    if (Math.abs(pitch) > 1e-9) {
+      const right = this.right();
+      this._fwd = rotateAroundAxis(this._fwd, right, pitch);
+      this._upBody = rotateAroundAxis(this._upBody, right, pitch);
+    }
+    this._upBody = orthonormalizeUp(this._fwd, this._upBody);
+    this._syncYawPitchFromDir(this._fwd);
+    this._angVel = { x: 0, y: 0, z: 0 };
+    this._prevTargetBasis = null;
   }
 
   /** Set the basis directly and keep yaw/pitch in sync for free-look handoff. */
@@ -856,12 +885,14 @@ export class FlyCamera {
     if (this._keys.has("KeyS")) move = add3(move, scale3(f, -1));
     if (this._keys.has("KeyD")) move = add3(move, r);
     if (this._keys.has("KeyA")) move = add3(move, scale3(r, -1));
-    if (this._keys.has("KeyE")) move = add3(move, this.up);
-    if (this._keys.has("KeyQ")) move = add3(move, scale3(this.up, -1));
+    if (this._keys.has("KeyE")) move = add3(move, this._viewUp());
+    if (this._keys.has("KeyQ")) move = add3(move, scale3(this._viewUp(), -1));
 
     const len = Math.hypot(move.x, move.y, move.z);
     if (len > 0) {
-      this.clearOrbit();
+      if (this._slot || this._flightMode !== "free" || this._travel) {
+        this.enterFreeFlight();
+      }
       move = scale3(move, (speed * dtClamped) / len);
       this.position = add3(this.position, move);
       return;
@@ -1024,18 +1055,7 @@ export class FlyCamera {
   }
 
   viewMatrix() {
-    if (this._flightMode === "travel" || this._flightMode === "orbit") {
-      return lookAt(this.position, add3(this.position, this._fwd), this._upBody);
-    }
-    if (this._slot && !this._orbitDragging && this._reattachCooldown > 0) {
-      const target = add3(this.position, this.forwardFromYawPitch());
-      return lookAt(this.position, target, WORLD_UP);
-    }
-    if (this._slot) {
-      return lookAt(this.position, this._slot.target, this._slot.basis?.ey || WORLD_UP);
-    }
-    const target = add3(this.position, this.forwardFromYawPitch());
-    return lookAt(this.position, target, this.up);
+    return lookAt(this.position, add3(this.position, this._fwd), this._upBody);
   }
 }
 
