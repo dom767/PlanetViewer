@@ -278,7 +278,11 @@ body.view-fixed #app {
 }
 
 #panel-content .system-photo {
-  margin: 0 0 16px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  margin: 0 auto 16px;
+  text-align: center;
 }
 
 #panel-content .system-photo img {
@@ -289,8 +293,9 @@ body.view-fixed #app {
   aspect-ratio: 1;
   object-fit: cover;
   border-radius: var(--radius-sm);
-  border: 1px solid var(--border);
+  border: 1px solid var(--border-strong);
   background: #000;
+  box-sizing: border-box;
 }
 
 #panel-content .system-photo figcaption {
