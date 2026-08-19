@@ -31,7 +31,7 @@ const __dirname = dirname(fileURLToPath(import.meta.url));
 const ROOT = join(__dirname, "..", "..");
 const CATALOG = join(ROOT, "data", "exoplanets.json");
 const SYSTEM_IMAGES_JSON = join(ROOT, "data", "system-images.json");
-const SYSTEM_IMAGES_DIR = join(ROOT, "images", "systems");
+const SYSTEM_IMAGES_DIR = join(ROOT, "images");
 const RESULTS = join(__dirname, "results.json");
 const WIKI_CACHE = join(__dirname, "wiki-table.json");
 const THUMBS_DIR = join(__dirname, "thumbs");
@@ -279,7 +279,7 @@ async function applySelectionToApp(name, cell, sourceKey) {
   }
   payload.fetchedAt = new Date().toISOString();
   payload.images[name] = {
-    src: `images/systems/${slug}.jpg`,
+    src: `images/${slug}.jpg`,
     alt: cell.title,
     credit: cell.credit,
     sourceUrl: cell.sourceUrl,

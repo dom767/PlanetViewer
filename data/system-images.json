@@ -1,446 +1,460 @@
 {
-  "fetchedAt": "2026-08-18T00:35:04.607Z",
+  "fetchedAt": "2026-08-18T23:30:45.572Z",
   "images": {
     "1RXS J160929.1-210524": {
-      "src": "images/systems/1rxs-j160929-1-210524.jpg",
+      "src": "images/1rxs-j160929-1-210524.jpg",
       "alt": "1RXS1609B MIRI",
       "credit": "Meli thev",
       "sourceUrl": "https://commons.wikimedia.org/wiki/File:1RXS1609B_MIRI.jpg",
       "license": "CC BY-SA 4.0"
     },
     "2MASS J01033563-5515561 A": {
-      "src": "images/systems/2mass-j01033563-5515561-a.jpg",
+      "src": "images/2mass-j01033563-5515561-a.jpg",
       "alt": "Delorme 1 (AB)b ESO VHS",
       "credit": "Meli thev",
       "sourceUrl": "https://commons.wikimedia.org/wiki/File:Delorme_1_(AB)b_ESO_VHS.jpg",
       "license": "CC BY-SA 4.0"
     },
     "2MASS J02192210-3925225": {
-      "src": "images/systems/2mass-j02192210-3925225.jpg",
+      "src": "images/2mass-j02192210-3925225.jpg",
       "alt": "2MASS J02192210-3925225 b legacy dr10",
       "credit": "Legacy Surveys / D.Lang (Perimeter Institute) & Meli thev",
       "sourceUrl": "https://commons.wikimedia.org/wiki/File:2MASS_J02192210-3925225_b_legacy_dr10.jpg",
       "license": "CC BY 4.0"
     },
     "2MASS J0249-0557 A": {
-      "src": "images/systems/2mass-j0249-0557-a.jpg",
+      "src": "images/2mass-j0249-0557-a.jpg",
       "alt": "2MASS J0249-0557 c",
       "credit": "Legacy Surveys / D.Lang (Perimeter Institute) & Meli thev",
       "sourceUrl": "https://commons.wikimedia.org/wiki/File:2MASS_J0249-0557_c.jpg",
       "license": "CC BY 4.0"
     },
     "2MASS J03590986+2009361": {
-      "src": "images/systems/2mass-j03590986-2009361.jpg",
+      "src": "images/2mass-j03590986-2009361.jpg",
       "alt": "2M0359+2009B MIRI",
       "credit": "Meli thev",
       "sourceUrl": "https://commons.wikimedia.org/wiki/File:2M0359+2009B_MIRI.jpg",
       "license": "CC BY-SA 4.0"
     },
     "2MASS J16262785-2625152": {
-      "src": "images/systems/2mass-j16262785-2625152.jpg",
+      "src": "images/2mass-j16262785-2625152.jpg",
       "alt": "KOINTREAU-4b",
       "credit": "Samuel A. U. Walker et al 2026 AJ 171 142",
       "sourceUrl": "https://commons.wikimedia.org/wiki/File:KOINTREAU-4b.png",
       "license": "CC BY 4.0"
     },
     "51 Eri": {
-      "src": "images/systems/51-eri.jpg",
+      "src": "images/51-eri.jpg",
       "alt": "Gemini-Discovered World is Most Like Jupiter (gemini1505b)",
       "credit": "J. Rameau (UdeM) and C. Marois (NRC Herzberg).",
       "sourceUrl": "https://commons.wikimedia.org/wiki/File:Gemini-Discovered_World_is_Most_Like_Jupiter_(gemini1505b).jpg",
       "license": "CC BY 4.0"
     },
     "AB Aur": {
-      "src": "images/systems/ab-aur.jpg",
+      "src": "images/ab-aur.jpg",
       "alt": "Detection of the protoplanet AB Aur b from the Subaru Telescope",
       "credit": "2632cgn",
       "sourceUrl": "https://commons.wikimedia.org/wiki/File:Subaru_AB_Aur_b.png",
       "license": "CC BY-SA 4.0"
     },
     "AB Pic": {
-      "src": "images/systems/ab-pic.jpg",
+      "src": "images/ab-pic.jpg",
       "alt": "Coronagraphic image of AB Pictoris showing its tiny companion (bottom left). The data was obtained on 16 March 2003 with NACO on the VLT, using a 1.4 arcsec occulting mask on top o",
       "credit": "ESO",
       "sourceUrl": "https://commons.wikimedia.org/wiki/File:The_Star_AB_Pictoris_and_its_Companion_-_Phot-14d-05-normal.jpg",
       "license": "CC BY 4.0"
     },
     "AF Lep": {
-      "src": "images/systems/af-lep.jpg",
+      "src": "images/af-lep.jpg",
       "alt": "Potw2308a(1)",
       "credit": "ESO/Mesa, De Rosa et al.",
       "sourceUrl": "https://commons.wikimedia.org/wiki/File:Potw2308a(1).jpg",
       "license": "CC BY 4.0"
     },
     "b Cen A": {
-      "src": "images/systems/b-cen-a.jpg",
+      "src": "images/b-cen-a.jpg",
       "alt": "Eso2118b",
       "credit": "ESO/Janson et al.",
       "sourceUrl": "https://commons.wikimedia.org/wiki/File:Eso2118b.jpg",
       "license": "CC BY 4.0"
     },
     "BD+60 1417": {
-      "src": "images/systems/bd-60-1417.jpg",
+      "src": "images/bd-60-1417.jpg",
       "alt": "This image shows the directly imaged exoplanet BD+60 1417b (white arrow). filters: 90Prime: g, r DECam: z Image Credit: 90Prime + DECam",
       "credit": "Meli thev",
       "sourceUrl": "https://commons.wikimedia.org/wiki/File:Exoplanet_BD+60_1417b.jpg",
       "license": "CC BY-SA 4.0"
     },
     "bet Pic": {
-      "src": "images/systems/bet-pic.jpg",
+      "src": "images/bet-pic.jpg",
       "alt": "Planet Beta Pictoris seen with the NACO APP",
       "credit": "ESO",
       "sourceUrl": "https://www.eso.org/public/images/ann1037c/",
       "license": "CC BY 4.0"
     },
     "CFBDSIR J145829+101343": {
-      "src": "images/systems/cfbdsir-j145829-101343.jpg",
+      "src": "images/cfbdsir-j145829-101343.jpg",
       "alt": "Brown Dwarf Binary CFBDSIR 1458+10",
       "credit": "Michael Liu, University of Hawaii",
       "sourceUrl": "https://commons.wikimedia.org/wiki/File:Brown_Dwarf_Binary_CFBDSIR_1458+10.tif",
       "license": "CC BY 4.0"
     },
     "CHXR 73": {
-      "src": "images/systems/chxr-73.jpg",
+      "src": "images/chxr-73.jpg",
       "alt": "CHXR 73 b, a star which lies at the border between planet and brown dwarf",
       "credit": "NASA/ESA/K. Luhman (Penn State University, USA)",
       "sourceUrl": "https://commons.wikimedia.org/wiki/File:Hubbledwarf.jpg",
       "license": "Public domain"
     },
     "COCONUTS-2 A": {
-      "src": "images/systems/coconuts-2-a.jpg",
+      "src": "images/coconuts-2-a.jpg",
       "alt": "COCONUTS-2 system unWISE",
       "credit": "Meli thev",
       "sourceUrl": "https://commons.wikimedia.org/wiki/File:COCONUTS-2_system_unWISE.png",
       "license": "CC BY-SA 4.0"
     },
     "CT Cha": {
-      "src": "images/systems/ct-cha.jpg",
+      "src": "images/ct-cha.jpg",
       "alt": "This image shows the young star CT Cha and a companion (on the right)",
       "credit": "Tobias Schmidt (AIU Jena)",
       "sourceUrl": "https://www.openexoplanetcatalogue.com/planet/CT%20Cha%20b/",
       "license": "see source"
     },
     "CWISEP J193518.59-154620.3": {
-      "src": "images/systems/cwisep-j193518-59-154620-3.jpg",
+      "src": "images/cwisep-j193518-59-154620-3.jpg",
       "alt": "CWISEP J1935-1546 JWST MIRI",
       "credit": "Meli thev",
       "sourceUrl": "https://commons.wikimedia.org/wiki/File:CWISEP_J1935-1546_JWST_MIRI.jpg",
       "license": "CC BY-SA 4.0"
     },
     "DH Tau": {
-      "src": "images/systems/dh-tau.jpg",
+      "src": "images/dh-tau.jpg",
       "alt": "DH Tauri",
       "credit": "Meli thev",
       "sourceUrl": "https://commons.wikimedia.org/wiki/File:DH_Tauri.jpg",
       "license": "CC BY-SA 4.0"
     },
     "FU Tau": {
-      "src": "images/systems/fu-tau.jpg",
+      "src": "images/fu-tau.jpg",
       "alt": "FU Tauri B with MIRI Filters: F560W, F770W, F1000W proposal id: GO 2311 PI: Ya-Lin Wu Image Credit: NASA/ESA/CSA JWST; Ya-Lin Wu et al. proposal link: https://www.stsci.edu/jwst-pr",
       "credit": "Meli thev",
       "sourceUrl": "https://commons.wikimedia.org/wiki/File:FU_Tau_B.jpg",
       "license": "CC BY-SA 4.0"
     },
     "G 196-3": {
-      "src": "images/systems/g-196-3.jpg",
+      "src": "images/g-196-3.jpg",
       "alt": "Een stier vechtend met een leeuw, RP-P-H-G-196-3",
       "credit": "Rijksmuseum",
       "sourceUrl": "https://commons.wikimedia.org/wiki/File:Een_stier_vechtend_met_een_leeuw,_RP-P-H-G-196-3.jpg",
       "license": "CC0"
     },
     "GJ 504": {
-      "src": "images/systems/gj-504.jpg",
+      "src": "images/gj-504.jpg",
       "alt": "Composite combines Subaru images of GJ 504 (no labels)",
       "credit": "NASA’s Goddard Space Flight Center/NOAJ",
       "sourceUrl": "https://commons.wikimedia.org/wiki/File:Composite_combines_Subaru_images_of_GJ_504_(no_labels).jpg",
       "license": "Public domain"
     },
     "GJ 900 A": {
-      "src": "images/systems/gj-900-a.jpg",
+      "src": "images/gj-900-a.jpg",
       "alt": "GJ900 AB unWISE",
       "credit": "unWISE / NASA/JPL-Caltech / D. Lang (Perimeter Institute) & Meli thev",
       "sourceUrl": "https://commons.wikimedia.org/wiki/File:GJ900_AB_unWISE.jpg",
       "license": "CC BY 4.0"
     },
     "GQ Lup": {
-      "src": "images/systems/gq-lup.jpg",
+      "src": "images/gq-lup.jpg",
       "alt": "The Sub-Stellar Companion to GQ Lupi",
       "credit": "ESO",
       "sourceUrl": "https://commons.wikimedia.org/wiki/File:The_Sub-Stellar_Companion_to_GQ_Lupi.jpg",
       "license": "CC BY 4.0"
     },
     "GSC 06214-00210": {
-      "src": "images/systems/gsc-06214-00210.jpg",
+      "src": "images/gsc-06214-00210.jpg",
       "alt": "GSC 6214-00210 B MIRI",
       "credit": "Meli thev",
       "sourceUrl": "https://commons.wikimedia.org/wiki/File:GSC_6214-00210_B_MIRI.jpg",
       "license": "CC BY-SA 4.0"
     },
     "GU Psc": {
-      "src": "images/systems/gu-psc.jpg",
+      "src": "images/gu-psc.jpg",
       "alt": "GUPscb GMOSiz WIRCamJ noinset",
       "credit": "NASA, Marie-Eve Naud et al, Gemini Observatory",
       "sourceUrl": "https://commons.wikimedia.org/wiki/File:GUPscb_GMOSiz_WIRCamJ_noinset.jpg",
       "license": "Public domain"
     },
     "HD 100546": {
-      "src": "images/systems/hd-100546.jpg",
+      "src": "images/hd-100546.jpg",
       "alt": "Early forming exoplanet system around the star HD 100546 (geminiann15016b)",
       "credit": "International Gemini Observatory/NOIRLab/ NSF /AURA",
       "sourceUrl": "https://commons.wikimedia.org/wiki/File:Early_forming_exoplanet_system_around_the_star_HD_100546_(geminiann15016b).jpg",
       "license": "CC BY 4.0"
     },
     "HD 106906": {
-      "src": "images/systems/hd-106906.jpg",
+      "src": "images/hd-106906.jpg",
       "alt": "HD 106906 Disk with the Gemini Planet Imager (geminiann15016a)",
       "credit": "International Gemini Observatory/NOIRLab/ NSF /AURA",
       "sourceUrl": "https://commons.wikimedia.org/wiki/File:HD_106906_Disk_with_the_Gemini_Planet_Imager_(geminiann15016a).jpg",
       "license": "CC BY 4.0"
     },
     "HD 135344 A": {
-      "src": "images/systems/hd-135344-a.jpg",
+      "src": "images/hd-135344-a.jpg",
       "alt": "The disc around the star HD 135344B as seen with SPHERE",
       "credit": "ESO/T. Stolker et al.",
       "sourceUrl": "https://www.eso.org/public/images/eso2513c/",
       "license": "CC BY 4.0"
     },
     "HD 143811 A": {
-      "src": "images/systems/hd-143811-a.jpg",
+      "src": "images/hd-143811-a.jpg",
       "alt": "HD 143811 AB b Gemini Planet Imager",
       "credit": "Nathalie K. Jones et al. (2025), arxiv pre-print",
       "sourceUrl": "https://commons.wikimedia.org/wiki/File:HD_143811_AB_b_Gemini_Planet_Imager.png",
       "license": "CC BY 4.0"
     },
     "HD 169142": {
-      "src": "images/systems/hd-169142.jpg",
+      "src": "images/hd-169142.jpg",
       "alt": "Dusty disk around HD 169142 (noirlab2212d)",
       "credit": "International Gemini Observatory/NOIRLab/NSF/AURA/E. Rich (Michigan University)",
       "sourceUrl": "https://commons.wikimedia.org/wiki/File:Dusty_disk_around_HD_169142_(noirlab2212d).jpg",
       "license": "CC BY 4.0"
     },
     "HD 203030": {
-      "src": "images/systems/hd-203030.jpg",
+      "src": "images/hd-203030.jpg",
       "alt": "Spitzer IRAC HD 203030B",
       "credit": "Meli thev",
       "sourceUrl": "https://commons.wikimedia.org/wiki/File:Spitzer_IRAC_HD_203030B.jpg",
       "license": "CC BY-SA 4.0"
     },
     "HD 95086": {
-      "src": "images/systems/hd-95086.jpg",
+      "src": "images/hd-95086.jpg",
       "alt": "VLT image of exoplanet HD 95086 b",
       "credit": "ESO/J. Rameau",
       "sourceUrl": "https://commons.wikimedia.org/wiki/File:VLT_image_of_exoplanet_HD_95086_b.jpg",
       "license": "CC BY 4.0"
     },
     "HIP 54515": {
-      "src": "images/systems/hip-54515.jpg",
+      "src": "images/hip-54515.jpg",
       "alt": "HIP 54515 b 2022-12-30",
       "credit": "Thayne Currie et al 2026 AJ 171 5",
       "sourceUrl": "https://commons.wikimedia.org/wiki/File:HIP_54515_b_2022-12-30.jpg",
       "license": "CC BY 4.0"
     },
     "HIP 65426": {
-      "src": "images/systems/hip-65426.jpg",
+      "src": "images/hip-65426.jpg",
       "alt": "The unusual exoplanet HIP 65426b — SPHERE's first",
       "credit": "ESO",
       "sourceUrl": "https://commons.wikimedia.org/wiki/File:The_unusual_exoplanet_HIP_65426b_—_SPHERE's_first.jpg",
       "license": "CC BY 4.0"
     },
     "HIP 78530": {
-      "src": "images/systems/hip-78530.jpg",
+      "src": "images/hip-78530.jpg",
       "alt": "This image shows the star HIP 78530 with its companion in the lower left corner",
       "credit": "David Lafreniere (University of Montreal)",
       "sourceUrl": "https://www.openexoplanetcatalogue.com/planet/HIP%2078530%20b/",
       "license": "see source"
     },
     "HIP 79098 AB": {
-      "src": "images/systems/hip-79098-ab.jpg",
+      "src": "images/hip-79098-ab.jpg",
       "alt": "K 1 image of HIP 79098 AB and its faint companion HIP 79098 (AB)b from SPHERE, without PSF subtraction.",
       "credit": "SPHERE, Maud Langlois",
       "sourceUrl": "https://commons.wikimedia.org/wiki/File:K-1-image-of-HIP-79098-AB-and-its-faint-companion-HIP-79098-ABb-from-SPHERE-without-PSF-subtraction.jpg",
       "license": "CC BY 4.0"
     },
     "HIP 81208 C": {
-      "src": "images/systems/hip-81208-c.jpg",
+      "src": "images/hip-81208-c.jpg",
       "alt": "New planetary-mass object found in quadruple system (potw2338a)",
       "credit": "ESO/A. Chomez et al.",
       "sourceUrl": "https://commons.wikimedia.org/wiki/File:New_planetary-mass_object_found_in_quadruple_system_(potw2338a).jpg",
       "license": "CC BY 4.0"
     },
     "HIP 99770": {
-      "src": "images/systems/hip-99770.jpg",
+      "src": "images/hip-99770.jpg",
       "alt": "Detection of the HIP 99770 b exoplanet from May 19, 2021 data using the Subaru Telescope on Mauna Kea.",
       "credit": "2632cgn",
       "sourceUrl": "https://commons.wikimedia.org/wiki/File:HIP_99770_b.png",
       "license": "CC BY-SA 4.0"
     },
     "HN Peg": {
-      "src": "images/systems/hn-peg.jpg",
+      "src": "images/hn-peg.jpg",
       "alt": "T-type brown dwarf HN Pegasi B (bottom right) with around 20 times Jupiter's mass.",
       "credit": "Luhman et al, PSU, CfA, JPL, CalTech, NASA",
       "sourceUrl": "https://commons.wikimedia.org/wiki/File:HN_Pegasi_B.jpg",
       "license": "Public domain"
     },
     "HR 8799": {
-      "src": "images/systems/hr-8799.jpg",
+      "src": "images/hr-8799.jpg",
       "alt": "444226main exoplanet20100414-a-full",
       "credit": "NASA/JPL-Caltech/Palomar Observatory",
       "sourceUrl": "https://commons.wikimedia.org/wiki/File:444226main_exoplanet20100414-a-full.jpg",
       "license": "Public domain"
     },
     "ISO-Oph 96": {
-      "src": "images/systems/iso-oph-96.jpg",
+      "src": "images/iso-oph-96.jpg",
       "alt": "KOINTREAU-3b",
       "credit": "Samuel A. U. Walker et al 2026 AJ 171 142",
       "sourceUrl": "https://commons.wikimedia.org/wiki/File:KOINTREAU-3b.png",
       "license": "CC BY 4.0"
     },
     "kap And": {
-      "src": "images/systems/kap-and.jpg",
+      "src": "images/kap-and.jpg",
       "alt": "Image of the star Kappa Andromedae and the planet or brown dwarf Kappa Andromedae (top left)",
       "credit": "J",
       "sourceUrl": "https://www.openexoplanetcatalogue.com/planet/Kappa%20Andromedae%20b/",
       "license": "see source"
     },
     "LkCa 15": {
-      "src": "images/systems/lkca-15.jpg",
+      "src": "images/lkca-15.jpg",
       "alt": "The transitional disk around the star LkCa 15, the inner dust-free hole has a diameter of 55 times the distance from Earth - Sun.",
       "credit": "Adam Kraus and Michael Ireland, posted by NASA Blueshift on Flickr under Creative Commons Attribution 2.0 Generic (CC BY 2.0), uploaded by AxelHH",
       "sourceUrl": "https://commons.wikimedia.org/wiki/File:LkCa_15_disk_protoplanetare_Scheibe_cropped.jpg",
       "license": "CC BY 2.0"
     },
     "MWC 758": {
-      "src": "images/systems/mwc-758.jpg",
+      "src": "images/mwc-758.jpg",
       "alt": "The MWC 758 planet-forming disc as seen by SPHERE and ALMA",
       "credit": "ESO/A. Garufi et al.; R. Dong et al.; ALMA (ESO/NAOJ/NRAO)",
       "sourceUrl": "https://www.eso.org/public/images/eso2405e/",
       "license": "CC BY 4.0"
     },
     "Oph 11": {
-      "src": "images/systems/oph-11.jpg",
+      "src": "images/oph-11.jpg",
       "alt": "Oph 1622 eso0629b",
       "credit": "ESO",
       "sourceUrl": "https://commons.wikimedia.org/wiki/File:Oph_1622_eso0629b.jpg",
       "license": "CC BY 4.0"
     },
     "PDS 70": {
-      "src": "images/systems/pds-70.jpg",
+      "src": "images/pds-70.jpg",
       "alt": "SPHERE image of the newborn planet PDS 70b",
       "credit": "ESO/A. Müller et al.",
       "sourceUrl": "https://www.eso.org/public/images/eso1821a/",
       "license": "CC BY 4.0"
     },
     "PZ Tel": {
-      "src": "images/systems/pz-tel.jpg",
+      "src": "images/pz-tel.jpg",
       "alt": "NICI image of PZ Tel A and B (geminiann10013a)",
       "credit": "NOIRLab/Beth Biller/Gemini Observatory/AURA",
       "sourceUrl": "https://commons.wikimedia.org/wiki/File:NICI_image_of_PZ_Tel_A_and_B_(geminiann10013a).jpg",
       "license": "CC BY 4.0"
     },
     "Ross 458": {
-      "src": "images/systems/ross-458.jpg",
+      "src": "images/ross-458.jpg",
       "alt": "DT Virginis",
       "credit": "Legacy Surveys / D.Lang (Perimeter Institute) & Meli thev",
       "sourceUrl": "https://commons.wikimedia.org/wiki/File:DT_Virginis.jpg",
       "license": "CC BY-SA 4.0"
     },
     "ROXs 12": {
-      "src": "images/systems/roxs-12.jpg",
+      "src": "images/roxs-12.jpg",
       "alt": "ROXs 12 MUSE",
       "credit": "Meli thev",
       "sourceUrl": "https://commons.wikimedia.org/wiki/File:ROXs_12_MUSE.png",
       "license": "CC BY-SA 4.0"
     },
     "ROXs 42 B": {
-      "src": "images/systems/roxs-42-b.jpg",
+      "src": "images/roxs-42-b.jpg",
       "alt": "ROXs 42B MUSE IR",
       "credit": "Meli thev",
       "sourceUrl": "https://commons.wikimedia.org/wiki/File:ROXs_42B_MUSE_IR.jpg",
       "license": "CC BY-SA 4.0"
     },
     "SR 12 AB": {
-      "src": "images/systems/sr-12-ab.jpg",
+      "src": "images/sr-12-ab.jpg",
       "alt": "SR 12 + companion Hubble",
       "credit": "Meli thev",
       "sourceUrl": "https://commons.wikimedia.org/wiki/File:SR_12_+_companion_Hubble.jpg",
       "license": "CC BY-SA 4.0"
     },
     "TWA 7": {
-      "src": "images/systems/twa-7.jpg",
+      "src": "images/twa-7.jpg",
       "alt": "High-contrast coronograph image of TWA 7b (weic2512)",
       "credit": "ESA/Webb, NASA, CSA, A.M. Lagrange, M. Zamani (ESA/Webb)",
       "sourceUrl": "https://commons.wikimedia.org/wiki/File:High-contrast_coronograph_image_of_TWA_7b_(weic2512).jpg",
       "license": "CC BY 4.0"
     },
     "TYC 8998-760-1": {
-      "src": "images/systems/tyc-8998-760-1.jpg",
+      "src": "images/tyc-8998-760-1.jpg",
       "alt": "First ever image of a multi-planet system around a Sun-like star (uncropped, without annotations) (eso2011c)",
       "credit": "ESO/Bohn et al.",
       "sourceUrl": "https://commons.wikimedia.org/wiki/File:First_ever_image_of_a_multi-planet_system_around_a_Sun-like_star_(uncropped,_without_annotations)_(eso2011c).jpg",
       "license": "CC BY 4.0"
     },
     "USco CTIO 108": {
-      "src": "images/systems/usco-ctio-108.jpg",
+      "src": "images/usco-ctio-108.jpg",
       "alt": "UScoCTIO 108 legacy dr10",
       "credit": "Legacy Surveys / D.Lang (Perimeter Institute) & Meli thev",
       "sourceUrl": "https://commons.wikimedia.org/wiki/File:UScoCTIO_108_legacy_dr10.jpg",
       "license": "CC BY 4.0"
     },
     "USco1556 A": {
-      "src": "images/systems/usco1556-a.jpg",
+      "src": "images/usco1556-a.jpg",
       "alt": "USco 1556 legacy dr10",
       "credit": "Legacy Surveys / D.Lang (Perimeter Institute) & Meli thev",
       "sourceUrl": "https://commons.wikimedia.org/wiki/File:USco_1556_legacy_dr10.jpg",
       "license": "CC BY 4.0"
     },
     "USco1621 A": {
-      "src": "images/systems/usco1621-a.jpg",
+      "src": "images/usco1621-a.jpg",
       "alt": "USco 1621 ESO VHS",
       "credit": "Meli thev",
       "sourceUrl": "https://commons.wikimedia.org/wiki/File:USco_1621_ESO_VHS.jpg",
       "license": "CC BY-SA 4.0"
     },
     "VHS J125601.92-125723.9": {
-      "src": "images/systems/vhs-j125601-92-125723-9.jpg",
+      "src": "images/vhs-j125601-92-125723-9.jpg",
       "alt": "VHS J1256-1257",
       "credit": "Meli thev",
       "sourceUrl": "https://commons.wikimedia.org/wiki/File:VHS_J1256-1257.jpg",
       "license": "CC BY-SA 4.0"
     },
     "WD 0806-661": {
-      "src": "images/systems/wd-0806-661.jpg",
+      "src": "images/wd-0806-661.jpg",
       "alt": "WD 0806-661B NIRCam",
       "credit": "Meli thev",
       "sourceUrl": "https://commons.wikimedia.org/wiki/File:WD_0806-661B_NIRCam.jpg",
       "license": "CC BY-SA 4.0"
     },
     "WISEP J121756.91+162640.2 A": {
-      "src": "images/systems/wisep-j121756-91-162640-2-a.jpg",
+      "src": "images/wisep-j121756-91-162640-2-a.jpg",
       "alt": "WISE 1217+1626 AB Hubble WFC3IR",
       "credit": "Meli thev",
       "sourceUrl": "https://commons.wikimedia.org/wiki/File:WISE_1217+1626_AB_Hubble_WFC3IR.jpg",
       "license": "CC BY-SA 4.0"
     },
     "WISPIT 1": {
-      "src": "images/systems/wispit-1.jpg",
+      "src": "images/wispit-1.jpg",
       "alt": "WISPIT 1 2024-11-30",
       "credit": "van Capelleveen, R. F., et al.: A&A, 704, A221 (2025)",
       "sourceUrl": "https://commons.wikimedia.org/wiki/File:WISPIT_1_2024-11-30.tif",
       "license": "CC BY 4.0"
     },
     "WISPIT 2": {
-      "src": "images/systems/wispit-2.jpg",
+      "src": "images/wispit-2.jpg",
       "alt": "WISPIT 2 Annotated LBTI Image",
       "credit": "Laird Close & Gabriel Weible (University of Arizona)",
       "sourceUrl": "https://commons.wikimedia.org/wiki/File:WISPIT_2_Annotated_LBTI_Image.png",
       "license": "CC BY 4.0"
     },
     "XEST 17-036": {
-      "src": "images/systems/xest-17-036.jpg",
+      "src": "images/xest-17-036.jpg",
       "alt": "KOINTREAU-1b",
       "credit": "Samuel A. U. Walker et al. (2025), arxiv pre-print, accepted for publication by AJ",
       "sourceUrl": "https://commons.wikimedia.org/wiki/File:KOINTREAU-1b.png",
       "license": "CC BY 4.0"
+    },
+    "2MASS J12073346-3932539": {
+      "src": "images/2mass-j12073346-3932539.jpg",
+      "alt": "2M1207b - First image of an exoplanet",
+      "credit": "ESO",
+      "sourceUrl": "https://commons.wikimedia.org/wiki/File:2M1207b_-_First_image_of_an_exoplanet.jpg",
+      "license": "CC BY 4.0"
+    },
+    "2MASS J22362452+4751425": {
+      "src": "images/2mass-j22362452-4751425.jpg",
+      "alt": "2M2236+4751 b with Hubble Image Credit: NASA/ESA Hubble; Brendan Bowler et al. Instrument: WFC3/IR Filter: F125W proposal id: 16721 proposal link: https://archive.stsci.edu/proposa",
+      "credit": "Meli thev",
+      "sourceUrl": "https://commons.wikimedia.org/wiki/File:2M2236+4751_b.jpg",
+      "license": "CC BY-SA 4.0"
     }
   }
 }

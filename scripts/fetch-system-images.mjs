@@ -2,7 +2,7 @@
  * Apply curated probe-dashboard selections into the app catalog.
  *
  * Default: read tools/system-image-probe/results.json, copy each selected
- * 300×300 preview into images/systems/, and write data/system-images.json.
+ * 300×300 preview into images/, and write data/system-images.json.
  * Hosts marked “no image” (or never selected) are omitted.
  *
  * --search  live-probe hosts that still have no selection (ESO / Commons /
@@ -40,7 +40,7 @@ const ROOT = join(__dirname, "..");
 const CATALOG = join(ROOT, "data", "exoplanets.json");
 const OUT_JSON = join(ROOT, "data", "system-images.json");
 const OUT_REPORT = join(ROOT, "data", "system-images-report.json");
-const OUT_DIR = join(ROOT, "images", "systems");
+const OUT_DIR = join(ROOT, "images");
 const RESULTS = join(ROOT, "tools", "system-image-probe", "results.json");
 const PREVIEW_ROOT = join(ROOT, "tools", "system-image-probe");
 const WIKI_CACHE = join(PREVIEW_ROOT, "wiki-table.json");
@@ -88,7 +88,7 @@ async function fileExists(path) {
 function metaFromCell(name, cell) {
   const slug = slugFromName(name);
   return {
-    src: `images/systems/${slug}.jpg`,
+    src: `images/${slug}.jpg`,
     alt: cell.alt || cell.title,
     credit: cell.credit,
     sourceUrl: cell.sourceUrl,
@@ -227,7 +227,9 @@ async function main() {
 
   if (!partial) {
     const keepFiles = new Set(
-      Object.values(payloadImages).map((m) => String(m.src).replace(/^images\/systems\//, ""))
+      Object.values(payloadImages).map((m) =>
+        String(m.src).replace(/^images\/(?:systems\/)?/, "")
+      )
     );
     const existing = await readdir(OUT_DIR).catch(() => []);
     for (const file of existing) {

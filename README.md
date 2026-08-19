@@ -82,7 +82,7 @@ js/ui/             # InfoPanel, Minimap, Hud, TourPicker
 data/exoplanets.json
 data/nearby-stars.json
 data/system-images.json
-images/systems/
+images/
 scripts/fetch-exoplanets.mjs
 ```
 

@@ -2,7 +2,7 @@
 setlocal
 cd /d "%~dp0"
 echo PlanetViewer system-image catalog
-echo Applies probe-dashboard selections into data/system-images.json and images/systems/.
+echo Applies probe-dashboard selections into data/system-images.json and images/.
 echo Use --search to live-probe hosts that still have no selection.
 echo.
 node "%~dp0scripts\fetch-system-images.mjs" %*

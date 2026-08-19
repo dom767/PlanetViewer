@@ -102,7 +102,7 @@ async function build(outDir, version) {
   await writeGzippedJson(CLOSE_BINARIES, join(outDir, "data", "close-binaries.json.gz"));
 
   console.log("Copying system images…");
-  await cp(join(ROOT, "images", "systems"), join(outDir, "images", "systems"), {
+  await cp(join(ROOT, "images"), join(outDir, "images"), {
     recursive: true,
   });
 

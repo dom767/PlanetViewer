@@ -1,6 +1,7 @@
 /**
  * Telescope stills for catalog hosts. Map is filled at startup from
  * data/system-images.json (see loadSystemImages / fetch-system-images.mjs).
+ * File URLs are `images/{slug}.jpg`.
  *
  * @typedef {{ src: string, alt: string, credit: string, sourceUrl: string, license: string }} SystemImage
  */
