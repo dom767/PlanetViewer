@@ -90,6 +90,73 @@ export const STAR_NOTES = {
   },
   "Kepler-16": {
     text: "A binary star with a circumbinary planet, Kepler-16b: a real Tatooine-style world that orbits both suns.",
+    tours: {
+      binaries:
+        "Kepler-16: a K dwarf and a much fainter M companion, 0.22 AU apart (41-day binary). Planet b orbits both suns every 229 days — the first transiting circumbinary world.",
+    },
+  },
+  "Kepler-47": {
+    text: "A close G+M binary with three circumbinary planets — the first known multi-planet system around two suns.",
+    tours: {
+      binaries:
+        "Kepler-47: the tightest pair on this tour (0.08 AU, 7.4 days) and three planets around both stars. The inner world would see suns that swap places in a week.",
+    },
+  },
+  "Kepler-38": {
+    text: "A G-type primary and an M-dwarf companion with a circumbinary Neptune-sized planet.",
+    tours: {
+      binaries:
+        "Kepler-38: a G star with a dim M companion at 0.15 AU. The planet sits outside both suns; the secondary is the faint red spark next to the primary.",
+    },
+  },
+  "Kepler-413": {
+    text: "A K+M eclipsing binary whose circumbinary planet's orbit precesses rapidly, so transits come and go.",
+    tours: {
+      binaries:
+        "Kepler-413: K and M stars 0.10 AU apart. The planet's orbit tilts and precesses in about a decade, so transits vanish for years, then return.",
+    },
+  },
+  "Kepler-453": {
+    text: "A G+M binary with a circumbinary planet near the habitable zone of the pair.",
+    tours: {
+      binaries:
+        "Kepler-453: a Sun-like star and a small M dwarf, 0.19 AU apart. Planet b's year is long enough to sit near the binary's habitable zone.",
+    },
+  },
+  "Kepler-35": {
+    text: "Two similar G stars with a Saturn-sized world on a circumbinary orbit.",
+    tours: {
+      binaries:
+        "Kepler-35: two G stars of nearly equal mass, 0.18 AU apart. Unlike Kepler-16, both suns should look comparably bright.",
+    },
+  },
+  "Kepler-34": {
+    text: "Twin G stars on a highly eccentric 28-day orbit, with a circumbinary Saturn analog.",
+    tours: {
+      binaries:
+        "Kepler-34: two G stars on a very eccentric orbit (e ≈ 0.52). Watch the pair's separation breathe in and out over the 28-day binary period.",
+    },
+  },
+  "Kepler-1647": {
+    text: "An F+G binary whose circumbinary planet has a three-year orbit — among the longest of the Kepler two-sun worlds.",
+    tours: {
+      binaries:
+        "Kepler-1647: an F star with a G companion, 0.13 AU apart. Planet b takes about three Earth years to circle both suns, far outside the pair.",
+    },
+  },
+  "TOI-1338 A": {
+    text: "TESS's first transiting circumbinary planet: an F8 primary, an M dwarf, and a Saturn-sized world around both.",
+    tours: {
+      binaries:
+        "TOI-1338: the first TESS circumbinary system. An F8 star and an M companion (0.13 AU, 15 days) with a Saturn-sized planet around both.",
+    },
+  },
+  "TIC 172900988 Aa": {
+    text: "Two similar F/G stars on an eccentric 20-day orbit, with a circumbinary giant found by TESS.",
+    tours: {
+      binaries:
+        "TIC 172900988: two nearly twin F/G stars, eccentric like Kepler-34 (e ≈ 0.45). A good check that equal-mass suns read as two map-star glows.",
+    },
   },
   "HR 8799": {
     text: "The first system with multiple planets photographed directly: four giant worlds, imaged over years as they moved around their young star.",
