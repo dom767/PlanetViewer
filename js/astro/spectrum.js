@@ -109,27 +109,6 @@ export function luminositySolar(star) {
 }
 
 /**
- * Focused-view star billboard size: radius plus luminosity so A and B
- * stay distinct instead of both slamming the screen clamp.
- * @param {{radius?: number|null, luminosity?: number|null, teff?: number|null, vmag?: number|null, distPc?: number|null}} star
- */
-export function focusStarPointSize(star) {
-  const lum = luminositySolar(star);
-  const rad =
-    star.radius && star.radius > 0
-      ? star.radius
-      : lum != null
-        ? Math.sqrt(Math.max(lum, 1e-6))
-        : 1;
-  const fromR = 6 + 10 * Math.sqrt(Math.max(rad, 0.05));
-  const fromL =
-    lum != null
-      ? Math.max(0.42, 1 + 0.55 * Math.log10(Math.max(lum, 1e-6) * 10))
-      : 1;
-  return fromR * fromL;
-}
-
-/**
  * Billboard intensity from intrinsic luminosity (L/L☉).
  * Log-scaled and centered on the Sun (L=1 → 1.0) so dim M dwarfs and
  * luminous hosts stay clearly different; the star shader twinkles around this.

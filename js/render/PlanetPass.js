@@ -3,7 +3,7 @@ import {
   createFocusPlanetPipeline,
   createSoftParticlePipeline,
   FOCUS_PLANET_PARTICLE_WGSL,
-  FOCUS_STAR_WGSL,
+  STAR_WGSL,
   LINE_WGSL,
   BLEND_PREMULTIPLIED,
   BLEND_ADDITIVE,
@@ -21,7 +21,7 @@ import {
 } from "../astro/orbits.js";
 import { cross3, length3, normalize3, sub3 } from "../astro/coords.js";
 import { planetRadiusEarth } from "../astro/planetType.js";
-import { focusStarPointSize, starBrightness } from "../astro/spectrum.js";
+import { starBrightness, starPointSize } from "../astro/spectrum.js";
 
 /** Dual-scale: AU orbits mapped into a local focus radius around the star (parsecs). */
 export const FOCUS_ORBIT_RADIUS_PC = 0.85;
@@ -96,7 +96,7 @@ export class PlanetPass {
     this.starPipeline = createSoftParticlePipeline(
       gpu.device,
       gpu.format,
-      FOCUS_STAR_WGSL,
+      STAR_WGSL,
       BLEND_ADDITIVE
     );
     this.starBindGroup = gpu.device.createBindGroup({
@@ -404,7 +404,7 @@ export class PlanetPass {
           y: p.y,
           z: p.z,
           color: star.color || [1, 0.95, 0.8],
-          size: focusStarPointSize(star),
+          size: star.pointSize ?? starPointSize(star),
           brightness: (star.brightness ?? starBrightness(star)) * bright,
         });
       }
