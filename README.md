@@ -83,6 +83,7 @@ js/data/loader.js
 js/render/         # WebGL2 Scene, StarPass, PlanetPass
 js/content/        # star notes, tours, landmarks, system stills
 js/ui/             # InfoPanel, Minimap, Hud, TourPicker
+tours.md           # how guided tours work; brief for adding a tour
 data/exoplanets.json
 data/nearby-stars.json
 data/system-images.json
