@@ -93,19 +93,13 @@ export function kindFromSnum(snum) {
 }
 
 /**
- * Draw companion in the focused orbit view if the pair is close in absolute
- * terms or the planet reaches ≥5% of the binary orbit.
+ * Draw companion in the focused orbit view — see js/catalog/mergeHosts.js.
+ * Re-exported so Node import scripts can keep a single util surface.
  */
-export function shouldDrawBinary({ a, circumbinary, planets }) {
-  if (a == null || !(a > 0)) return false;
-  if (circumbinary && a <= 1) return true;
-  if (a <= 5) return true;
-  let outer = 0;
-  for (const p of planets || []) {
-    if (p?.a != null && p.a > outer) outer = p.a;
-  }
-  return outer > 0 && a <= 20 * outer;
-}
+export {
+  shouldDrawBinary,
+  planetsOrbitMultipleComponents,
+} from "../../js/catalog/mergeHosts.js";
 
 export function sliceField(line, start1, end1) {
   return str(line.slice(start1 - 1, end1));

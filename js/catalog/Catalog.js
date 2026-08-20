@@ -16,6 +16,7 @@ import {
   assignPlanetAround,
   isComponentAround,
   mergeCoLocatedComponentHosts,
+  shouldDrawBinary,
 } from "./mergeHosts.js";
 
 /**
@@ -376,11 +377,6 @@ function attachBinary(system, raw) {
     m.orbitQuality ||
     raw.orbitQuality ||
     (m.orbitInferred || raw.orbitInferred ? "inferred" : a ? "keplerian" : "projected");
-  const drawnExplicit = m.drawn ?? raw.drawn;
-  const drawn =
-    drawnExplicit != null
-      ? !!drawnExplicit && a != null && a > 0
-      : a != null && a > 0 && a <= 5;
 
   const binary = {
     a: a ?? null,
@@ -392,10 +388,21 @@ function attachBinary(system, raw) {
     orbitInferred: quality === "inferred" || !!raw.orbitInferred,
     orbitQuality: quality,
     circumbinary: !!(m.circumbinary ?? raw.circumbinary),
-    drawn,
+    drawn: false,
     source: m.source ?? raw.source ?? null,
     stars,
   };
+
+  const anyCb = binary.circumbinary || system.planets.some((p) => p.cbFlag);
+  binary.circumbinary = assignPlanetAround(system.planets, {
+    a: binary.a,
+    circumbinary: anyCb,
+  });
+  binary.drawn = shouldDrawBinary({
+    a: binary.a,
+    circumbinary: binary.circumbinary,
+    planets: system.planets,
+  });
 
   if (
     binary.drawn &&
@@ -408,12 +415,6 @@ function attachBinary(system, raw) {
     binary.orbitInferred = true;
     binary.orbitQuality = binary.orbitQuality === "keplerian" ? "keplerian" : "inferred";
   }
-
-  const anyCb = binary.circumbinary || system.planets.some((p) => p.cbFlag);
-  binary.circumbinary = assignPlanetAround(system.planets, {
-    a: binary.a,
-    circumbinary: anyCb,
-  });
 
   system.binary = binary;
   system.stars = stars;

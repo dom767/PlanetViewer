@@ -1,5 +1,5 @@
 import { readFile } from "node:fs/promises";
-import { assignPlanetAround } from "../../js/catalog/mergeHosts.js";
+import { assignPlanetAround, shouldDrawBinary } from "../../js/catalog/mergeHosts.js";
 import { SystemIndex, extractHd, extractHip } from "./names.mjs";
 import {
   CURATED_PATH,
@@ -8,7 +8,6 @@ import {
   num,
   periodDaysFromMasses,
   projectedSepAu,
-  shouldDrawBinary,
   str,
 } from "./util.mjs";
 

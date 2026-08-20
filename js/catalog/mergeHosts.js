@@ -22,6 +22,31 @@ export function isComponentAround(around) {
   return around === "A" || around === "B" || around === "C" || around === "D";
 }
 
+/** True when at least two planets name different host letters (A/B/…). */
+export function planetsOrbitMultipleComponents(planets) {
+  const letters = new Set();
+  for (const p of planets || []) {
+    if (isComponentAround(p?.around)) letters.add(p.around);
+  }
+  return letters.size >= 2;
+}
+
+/**
+ * Draw companion in the focused orbit view if the pair is close, a planet
+ * reaches ≥5% of the binary orbit, or planets orbit more than one component.
+ */
+export function shouldDrawBinary({ a, circumbinary, planets }) {
+  if (a == null || !(a > 0)) return false;
+  if (planetsOrbitMultipleComponents(planets)) return true;
+  if (circumbinary && a <= 1) return true;
+  if (a <= 5) return true;
+  let outer = 0;
+  for (const p of planets || []) {
+    if (p?.a != null && p.a > outer) outer = p.a;
+  }
+  return outer > 0 && a <= 20 * outer;
+}
+
 /**
  * Angular separation in degrees → projected AU at distPc.
  * 1 arcsec at 1 pc = 1 AU.
@@ -144,6 +169,16 @@ function mergeCluster(members) {
   for (const m of members) {
     multiplicity = betterMultiplicity(multiplicity, m.multiplicity);
     if ((m.stars?.length || 0) > (stars?.length || 0)) stars = m.stars;
+  }
+  if (multiplicity) {
+    multiplicity = {
+      ...multiplicity,
+      drawn: shouldDrawBinary({
+        a: multiplicity.a,
+        circumbinary: multiplicity.circumbinary,
+        planets,
+      }),
+    };
   }
 
   const snum = Math.max(
