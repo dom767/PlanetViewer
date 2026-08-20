@@ -38,7 +38,7 @@ On first load, pick one of five **guided tours** or **Free flight**. Amber bookm
 | Next | Next stop on the active tour (wraps) |
 | Change tour / Select Tour | Reopen the tour picker. Picking a star off the active tour ends it. |
 | Fullscreen | Settings toggle (hidden if the browser cannot fullscreen; Esc exits) |
-| TikTok record | Settings toggle — on phones, parks info/search/settings sheets in the TikTok safe zone (~15% from the top) |
+| TikTok record | Settings toggle — on phones, moves the star name and HUD note below TikTok’s top labels |
 
 ## Data
 
