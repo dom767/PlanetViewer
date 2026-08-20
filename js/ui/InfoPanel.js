@@ -131,13 +131,13 @@ function renderStarBlock(s) {
     const inf = s.binary.orbitInferred ? "*" : "";
     const period =
       s.binary.periodDays != null ? fmt(s.binary.periodDays, 2, "days") : "—";
-    return `<dt>Effective temperature</dt><dd>${pairFmt(a.teff, b.teff, 0, "K")}</dd>
+    return `<dt>Temperature</dt><dd>${pairFmt(a.teff, b.teff, 0, "K")}</dd>
       <dt>Radius</dt><dd>${pairFmt(a.radius, b.radius, 2, "R☉")}</dd>
       <dt>Stellar mass</dt><dd>${pairFmt(a.mass, b.mass, 2, "M☉")}</dd>
       <dt>Binary</dt><dd>${fmt(s.binary.a, 3, "AU")}${inf} · ${period}${inf}</dd>
       <dt>V magnitude</dt><dd>${fmt(s.vmag, 2)}</dd>`;
   }
-  return `<dt>Effective temperature</dt><dd>${fmt(s.teff, 0, "K")}</dd>
+  return `<dt>Temperature</dt><dd>${fmt(s.teff, 0, "K")}</dd>
       <dt>Radius</dt><dd>${fmt(s.radius, 2, "R☉")}</dd>
       <dt>Luminosity</dt><dd>${fmt(s.luminosity, 3, "L☉")}</dd>
       <dt>V magnitude</dt><dd>${fmt(s.vmag, 2)}</dd>
