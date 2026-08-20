@@ -492,7 +492,7 @@ body.view-fixed #app {
 }
 
 /*
- * TikTok record: park the on-screen star readout below top tabs (~15% from top),
+ * Recording Mode: park the on-screen star readout below top tabs (~15% from top),
  * leaving the lower screen clear for captions and engagement overlays.
  */
 @media (max-width: 767px) {
