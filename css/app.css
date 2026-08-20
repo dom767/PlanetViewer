@@ -238,6 +238,26 @@ body.view-fixed #app {
   z-index: 8;
 }
 
+/*
+ * TikTok safe zone (≈1080×1920): top UI ~130–250px (~7–13%), bottom captions
+ * ~320–480px (~17–25%). Park sheets at 15% from the top and leave the lower
+ * fifth free so overlays do not cover the panel.
+ */
+@media (max-width: 767px) {
+  body.tiktok-record #info-panel.info-panel--sheet {
+    top: max(15vh, calc(env(safe-area-inset-top, 0px) + 12px));
+    bottom: auto;
+    max-height: min(55vh, calc(100vh - 15vh - 22vh));
+    border-radius: var(--radius);
+  }
+
+  body.tiktok-record .app-sheet {
+    top: max(15vh, calc(env(safe-area-inset-top, 0px) + 12px));
+    bottom: auto;
+    max-height: min(55vh, calc(100vh - 15vh - 22vh));
+  }
+}
+
 #panel-close {
   position: absolute;
   top: 10px;

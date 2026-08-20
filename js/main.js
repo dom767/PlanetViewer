@@ -327,6 +327,13 @@ async function main() {
     fieldToggle?.addEventListener("change", updateFieldStats);
     updateFieldStats();
 
+    const tiktokToggle = document.getElementById("toggle-tiktok-record");
+    const syncTiktokRecord = () => {
+      document.body.classList.toggle("tiktok-record", !!tiktokToggle?.checked);
+    };
+    tiktokToggle?.addEventListener("change", syncTiktokRecord);
+    syncTiktokRecord();
+
     search = new SystemSearch({
       input: document.getElementById("system-search-input"),
       results: document.getElementById("system-search-results"),
