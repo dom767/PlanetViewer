@@ -48,6 +48,21 @@ export const LANDMARK_STARS = [
     snum: 3,
     pnum: 0,
     planets: [],
+    stars: [
+      { letter: "A", teff: 5151, radius: 0.81, mass: 0.78, spectype: "K0.5V", luminosity: 0.44 },
+      { letter: "B", teff: 16500, radius: 0.014, mass: 0.57, spectype: "DA4" },
+      { letter: "C", teff: 3125, radius: 0.31, mass: 0.20, spectype: "M4.5Ve" },
+    ],
+    multiplicity: {
+      snum: 3,
+      kind: "triple",
+      orbitQuality: "projected",
+      circumbinary: false,
+      a: 400,
+      periodDays: null,
+      source: "landmark",
+      drawn: false,
+    },
   },
   {
     name: "zet 2 Ret",
@@ -73,5 +88,19 @@ export const LANDMARK_STARS = [
     snum: 2,
     pnum: 0,
     planets: [],
+    stars: [
+      { letter: "A", teff: 5850, radius: 0.99, mass: 0.96, spectype: "G1V", luminosity: 0.97 },
+      { letter: "B", teff: 5795, radius: 0.92, mass: 0.99, spectype: "G2.5V", luminosity: 0.93 },
+    ],
+    multiplicity: {
+      snum: 2,
+      kind: "binary",
+      orbitQuality: "projected",
+      circumbinary: false,
+      a: 3700,
+      periodDays: null,
+      source: "landmark",
+      drawn: false,
+    },
   },
 ];

@@ -15,7 +15,7 @@ try {
     throw "fetch-exoplanets.mjs failed with exit code $LASTEXITCODE"
   }
 
-  Write-Host "Refreshing close-binary orbits (curated + stellarhosts)..." -ForegroundColor Cyan
+  Write-Host "Refreshing binary orbits (curated CBP, ORB6, SB9, Thebault)..." -ForegroundColor Cyan
   & node "scripts/fetch-close-binaries.mjs"
   if ($LASTEXITCODE -ne 0) {
     throw "fetch-close-binaries.mjs failed with exit code $LASTEXITCODE"

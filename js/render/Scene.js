@@ -97,7 +97,7 @@ export class Scene {
 
   _applyFocusStarSuppress() {
     const s = this.focusedSystem;
-    const hide = !!(s && s.binary && !s.isSol);
+    const hide = !!(s && s.binary?.drawn && !s.isSol);
     this.starPass.setSuppressedIndex(hide ? s.id : null);
   }
 
@@ -144,7 +144,7 @@ export class Scene {
     });
     const highlightTarget = this.hoverTarget || this.focusedSystem;
     const skipFocusRing =
-      !!this.focusedSystem?.binary &&
+      !!this.focusedSystem?.binary?.drawn &&
       highlightTarget === this.focusedSystem;
     const highlightingFocus =
       !!highlightTarget &&

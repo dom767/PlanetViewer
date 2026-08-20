@@ -1,0 +1,228 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Catalog import</title>
+  <style>
+    :root {
+      --bg: #0d1117;
+      --surface: #161b22;
+      --border: #30363d;
+      --text: #e6edf3;
+      --muted: #8b949e;
+      --green: #3fb950;
+      --red: #f85149;
+      --accent: #58a6ff;
+      --gold: #d4a72c;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      font-size: 14px;
+      line-height: 1.45;
+    }
+    header {
+      padding: 16px 20px;
+      border-bottom: 1px solid var(--border);
+      background: var(--surface);
+      position: sticky;
+      top: 0;
+    }
+    h1 { margin: 0 0 6px; font-size: 18px; font-weight: 600; }
+    p.lead { margin: 0; color: var(--muted); max-width: 72ch; }
+    .controls {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-top: 12px;
+    }
+    button {
+      background: var(--accent);
+      color: #fff;
+      border: none;
+      padding: 8px 14px;
+      border-radius: 6px;
+      font-size: 13px;
+      cursor: pointer;
+    }
+    button:disabled { opacity: 0.5; cursor: not-allowed; }
+    button.secondary { background: #30363d; }
+    main { padding: 16px 20px 32px; display: grid; gap: 16px; }
+    .cards {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+      gap: 10px;
+    }
+    .card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 12px 14px;
+    }
+    .card h2 {
+      margin: 0 0 4px;
+      font-size: 11px;
+      font-weight: 600;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+    }
+    .card .value { font-size: 22px; font-weight: 600; }
+    .card .sub { color: var(--muted); font-size: 12px; margin-top: 4px; }
+    .log {
+      background: #010409;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 12px;
+      max-height: 420px;
+      overflow: auto;
+      font-family: ui-monospace, SFMono-Regular, Consolas, monospace;
+      font-size: 12px;
+      white-space: pre-wrap;
+    }
+    .log .ts { color: var(--muted); margin-right: 8px; }
+    .status { color: var(--accent); }
+    .status.err { color: var(--red); }
+    .status.ok { color: var(--green); }
+    table { width: 100%; border-collapse: collapse; font-size: 13px; }
+    th, td { text-align: left; padding: 6px 8px; border-bottom: 1px solid var(--border); }
+    th { color: var(--muted); font-weight: 600; font-size: 12px; }
+    .warn { color: var(--gold); }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>Catalog import</h1>
+    <p class="lead">
+      Refresh NASA exoplanets, Gaia stars within 30 pc, and binary orbits
+      (curated circumbinaries, ORB6, SB9, Thebault). Writes the same
+      <code>data/*.json</code> files as Fetch-Data.cmd.
+    </p>
+    <div class="controls">
+      <button id="run-all">Run all</button>
+      <button id="run-exoplanets" class="secondary">Refresh exoplanets</button>
+      <button id="run-binaries" class="secondary">Refresh binaries</button>
+      <button id="run-nearby" class="secondary">Refresh nearby stars</button>
+    </div>
+    <p id="status" class="status"></p>
+  </header>
+  <main>
+    <section class="cards" id="cards"></section>
+    <section>
+      <h2 style="font-size:14px;margin:0 0 8px;">Snapshots</h2>
+      <table>
+        <thead>
+          <tr><th>File</th><th>Fetched</th><th>Count</th></tr>
+        </thead>
+        <tbody id="snaps"></tbody>
+      </table>
+    </section>
+    <section>
+      <h2 style="font-size:14px;margin:0 0 8px;">Log</h2>
+      <div class="log" id="log"></div>
+    </section>
+  </main>
+  <script>
+    const $ = (id) => document.getElementById(id);
+    const buttons = ["all", "exoplanets", "binaries", "nearby"];
+
+    function fmtTime(iso) {
+      if (!iso) return "—";
+      try { return new Date(iso).toLocaleString(); } catch { return iso; }
+    }
+
+    function render(state) {
+      const running = !!state.running || !!state.progress?.running;
+      for (const key of buttons) {
+        const btn = $("run-" + key);
+        if (btn) btn.disabled = running;
+      }
+      const st = $("status");
+      if (state.progress?.error) {
+        st.className = "status err";
+        st.textContent = state.progress.error;
+      } else if (running) {
+        st.className = "status";
+        st.textContent = "Running: " + (state.progress?.job || "");
+      } else {
+        st.className = "status ok";
+        st.textContent = state.progress?.job ? "Idle (last job: " + state.progress.job + ")" : "Idle";
+      }
+
+      const stats = state.stats || {};
+      const exo = state.snapshots?.exoplanets || {};
+      const cards = [
+        ["Hosts", exo.systemCount ?? stats.systemCount, exo.fetchedAt],
+        ["Planets", exo.planetCount ?? stats.planetCount, null],
+        ["Multiples", stats.multiples ?? exo.multiplicity?.multiples, null],
+        ["Drawn binaries", stats.drawn ?? exo.multiplicity?.drawn, "orbit view"],
+        ["Info-only", stats.infoOnly ?? exo.multiplicity?.infoOnly, "wide companions"],
+        ["Circumbinary", stats.circumbinary ?? exo.multiplicity?.circumbinary, null],
+      ];
+      $("cards").innerHTML = cards.map(([title, value, sub]) =>
+        `<article class="card"><h2>${title}</h2><div class="value">${value ?? "—"}</div>` +
+        (sub && String(sub).includes("T") ? `<div class="sub">${fmtTime(sub)}</div>` :
+          sub ? `<div class="sub">${sub}</div>` : "") +
+        `</article>`
+      ).join("");
+
+      const q = stats.byQuality || exo.multiplicity?.byQuality || {};
+      const src = stats.bySource || exo.multiplicity?.bySource || {};
+      const unmatched = stats.unmatchedCurated || [];
+      const extra = [];
+      extra.push(`<tr><td>orbitQuality</td><td colspan="2">keplerian ${q.keplerian ?? 0} · inferred ${q.inferred ?? 0} · projected ${q.projected ?? 0}</td></tr>`);
+      extra.push(`<tr><td>sources</td><td colspan="2">${Object.entries(src).map(([k,v]) => k + " " + v).join(" · ") || "—"}</td></tr>`);
+      if (unmatched.length) {
+        extra.push(`<tr><td class="warn">unmatched curated</td><td colspan="2" class="warn">${unmatched.join(", ")}</td></tr>`);
+      }
+
+      const snaps = state.snapshots || {};
+      $("snaps").innerHTML = [
+        row("data/exoplanets.json", snaps.exoplanets),
+        row("data/nearby-stars.json", snaps.nearby),
+        row("data/close-binaries.json", snaps.binaries),
+        ...extra,
+      ].join("");
+
+      const log = state.progress?.log || [];
+      $("log").innerHTML = log.map((e) =>
+        `<div><span class="ts">${fmtTime(e.at)}</span>${escapeHtml(e.message)}</div>`
+      ).join("") || "<div class='ts'>No log yet.</div>";
+    }
+
+    function row(name, meta = {}) {
+      return `<tr><td>${name}</td><td>${fmtTime(meta.fetchedAt)}</td><td>${meta.systemCount ?? "—"}</td></tr>`;
+    }
+
+    function escapeHtml(s) {
+      return String(s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;");
+    }
+
+    async function poll() {
+      const res = await fetch("/api/state");
+      const state = await res.json();
+      render(state);
+    }
+
+    async function run(job) {
+      const res = await fetch("/api/run/" + job, { method: "POST" });
+      if (res.status === 409) return;
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({}));
+        alert(body.error || res.statusText);
+      }
+      poll();
+    }
+
+    for (const key of buttons) {
+      $("run-" + key).addEventListener("click", () => run(key));
+    }
+    poll();
+    setInterval(poll, 1500);
+  </script>
+</body>
+</html>

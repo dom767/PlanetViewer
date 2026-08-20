@@ -231,7 +231,7 @@ export class PlanetPass {
     for (const p of system.planets) {
       if (p.a && p.a > maxA) maxA = p.a;
     }
-    if (system.binary?.a) maxA = Math.max(maxA, system.binary.a);
+    if (system.binary?.drawn && system.binary.a) maxA = Math.max(maxA, system.binary.a);
     maxA = Math.max(maxA, 0.05);
     this.auToPc = FOCUS_ORBIT_RADIUS_PC / maxA;
     this.sizeBoost = orbitStretchBoost(maxA);
@@ -244,7 +244,7 @@ export class PlanetPass {
       });
     }
 
-    const binary = system.binary;
+    const binary = system.binary?.drawn ? system.binary : null;
     if (binary?.a) {
       const m1 = binary.stars[0]?.mass > 0 ? binary.stars[0].mass : 1;
       const m2 = binary.stars[1]?.mass > 0 ? binary.stars[1].mass : 0.5;
@@ -336,7 +336,7 @@ export class PlanetPass {
       return;
     }
 
-    const starOff = system.binary
+    const starOff = system.binary?.drawn
       ? binaryStarOffsetsAu(system.binary, tDays)
       : null;
 

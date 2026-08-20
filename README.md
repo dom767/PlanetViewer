@@ -50,8 +50,10 @@ Refresh the snapshots (requires network; separate from packaging):
 npm run fetch-data
 # or separately:
 node scripts/fetch-exoplanets.mjs
+node scripts/fetch-close-binaries.mjs
 node scripts/fetch-nearby-stars.mjs
 # Windows: Fetch-Data.cmd
+# Local dashboard (port 8766): Catalog-Import.cmd  or  npm run catalog-import
 ```
 
 Then package a release from the existing snapshots:

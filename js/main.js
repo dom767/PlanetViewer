@@ -272,7 +272,10 @@ async function main() {
     loading.textContent = "Loading catalog…";
     const raw = await loadExoplanetCatalog();
     catalog.load(raw);
-    catalog.attachCloseBinaries(await loadCloseBinaries());
+    const hasInline = raw.some(
+      (s) => s.multiplicity || (Array.isArray(s.stars) && s.stars.length >= 2)
+    );
+    if (!hasInline) catalog.attachCloseBinaries(await loadCloseBinaries());
     const imageMap = await loadSystemImages();
     setSystemImages(imageMap);
     const starCount = catalog.systems.filter((s) => (s.planets?.length ?? 0) > 0).length;

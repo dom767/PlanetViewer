@@ -71,7 +71,8 @@ export async function loadNearbyStars(url = "data/nearby-stars.json") {
 }
 
 /**
- * Load ≤5 AU close-binary snapshot. Missing file yields an empty list.
+ * Load close-binary sidecar. New snapshots inline multiplicity on each
+ * system; this remains a fallback for older exports.
  * @returns {Promise<object[]>}
  */
 export async function loadCloseBinaries(url = "data/close-binaries.json") {

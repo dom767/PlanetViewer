@@ -74,6 +74,7 @@ function renderSystem(s) {
   const photo = renderSystemImage(s.name);
   const anyEstimated = (s.planets || []).some((p) => p.radiusEstimated);
   const orbitInferred = !!s.binary?.orbitInferred;
+  const quality = s.binary?.orbitQuality;
 
   const planets = (s.planets || [])
     .map((p) => {
@@ -108,6 +109,9 @@ function renderSystem(s) {
   const notes = [];
   if (anyEstimated) notes.push("* Radius estimated from mass");
   if (orbitInferred) notes.push("* Binary orbit inferred from masses and separation");
+  if (quality === "projected") {
+    notes.push("* Stellar companion separation is a projected sky value, not a full Keplerian orbit");
+  }
 
   return `
     <h2>${escapeHtml(s.label ?? s.name)}</h2>
@@ -126,15 +130,18 @@ function renderSystem(s) {
 }
 
 function renderStarBlock(s) {
-  if (s.binary?.stars?.length >= 2) {
-    const [a, b] = s.binary.stars;
-    const inf = s.binary.orbitInferred ? "*" : "";
+  const stars = s.binary?.stars;
+  if (stars?.length >= 2) {
+    const inf = s.binary.orbitInferred || s.binary.orbitQuality === "projected" ? "*" : "";
+    const kind = s.binary.stars.length >= 3 ? "Triple" : "Binary";
     const period =
       s.binary.periodDays != null ? fmt(s.binary.periodDays, 2, "days") : "—";
-    return `<dt>Temperature</dt><dd>${pairFmt(a.teff, b.teff, 0, "K")}</dd>
-      <dt>Radius</dt><dd>${pairFmt(a.radius, b.radius, 2, "R☉")}</dd>
-      <dt>Stellar mass</dt><dd>${pairFmt(a.mass, b.mass, 2, "M☉")}</dd>
-      <dt>Binary</dt><dd>${fmt(s.binary.a, 3, "AU")}${inf} · ${period}${inf}</dd>
+    const sep = s.binary.a != null ? `${fmt(s.binary.a, 3, "AU")}${inf}` : "wide / unknown";
+    const periodBit = s.binary.periodDays != null ? ` · ${period}${inf}` : "";
+    return `<dt>Temperature</dt><dd>${joinFmt(stars, (st) => st.teff, 0, "K")}</dd>
+      <dt>Radius</dt><dd>${joinFmt(stars, (st) => st.radius, 2, "R☉")}</dd>
+      <dt>Stellar mass</dt><dd>${joinFmt(stars, (st) => st.mass, 2, "M☉")}</dd>
+      <dt>${kind}</dt><dd>${sep}${periodBit}</dd>
       <dt>V magnitude</dt><dd>${fmt(s.vmag, 2)}</dd>`;
   }
   return `<dt>Temperature</dt><dd>${fmt(s.teff, 0, "K")}</dd>
@@ -144,21 +151,19 @@ function renderStarBlock(s) {
       <dt>Stellar mass</dt><dd>${fmt(s.mass, 2, "M☉")}</dd>`;
 }
 
-/** Spectral type line in the subtitle (single value, or A / B for binaries). */
+/** Spectral type line in the subtitle (single value, or A / B / C for multiples). */
 function subtitleTypeLabel(s) {
-  if (s.binary?.stars?.length >= 2) {
-    const [a, b] = s.binary.stars;
-    const specA = a.spectype ? escapeHtml(a.spectype) : "—";
-    const specB = b.spectype ? escapeHtml(b.spectype) : "—";
-    if (!a.spectype && !b.spectype) return "Spectral type unknown";
-    return `${specA} / ${specB}`;
+  const stars = s.binary?.stars;
+  if (stars?.length >= 2) {
+    const parts = stars.map((st) => (st.spectype ? escapeHtml(st.spectype) : "—"));
+    if (stars.every((st) => !st.spectype)) return "Spectral type unknown";
+    return parts.join(" / ");
   }
   return s.spectype ? escapeHtml(s.spectype) : "Spectral type unknown";
 }
 
-/** Two stellar values in A / B order (same unit on both sides). */
-function pairFmt(a, b, digits = 2, unit = "") {
-  return `${fmt(a, digits, unit)} / ${fmt(b, digits, unit)}`;
+function joinFmt(stars, pick, digits, unit) {
+  return stars.map((st) => fmt(pick(st), digits, unit)).join(" / ");
 }
 
 /** @param {string} name */

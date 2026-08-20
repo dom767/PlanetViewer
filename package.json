@@ -5,12 +5,13 @@
   "description": "WebGPU exoplanet map around Sol",
   "type": "module",
   "scripts": {
-    "fetch-data": "node scripts/fetch-exoplanets.mjs && node scripts/fetch-nearby-stars.mjs && node scripts/fetch-close-binaries.mjs",
+    "fetch-data": "node scripts/fetch-exoplanets.mjs && node scripts/fetch-close-binaries.mjs && node scripts/fetch-nearby-stars.mjs",
     "fetch-exoplanets": "node scripts/fetch-exoplanets.mjs",
     "fetch-close-binaries": "node scripts/fetch-close-binaries.mjs",
     "fetch-nearby-stars": "node scripts/fetch-nearby-stars.mjs",
     "fetch-system-images": "node scripts/fetch-system-images.mjs",
     "probe-dashboard": "node tools/system-image-probe/server.mjs",
+    "catalog-import": "node tools/catalog-import/server.mjs",
     "export-static": "node export-static.mjs",
     "build": "node export-static.mjs",
     "start": "npx --yes serve -p 8080"

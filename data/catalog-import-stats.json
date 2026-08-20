@@ -1,0 +1,24 @@
+{
+  "fetchedAt": "2026-08-20T14:58:21.902Z",
+  "exoplanetFetchedAt": "2026-08-18T23:33:40.908Z",
+  "systemCount": 4722,
+  "planetCount": 6309,
+  "multiples": 897,
+  "drawn": 90,
+  "infoOnly": 807,
+  "circumbinary": 37,
+  "byQuality": {
+    "keplerian": 101,
+    "inferred": 0,
+    "projected": 796
+  },
+  "bySource": {
+    "thebault": 792,
+    "orb6": 42,
+    "snum": 22,
+    "gaia": 25,
+    "sb9": 2,
+    "curated": 14
+  },
+  "unmatchedCurated": []
+}

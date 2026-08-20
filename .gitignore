@@ -3,6 +3,7 @@ node_modules/
 *.log
 .server.pid
 .probe-dashboard.pid
+.catalog-import.pid
 tools/system-image-probe/results.json
 tools/system-image-probe/wiki-table.json
 tools/system-image-probe/thumbs/

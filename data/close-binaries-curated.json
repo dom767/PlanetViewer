@@ -140,6 +140,58 @@
         { "letter": "A", "mass": 1.238, "radius": 1.385, "teff": 6050, "spectype": "F9" },
         { "letter": "B", "mass": 1.202, "radius": 1.315, "teff": 5980, "spectype": "G0" }
       ]
+    },
+    {
+      "hostname": "Kepler-1661",
+      "a": 0.19,
+      "periodDays": 28.1626,
+      "e": 0.112,
+      "inclDeg": 90,
+      "circumbinary": true,
+      "ref": "Socia et al. 2020",
+      "stars": [
+        { "letter": "A", "mass": 0.841, "radius": 0.762, "teff": 5100, "spectype": "K" },
+        { "letter": "B", "mass": 0.262, "radius": 0.276, "teff": 3620, "spectype": "M" }
+      ]
+    },
+    {
+      "hostname": "Kepler-1660",
+      "a": 0.204,
+      "periodDays": 18.61087,
+      "e": 0.503,
+      "inclDeg": 90,
+      "circumbinary": true,
+      "ref": "Goldberg et al. 2023",
+      "stars": [
+        { "letter": "A", "mass": 1.136, "teff": 6200, "spectype": "F" },
+        { "letter": "B", "mass": 1.082, "spectype": "F" }
+      ]
+    },
+    {
+      "hostname": "PH1",
+      "a": 0.1744,
+      "periodDays": 20.0,
+      "e": 0.204,
+      "inclDeg": 90,
+      "circumbinary": true,
+      "ref": "Schwamb et al. 2013",
+      "stars": [
+        { "letter": "A", "mass": 1.528, "radius": 1.734, "spectype": "F" },
+        { "letter": "B", "mass": 0.408, "radius": 0.378, "spectype": "M" }
+      ]
+    },
+    {
+      "hostname": "BEBOP-3",
+      "a": 0.121,
+      "periodDays": 12.83,
+      "e": 0.063,
+      "inclDeg": 90,
+      "circumbinary": true,
+      "ref": "Thebault P-type + Kepler III",
+      "stars": [
+        { "letter": "A", "mass": 1.163, "spectype": "F" },
+        { "letter": "B", "mass": 0.273, "spectype": "M" }
+      ]
     }
   ]
 }

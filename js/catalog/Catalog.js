@@ -67,7 +67,9 @@ export class Catalog {
   }
 
   /**
-   * Attach ≤5 AU stellar companions after load(). Map hosts stay single stars.
+   * Attach stellar companions after load(). Map hosts stay single stars.
+   * New snapshots inline stars[] + multiplicity; this remains a fallback
+   * for older close-binaries.json sidecars.
    * @param {object[]|object|null|undefined} payload binaries array or { binaries: [] }
    */
   attachCloseBinaries(payload) {
@@ -222,11 +224,16 @@ function ingestRawSystem(catalog, raw) {
     brightness: starBrightness(starMeta),
     planets,
     aliases: Array.isArray(raw.aliases) ? raw.aliases : [],
+    stars: Array.isArray(raw.stars) ? raw.stars : null,
+    multiplicity: raw.multiplicity || null,
   };
 
   applyPlanetColors(system);
   applyGoldilocksZone(system);
   attachStarNote(system);
+  if (raw.multiplicity || (Array.isArray(raw.stars) && raw.stars.length >= 2)) {
+    attachBinary(system, raw);
+  }
 
   catalog.systems.push(system);
   catalog.byName.set(system.name, system);
@@ -279,22 +286,28 @@ function normalizePlanet(p, starMass, idx) {
 
 /**
  * @param {object} system
- * @param {object} raw
+ * @param {object} raw sidecar row or snapshot system with stars[] + multiplicity
  */
 function attachBinary(system, raw) {
-  const a = raw.a;
-  if (!a || a <= 0 || a > 5) return;
+  const m = raw.multiplicity && raw.a == null ? raw.multiplicity : raw;
+  const a = m.a ?? raw.a ?? null;
+  const curatedStars = Array.isArray(raw.stars)
+    ? raw.stars
+    : Array.isArray(m.stars)
+      ? m.stars
+      : [];
+  if (curatedStars.length < 2 && a == null) return;
 
-  const curatedStars = Array.isArray(raw.stars) ? raw.stars : [];
-  const stars = [0, 1].map((i) => {
-    const s = curatedStars[i] || {};
-    const letter = s.letter || (i === 0 ? "A" : "B");
+  const src = curatedStars.length ? curatedStars : [0, 1].map(() => ({}));
+  const stars = src.map((s, i) => {
+    const letter = s.letter || String.fromCharCode(65 + i);
     const teff = s.teff ?? (i === 0 ? system.teff : null);
     const radius = s.radius ?? (i === 0 ? system.radius : null);
     const mass = s.mass ?? (i === 0 ? system.mass : null);
     const spectype = s.spectype ?? (i === 0 ? system.spectype : null);
     const luminosity =
       s.luminosity ??
+      (i === 0 ? system.luminosity : null) ??
       luminositySolar({
         luminosity: s.luminosity,
         radius,
@@ -302,7 +315,14 @@ function attachBinary(system, raw) {
         vmag: i === 0 ? system.vmag : null,
         distPc: system.distPc,
       });
-    const meta = { teff, spectype, radius, luminosity, vmag: i === 0 ? system.vmag : null, distPc: system.distPc };
+    const meta = {
+      teff,
+      spectype,
+      radius,
+      luminosity,
+      vmag: i === 0 ? system.vmag : null,
+      distPc: system.distPc,
+    };
     return {
       letter,
       teff,
@@ -315,39 +335,60 @@ function attachBinary(system, raw) {
       brightness: starBrightness(meta),
     };
   });
-  if (stars[1].mass == null && stars[1].radius == null && stars[1].teff == null) {
-    return;
-  }
+  if (stars.length < 2) return;
 
   const hostNode = system.planets[0]?.nodeDeg ?? hashAngleDeg(system.name);
+  const quality =
+    m.orbitQuality ||
+    raw.orbitQuality ||
+    (m.orbitInferred || raw.orbitInferred ? "inferred" : a ? "keplerian" : "projected");
+  const drawnExplicit = m.drawn ?? raw.drawn;
+  const drawn =
+    drawnExplicit != null
+      ? !!drawnExplicit && a != null && a > 0
+      : a != null && a > 0 && a <= 5;
+
   const binary = {
-    a,
-    periodDays: raw.periodDays ?? null,
-    e: raw.e ?? 0,
-    inclDeg: raw.inclDeg ?? system.planets[0]?.inclDeg ?? 90,
-    omegaDeg: raw.omegaDeg ?? 0,
-    nodeDeg: raw.nodeDeg ?? hostNode,
-    orbitInferred: !!raw.orbitInferred,
-    circumbinary: !!raw.circumbinary,
+    a: a ?? null,
+    periodDays: m.periodDays ?? raw.periodDays ?? null,
+    e: m.e ?? raw.e ?? 0,
+    inclDeg: m.inclDeg ?? raw.inclDeg ?? system.planets[0]?.inclDeg ?? 90,
+    omegaDeg: m.omegaDeg ?? raw.omegaDeg ?? 0,
+    nodeDeg: m.nodeDeg ?? raw.nodeDeg ?? hostNode,
+    orbitInferred: quality === "inferred" || !!raw.orbitInferred,
+    orbitQuality: quality,
+    circumbinary: !!(m.circumbinary ?? raw.circumbinary),
+    drawn,
+    source: m.source ?? raw.source ?? null,
     stars,
   };
 
-  if ((binary.periodDays == null || binary.periodDays <= 0) && stars[0].mass && stars[1].mass) {
-    binary.periodDays = estimateOrbitalPeriodDays(a, stars[0].mass + stars[1].mass);
+  if (
+    binary.drawn &&
+    (binary.periodDays == null || binary.periodDays <= 0) &&
+    stars[0].mass &&
+    stars[1].mass &&
+    binary.a
+  ) {
+    binary.periodDays = estimateOrbitalPeriodDays(binary.a, stars[0].mass + stars[1].mass);
     binary.orbitInferred = true;
+    binary.orbitQuality = binary.orbitQuality === "keplerian" ? "keplerian" : "inferred";
   }
 
   const anyCb = binary.circumbinary || system.planets.some((p) => p.cbFlag);
-  const heuristicCb = system.planets.some((p) => p.a != null && p.a > 2 * a);
+  const heuristicCb =
+    binary.a != null && system.planets.some((p) => p.a != null && p.a > 2 * binary.a);
   binary.circumbinary = anyCb || heuristicCb;
 
   for (const p of system.planets) {
     if (binary.circumbinary) p.around = "bary";
-    else if (p.a != null && p.a < 0.5 * a) p.around = "A";
+    else if (binary.a != null && p.a != null && p.a < 0.5 * binary.a) p.around = "A";
     else p.around = "bary";
   }
 
   system.binary = binary;
+  system.stars = stars;
+  if ((system.snum || 1) < stars.length) system.snum = stars.length;
 }
 
 function clamp(v, lo, hi) {
