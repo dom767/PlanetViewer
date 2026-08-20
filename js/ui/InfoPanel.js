@@ -129,17 +129,16 @@ function renderSystem(s) {
 
 function renderStarBlock(s) {
   if (s.binary?.stars?.length >= 2) {
-    const stars = s.binary.stars
-      .map((star) => {
-        const spec = star.spectype ? escapeHtml(star.spectype) : "—";
-        return `<dt>Star ${escapeHtml(star.letter || "")}</dt>
-        <dd>${spec} · ${fmt(star.teff, 0, "K")} · ${fmt(star.mass, 2, "M☉")} · ${fmt(star.radius, 2, "R☉")}</dd>`;
-      })
-      .join("");
+    const [a, b] = s.binary.stars;
     const inf = s.binary.orbitInferred ? "*" : "";
     const period =
       s.binary.periodDays != null ? fmt(s.binary.periodDays, 2, "days") : "—";
-    return `${stars}
+    const specA = a.spectype ? escapeHtml(a.spectype) : "—";
+    const specB = b.spectype ? escapeHtml(b.spectype) : "—";
+    return `<dt>Spectral type</dt><dd>${specA} / ${specB}</dd>
+      <dt>Effective temperature</dt><dd>${pairFmt(a.teff, b.teff, 0, "K")}</dd>
+      <dt>Radius</dt><dd>${pairFmt(a.radius, b.radius, 2, "R☉")}</dd>
+      <dt>Stellar mass</dt><dd>${pairFmt(a.mass, b.mass, 2, "M☉")}</dd>
       <dt>Binary</dt><dd>${fmt(s.binary.a, 3, "AU")}${inf} · ${period}${inf}</dd>
       <dt>V magnitude</dt><dd>${fmt(s.vmag, 2)}</dd>`;
   }
@@ -148,6 +147,11 @@ function renderStarBlock(s) {
       <dt>Luminosity</dt><dd>${fmt(s.luminosity, 3, "L☉")}</dd>
       <dt>V magnitude</dt><dd>${fmt(s.vmag, 2)}</dd>
       <dt>Stellar mass</dt><dd>${fmt(s.mass, 2, "M☉")}</dd>`;
+}
+
+/** Two stellar values in A / B order (same unit on both sides). */
+function pairFmt(a, b, digits = 2, unit = "") {
+  return `${fmt(a, digits, unit)} / ${fmt(b, digits, unit)}`;
 }
 
 /** @param {string} name */
