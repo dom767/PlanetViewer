@@ -17,6 +17,8 @@ import {
   isComponentAround,
   mergeCoLocatedComponentHosts,
   shouldDrawBinary,
+  alignOrbitNodes,
+  hashAngleDeg,
 } from "./mergeHosts.js";
 
 /**
@@ -403,6 +405,7 @@ function attachBinary(system, raw) {
     circumbinary: binary.circumbinary,
     planets: system.planets,
   });
+  alignOrbitNodes(system, binary);
 
   if (
     binary.drawn &&
@@ -423,17 +426,6 @@ function attachBinary(system, raw) {
 
 function clamp(v, lo, hi) {
   return Math.max(lo, Math.min(hi, v));
-}
-
-/** Deterministic 0–360° from host name (stand-in Ω when catalog has none). */
-function hashAngleDeg(name) {
-  let h = 2166136261;
-  const s = String(name);
-  for (let i = 0; i < s.length; i++) {
-    h ^= s.charCodeAt(i);
-    h = Math.imul(h, 16777619);
-  }
-  return ((h >>> 0) % 36000) / 100;
 }
 
 /**

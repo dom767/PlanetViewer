@@ -181,13 +181,24 @@ function mergeCluster(members) {
     };
   }
 
+  // One shared stand-in Ω across merged A/B hosts so the binary fallback
+  // (Thebault/Gaia) cannot keep a different hash than the planets.
+  const sharedNode =
+    (primary.planets || []).find((p) => p.nodeDeg != null)?.nodeDeg ??
+    hashAngleDeg(canonical);
+  for (const p of planets) {
+    if (isStandInNodeDeg(p.nodeDeg, [primary.name, ...(primary.aliases || []), ...aliases, canonical])) {
+      p.nodeDeg = sharedNode;
+    }
+  }
+
   const snum = Math.max(
     ...members.map((m) => m.snum || 1),
     stars?.length || 1,
     primary.snum || 1
   );
 
-  return {
+  const merged = {
     ...primary,
     name: canonical,
     label: stripComponentSuffix(primary.label || primary.name) || canonical,
@@ -198,6 +209,8 @@ function mergeCluster(members) {
     stars,
     multiplicity,
   };
+  if (merged.multiplicity) alignOrbitNodes(merged, merged.multiplicity);
+  return merged;
 }
 
 /**
@@ -251,4 +264,76 @@ export function assignPlanetAround(planets, orbit) {
     else p.around = "bary";
   }
   return isCb;
+}
+
+/** Deterministic 0–360° stand-in Ω when the archive has none. */
+export function hashAngleDeg(name) {
+  let h = 2166136261;
+  const s = String(name || "");
+  for (let i = 0; i < s.length; i++) {
+    h ^= s.charCodeAt(i);
+    h = Math.imul(h, 16777619);
+  }
+  return ((h >>> 0) % 36000) / 100;
+}
+
+/** Sources that can supply a real binary longitude of ascending node. */
+const AUTHORITATIVE_NODE_SOURCES = new Set(["orb6", "curated"]);
+
+/**
+ * True when the binary orbit carries a published Ω (not a host-name hash).
+ * Thebault / Gaia / SB9 / snum do not publish a usable node for our viz frame.
+ */
+export function binaryHasAuthoritativeNode(orbit) {
+  if (!orbit) return false;
+  const src = String(orbit.source || "").toLowerCase();
+  if (!AUTHORITATIVE_NODE_SOURCES.has(src)) return false;
+  return orbit.nodeDeg != null && Number.isFinite(orbit.nodeDeg);
+}
+
+function nearlyEqualAngle(a, b) {
+  if (a == null || b == null) return false;
+  const d = Math.abs((((a - b) % 360) + 360) % 360);
+  return d < 0.05 || d > 359.95;
+}
+
+/** True when nodeDeg matches a hash stand-in for one of the host names. */
+export function isStandInNodeDeg(nodeDeg, names) {
+  if (nodeDeg == null || !Number.isFinite(nodeDeg)) return true;
+  for (const n of names || []) {
+    if (n && nearlyEqualAngle(nodeDeg, hashAngleDeg(n))) return true;
+  }
+  return false;
+}
+
+/**
+ * Keep the focus camera, planets, and drawn binary on one viz plane.
+ * - Non-authoritative binary Ω → copy from planets.
+ * - Authoritative binary Ω (ORB6 / curated) → copy onto planets whose Ω is a stand-in.
+ * Does not touch inclDeg.
+ *
+ * @param {object} system
+ * @param {object} orbit multiplicity / binary record (mutated)
+ * @returns {object} orbit
+ */
+export function alignOrbitNodes(system, orbit) {
+  if (!system || !orbit) return orbit;
+  const planets = system.planets || [];
+  const names = [
+    system.name,
+    ...(system.aliases || []),
+  ].filter(Boolean);
+
+  if (binaryHasAuthoritativeNode(orbit)) {
+    for (const p of planets) {
+      if (isStandInNodeDeg(p.nodeDeg, names)) p.nodeDeg = orbit.nodeDeg;
+    }
+    return orbit;
+  }
+
+  const planetNode =
+    planets.find((p) => p.nodeDeg != null && Number.isFinite(p.nodeDeg))?.nodeDeg ??
+    hashAngleDeg(system.name);
+  orbit.nodeDeg = planetNode;
+  return orbit;
 }

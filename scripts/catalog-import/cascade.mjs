@@ -1,5 +1,5 @@
 import { readFile } from "node:fs/promises";
-import { assignPlanetAround, shouldDrawBinary } from "../../js/catalog/mergeHosts.js";
+import { assignPlanetAround, shouldDrawBinary, alignOrbitNodes, hashAngleDeg } from "../../js/catalog/mergeHosts.js";
 import { SystemIndex, extractHd, extractHip } from "./names.mjs";
 import {
   CURATED_PATH,
@@ -48,16 +48,6 @@ function ensureStars(system, mass1, mass2, preferCatalog = false) {
   const rest = existing.filter((s) => s.letter && s.letter !== "A" && s.letter !== "B");
   system.stars = [starA, starB, ...rest];
   return system.stars;
-}
-
-function hashAngleDeg(name) {
-  let h = 2166136261;
-  const s = String(name);
-  for (let i = 0; i < s.length; i++) {
-    h ^= s.charCodeAt(i);
-    h = Math.imul(h, 16777619);
-  }
-  return ((h >>> 0) % 36000) / 100;
 }
 
 function fillPeriod(orbit, stars) {
@@ -125,6 +115,7 @@ function applyOrbit(system, orbit) {
     circumbinary: multiplicity.circumbinary,
     planets: system.planets,
   });
+  alignOrbitNodes(system, multiplicity);
   system.multiplicity = multiplicity;
   return true;
 }
