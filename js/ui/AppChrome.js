@@ -225,10 +225,9 @@ export class AppChrome {
     }
   }
 
-  /** After selecting a system from search — close search, optionally open info. */
-  onSystemSelected(fromSearch = false) {
+  /** After selecting a system from search — close search; info stays as-is. */
+  onSystemSelected(_fromSearch = false) {
     this.closeSearch();
-    if (!this.isWide) this.openInfo();
-    else this.setNavActive(this.isInfoOpen() ? "info" : null);
+    if (this.isWide) this.setNavActive(this.isInfoOpen() ? "info" : null);
   }
 }

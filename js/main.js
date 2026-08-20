@@ -339,7 +339,7 @@ async function main() {
       results: document.getElementById("system-search-results"),
       index: systemSearchIndex,
       onSelect: (system) => {
-        selectSystem(system, { openInfo: true });
+        selectSystem(system, { openInfo: !!chrome?.isWide });
         chrome?.onSystemSelected(true);
       },
       onEscape: () => chrome?.handleEscape(),
