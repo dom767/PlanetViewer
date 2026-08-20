@@ -94,7 +94,7 @@ export const TOURS = [
   {
     id: "binaries",
     title: "Two suns",
-    blurb: "Close binaries (≤5 AU): Tatooine-style worlds that orbit both stars.",
+    blurb: "Close binaries: Tatooine-style worlds around both stars, then planets that orbit only one star of the pair.",
     stops: [
       "Kepler-16",
       "Kepler-47",
@@ -106,6 +106,11 @@ export const TOURS = [
       "Kepler-1647",
       "TOI-1338 A",
       "TIC 172900988 Aa",
+      "gam Cep",
+      "DMPP-3 A",
+      "HIP 90988",
+      "TOI-1736",
+      "TOI-2267 A",
     ],
   },
 ];

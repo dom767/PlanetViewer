@@ -158,6 +158,41 @@ export const STAR_NOTES = {
         "TIC 172900988: two nearly twin F/G stars, eccentric like Kepler-34 (e ≈ 0.45). A good check that equal-mass suns read as two map-star glows.",
     },
   },
+  "gam Cep": {
+    text: "Gamma Cephei: a nearby orange giant with an M-dwarf companion, and a gas giant that orbits only the bright star.",
+    tours: {
+      binaries:
+        "Gamma Cephei switches the architecture: planet b circles the K giant alone, with an M dwarf as the second sun. One of the first S-type planets — a world with two suns that does not orbit both.",
+    },
+  },
+  "DMPP-3 A": {
+    text: "A K dwarf with a close-in planet and a faint L-dwarf companion just over 1 AU away — the planet orbits only the K star.",
+    tours: {
+      binaries:
+        "DMPP-3: the planet hugs the K star at 0.06 AU while an L-dwarf companion orbits at 1.22 AU. Watch the planet stay with the bright star; it never circles both.",
+    },
+  },
+  "HIP 90988": {
+    text: "A K giant with a gas giant at 1.4 AU and a low-mass stellar companion at 7.5 AU — the planet's orbit is a large fraction of the binary's.",
+    tours: {
+      binaries:
+        "HIP 90988: planet b at 1.4 AU around the K giant, companion star at 7.5 AU. The planetary orbit is ~18% of the binary's — among the tightest S-type ratios on this tour.",
+    },
+  },
+  "TOI-1736": {
+    text: "Two planets around a Sun-like star whose binary companion sits about 8 AU out.",
+    tours: {
+      binaries:
+        "TOI-1736: two planets orbit the primary only — a hot inner world and a giant at 1.4 AU — while the second star sits at 8 AU. A compact planetary system inside a wider pair.",
+    },
+  },
+  "TOI-2267 A": {
+    text: "A nearby pair of M dwarfs with two transiting planets around the primary only.",
+    tours: {
+      binaries:
+        "TOI-2267: two faint M dwarfs, extremely close. Both transiting planets stay with star A. Two red suns, but the worlds still have a single host.",
+    },
+  },
   "HR 8799": {
     text: "The first system with multiple planets photographed directly: four giant worlds, imaged over years as they moved around their young star.",
   },
