@@ -8,13 +8,31 @@ $ErrorActionPreference = "Stop"
 Set-Location $PSScriptRoot
 
 function Ensure-AwsLogin {
-  aws sts get-caller-identity 2>$null | Out-Null
-  if ($LASTEXITCODE -eq 0) { return }
+  # Probe must not throw: native stderr + $ErrorActionPreference Stop would abort
+  # before we can run `aws login` (expired sessions print to stderr and exit 255).
+  $prevEap = $ErrorActionPreference
+  $ErrorActionPreference = "Continue"
+  try {
+    aws sts get-caller-identity 2>&1 | Out-Null
+    if ($LASTEXITCODE -eq 0) { return }
+  }
+  finally {
+    $ErrorActionPreference = $prevEap
+  }
+
   Write-Host "AWS credentials missing/expired - running aws login..." -ForegroundColor Yellow
+  Write-Host "Complete the browser prompt, then return here." -ForegroundColor Yellow
   aws login
   if ($LASTEXITCODE -ne 0) { throw "aws login failed" }
-  aws sts get-caller-identity | Out-Null
-  if ($LASTEXITCODE -ne 0) { throw "Still not authenticated after aws login" }
+
+  $ErrorActionPreference = "Continue"
+  try {
+    aws sts get-caller-identity | Out-Null
+    if ($LASTEXITCODE -ne 0) { throw "Still not authenticated after aws login" }
+  }
+  finally {
+    $ErrorActionPreference = $prevEap
+  }
 }
 
 $script:ExportExitCode = 0
