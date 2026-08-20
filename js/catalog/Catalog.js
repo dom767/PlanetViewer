@@ -125,13 +125,16 @@ export class Catalog {
   /**
    * If `system` is on the active tour, move the tour index to that stop.
    * @param {SystemRecord|null|undefined} system
+   * @returns {boolean} true when the system is a tour stop
    */
   syncTourIndex(system) {
-    if (!system || !this.notableSystems.length) return;
+    if (!system || !this.notableSystems.length) return false;
     const i = this.notableSystems.findIndex(
       (s) => s === system || s.name === system.name
     );
-    if (i >= 0) this.tourIndex = i;
+    if (i < 0) return false;
+    this.tourIndex = i;
+    return true;
   }
 
   /**

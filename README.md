@@ -36,7 +36,7 @@ On first load, pick one of five **guided tours** or **Free flight**. Amber bookm
 | Time dropdown | Orbit simulation speed |
 | Home | Return to Sol |
 | Next | Next stop on the active tour (wraps) |
-| Change tour | Reopen the tour picker |
+| Change tour / Select Tour | Reopen the tour picker. Picking a star off the active tour ends it. |
 | Fullscreen | Settings toggle (hidden if the browser cannot fullscreen; Esc exits) |
 
 ## Data

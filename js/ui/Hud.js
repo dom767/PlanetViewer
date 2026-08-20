@@ -128,9 +128,23 @@ export class Hud {
   /**
    * @param {{ active: boolean, freeFlight?: boolean, title?: string, index?: number, total?: number }} state
    */
+  /**
+   * @param {{
+   *   active: boolean,
+   *   freeFlight?: boolean,
+   *   showFreeFlightMeta?: boolean,
+   *   title?: string,
+   *   index?: number,
+   *   total?: number,
+   * }} state
+   */
   setTourState(state) {
     this._tourActive = !!state?.active;
     this._freeFlight = !!state?.freeFlight && !this._tourActive;
+    const showFreeFlightMeta =
+      state?.showFreeFlightMeta != null
+        ? !!state.showFreeFlightMeta && this._freeFlight
+        : this._freeFlight;
     const title = state?.title || "";
     const total = Number(state?.total) || 0;
     const index = Number(state?.index) || 0;
@@ -138,7 +152,7 @@ export class Hud {
       if (this._tourActive && title && total > 0) {
         this.tourMeta.textContent = `${title} · ${index + 1} / ${total}`;
         this.tourMeta.classList.remove("hidden");
-      } else if (this._freeFlight) {
+      } else if (showFreeFlightMeta) {
         this.tourMeta.textContent = "Free flight";
         this.tourMeta.classList.remove("hidden");
       } else {
@@ -152,6 +166,11 @@ export class Hud {
         "aria-label",
         title ? `Next stop on ${title} tour` : "Next tour stop"
       );
+    }
+    if (this.changeTour) {
+      const label = this._tourActive ? "Change tour" : "Select Tour";
+      this.changeTour.textContent = label;
+      this.changeTour.setAttribute("aria-label", label);
     }
     this.syncNoteBlock();
   }

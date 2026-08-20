@@ -196,10 +196,19 @@ async function main() {
     hoverLabel.classList.remove("hidden");
   }
 
+  function leaveTour() {
+    if (!catalog.getActiveTour()) return;
+    exploringFreely = true;
+    catalog.clearActiveTour();
+    scene.setNotableSystems([]);
+  }
+
   function selectSystem(system, { openInfo = true } = {}) {
     const fromStar = focused;
     focused = system;
-    catalog.syncTourIndex(system);
+    if (catalog.getActiveTour() && !catalog.syncTourIndex(system)) {
+      leaveTour();
+    }
     const focusDist = system.isSol
       ? Math.max(FOCUS_ORBIT_RADIUS_PC * 2.6, 2.2)
       : Math.max(FOCUS_ORBIT_RADIUS_PC * 2.2, 1.5);
@@ -224,6 +233,7 @@ async function main() {
     hud.setTourState({
       active: !!tour,
       freeFlight: !tour && exploringFreely,
+      showFreeFlightMeta: !tour && exploringFreely && !focused,
       title: tour?.title ?? "",
       index: catalog.tourIndex,
       total: catalog.notableSystems.length,
