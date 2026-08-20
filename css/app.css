@@ -501,6 +501,11 @@ body.view-fixed #app {
     bottom: auto;
     max-width: min(420px, calc(100vw - 32px));
   }
+
+  /* Select Tour only — keep Next / Change tour while a tour is running */
+  body.tiktok-record #hud-note-next.hidden ~ #hud-change-tour {
+    display: none;
+  }
 }
 
 .hud-tour-meta {
