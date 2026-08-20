@@ -67,12 +67,10 @@ export class InfoPanel {
 }
 
 function renderSystem(s) {
-  const typeLabel = s.spectype
-    ? escapeHtml(s.spectype)
-    : "Spectral type unknown";
+  const typeLabel = subtitleTypeLabel(s);
   const subtitle = s.isSol
     ? "G2V · Our solar system (origin)"
-    : `${s.binary ? "Binary · " : ""}${typeLabel} · ${fmt(s.distPc, 2, "pc")} from Sol`;
+    : `${typeLabel} · ${fmt(s.distPc, 2, "pc")} from Sol`;
   const photo = renderSystemImage(s.name);
   const anyEstimated = (s.planets || []).some((p) => p.radiusEstimated);
   const orbitInferred = !!s.binary?.orbitInferred;
@@ -133,10 +131,7 @@ function renderStarBlock(s) {
     const inf = s.binary.orbitInferred ? "*" : "";
     const period =
       s.binary.periodDays != null ? fmt(s.binary.periodDays, 2, "days") : "—";
-    const specA = a.spectype ? escapeHtml(a.spectype) : "—";
-    const specB = b.spectype ? escapeHtml(b.spectype) : "—";
-    return `<dt>Spectral type</dt><dd>${specA} / ${specB}</dd>
-      <dt>Effective temperature</dt><dd>${pairFmt(a.teff, b.teff, 0, "K")}</dd>
+    return `<dt>Effective temperature</dt><dd>${pairFmt(a.teff, b.teff, 0, "K")}</dd>
       <dt>Radius</dt><dd>${pairFmt(a.radius, b.radius, 2, "R☉")}</dd>
       <dt>Stellar mass</dt><dd>${pairFmt(a.mass, b.mass, 2, "M☉")}</dd>
       <dt>Binary</dt><dd>${fmt(s.binary.a, 3, "AU")}${inf} · ${period}${inf}</dd>
@@ -147,6 +142,18 @@ function renderStarBlock(s) {
       <dt>Luminosity</dt><dd>${fmt(s.luminosity, 3, "L☉")}</dd>
       <dt>V magnitude</dt><dd>${fmt(s.vmag, 2)}</dd>
       <dt>Stellar mass</dt><dd>${fmt(s.mass, 2, "M☉")}</dd>`;
+}
+
+/** Spectral type line in the subtitle (single value, or A / B for binaries). */
+function subtitleTypeLabel(s) {
+  if (s.binary?.stars?.length >= 2) {
+    const [a, b] = s.binary.stars;
+    const specA = a.spectype ? escapeHtml(a.spectype) : "—";
+    const specB = b.spectype ? escapeHtml(b.spectype) : "—";
+    if (!a.spectype && !b.spectype) return "Spectral type unknown";
+    return `${specA} / ${specB}`;
+  }
+  return s.spectype ? escapeHtml(s.spectype) : "Spectral type unknown";
 }
 
 /** Two stellar values in A / B order (same unit on both sides). */
