@@ -11,7 +11,7 @@ Those numbers are only a sample of what is out there. Surveys suggest that **mos
 
 All star systems are shown up to 30 parsecs from Earth, which helps to give you a feel for quite how common exoplanets are in the nearby star systems where we've had the most time to search for exoplanets.
 
-Five **guided tours** start from a picker at launch (or choose **Free flight**), and can be switched later: science-fiction landmarks, directly imaged worlds, record holders (firsts, smallest, largest, farthest), **Goldilocks** worlds closest to Earth in size, mass, and sunlight, and **Two suns** (close binaries: circumbinary Tatooine worlds, then planets that orbit only one star of the pair). **Next** walks the active tour; amber bookmarks mark only those stops. Search and free flight still reach the full catalog.
+Five **guided tours** start from a picker at launch (or choose **Free flight**), and can be switched later: science-fiction landmarks, directly imaged worlds, record holders (firsts, smallest, largest, farthest), **Goldilocks** worlds closest to Earth in size, mass, and sunlight, and **Two suns** (close binaries: circumbinary Tatooine worlds mixed with planets that orbit only one star of the pair). **Next** walks the active tour; amber bookmarks mark only those stops. Search and free flight still reach the full catalog.
 
 
 ## Data sources

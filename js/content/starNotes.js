@@ -193,6 +193,20 @@ export const STAR_NOTES = {
         "TOI-2267: two faint M dwarfs, extremely close. Both transiting planets stay with star A. Two red suns, but the worlds still have a single host.",
     },
   },
+  "HD 110067": {
+    text: "A K dwarf with six sub-Neptunes locked in a resonant chain, and a near-equal companion star only ~4.7 AU away.",
+    tours: {
+      binaries:
+        "HD 110067: six planets orbit the K star alone, packed inside 0.26 AU, while a second star of similar mass sits at 4.7 AU. A whole compact system that never circles both suns.",
+    },
+  },
+  "LHS 1678": {
+    text: "A nearby M dwarf with three small planets and a stellar companion well inside 1 AU.",
+    tours: {
+      binaries:
+        "LHS 1678: three rocky worlds hug the M dwarf (the innermost year is under a day) while the second star sits at 0.73 AU. Watch the planets stay with A; they never orbit both.",
+    },
+  },
   "HR 8799": {
     text: "The first system with multiple planets photographed directly: four giant worlds, imaged over years as they moved around their young star.",
   },

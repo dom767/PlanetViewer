@@ -209,7 +209,7 @@ Do not add engine branches, CSS, or a new content file.
 | `imaged` | Directly imaged | Worlds / disks photographed | Hosts like `HR 8799`, `PDS 70`, `bet Pic`. |
 | `standout` | Record holders | Firsts and extremes | Starts at `Sol`. `KOI-351` = Kepler-90. |
 | `goldilocks` | Goldilocks | Earth-like size/mass/insolation | Heavy use of `tours.goldilocks` overrides. |
-| `binaries` | Two suns | Close binaries: P-type then S-type | Circumbinary Kepler/TESS hosts, then S-type (`gam Cep`, `DMPP-3 A`, …). |
+| `binaries` | Two suns | Close binaries: P-type mixed with S-type | Circumbinary Kepler/TESS hosts interleaved with S-type (`gam Cep`, `HD 110067`, `LHS 1678`, …). |
 
 Read those `stops` arrays and a few `STAR_NOTES` entries before writing copy so tone matches.
 
