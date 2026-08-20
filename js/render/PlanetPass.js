@@ -22,18 +22,9 @@ import {
 import { cross3, length3, normalize3, sub3 } from "../astro/coords.js";
 import { planetRadiusEarth } from "../astro/planetType.js";
 import { starBrightness, starPointSize } from "../astro/spectrum.js";
-import { planetsOrbitMultipleComponents } from "../catalog/mergeHosts.js";
 
 /** Dual-scale: AU orbits mapped into a local focus radius around the star (parsecs). */
 export const FOCUS_ORBIT_RADIUS_PC = 0.85;
-
-/**
- * When planets orbit both A and B but the true binary is much wider than those
- * orbits (e.g. TOI-2267 at ~8 AU vs ~0.02 AU planets), cap the *displayed*
- * binary separation so both suns stay on screen and planet orbits stay readable.
- * Catalog `binary.a` is unchanged. Single-host S-type / CBP systems are untouched.
- */
-const MULTI_HOST_BINARY_FRAME = 5;
 
 /**
  * Focused-planet billboard size from R / R⊕. Near-proportional so a gas giant
@@ -171,7 +162,6 @@ export class PlanetPass {
     this.planetCount = 0;
     this.system = null;
     this.auToPc = 1;
-    this._binaryDisplayScale = 1;
     this.sizeBoost = 1;
     this._refFrame = null;
 
@@ -231,33 +221,18 @@ export class PlanetPass {
     this._destroyOrbits();
     this.system = system;
     this._refFrame = system ? keplerReferenceFrame(system) : null;
-    this._binaryDisplayScale = 1;
     if (!system) {
       this.auToPc = 1;
       this.sizeBoost = 1;
       return;
     }
 
-    let outerPlanet = 0;
+    let maxA = 0;
     for (const p of system.planets) {
-      if (p.a && p.a > outerPlanet) outerPlanet = p.a;
+      if (p.a && p.a > maxA) maxA = p.a;
     }
-
-    let binaryA = 0;
-    if (system.binary?.drawn && system.binary.a > 0) {
-      binaryA = system.binary.a;
-      if (
-        planetsOrbitMultipleComponents(system.planets) &&
-        outerPlanet > 0 &&
-        binaryA > outerPlanet * MULTI_HOST_BINARY_FRAME
-      ) {
-        const capped = outerPlanet * MULTI_HOST_BINARY_FRAME;
-        this._binaryDisplayScale = capped / binaryA;
-        binaryA = capped;
-      }
-    }
-
-    const maxA = Math.max(outerPlanet, binaryA, 0.05);
+    if (system.binary?.drawn && system.binary.a) maxA = Math.max(maxA, system.binary.a);
+    maxA = Math.max(maxA, 0.05);
     this.auToPc = FOCUS_ORBIT_RADIUS_PC / maxA;
     this.sizeBoost = orbitStretchBoost(maxA);
 
@@ -278,11 +253,7 @@ export class PlanetPass {
       const m1 = binary.stars[0]?.mass > 0 ? binary.stars[0].mass : 1;
       const m2 = binary.stars[1]?.mass > 0 ? binary.stars[1].mass : 0.5;
       const q = m2 / (m1 + m2);
-      const displayBinary =
-        this._binaryDisplayScale !== 1
-          ? { ...binary, a: binary.a * this._binaryDisplayScale }
-          : binary;
-      const path = sampleOrbitPath(displayBinary, 160);
+      const path = sampleOrbitPath(binary, 160);
       this._pushOrbit(path, { originKey: "bary", scale: -q });
       this._pushOrbit(path, { originKey: "bary", scale: 1 - q });
     }
@@ -370,12 +341,7 @@ export class PlanetPass {
     }
 
     const starOff = system.binary?.drawn
-      ? binaryStarOffsetsAu(
-          this._binaryDisplayScale !== 1
-            ? { ...system.binary, a: system.binary.a * this._binaryDisplayScale }
-            : system.binary,
-          tDays
-        )
+      ? binaryStarOffsetsAu(system.binary, tDays)
       : null;
 
     for (const orbit of this.orbits) {
