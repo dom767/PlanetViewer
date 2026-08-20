@@ -186,11 +186,11 @@ export const STAR_NOTES = {
         "TOI-1736: two planets orbit the primary only — a hot inner world and a giant at 1.4 AU — while the second star sits at 8 AU. A compact planetary system inside a wider pair.",
     },
   },
-  "TOI-2267 A": {
-    text: "A nearby pair of M dwarfs with two transiting planets around the primary only.",
+  "TOI-2267": {
+    text: "A nearby M-dwarf binary with transiting Earth-sized planets; NASA lists worlds around both components.",
     tours: {
       binaries:
-        "TOI-2267: two faint M dwarfs, extremely close. Both transiting planets stay with star A. Two red suns, but the worlds still have a single host.",
+        "TOI-2267: two M dwarfs about 8 AU apart. NASA assigns b and c to star A and d to star B — a rare case of planets around each sun of the pair (host assignment is still debated).",
     },
   },
   "HD 110067": {

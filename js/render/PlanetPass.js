@@ -238,8 +238,12 @@ export class PlanetPass {
 
     for (const planet of system.planets) {
       if (!planet.a) continue;
+      const originKey =
+        planet.around === "A" || planet.around === "B" || planet.around === "C"
+          ? planet.around
+          : "bary";
       this._pushOrbit(sampleOrbitPath(planet, 160), {
-        originKey: planet.around === "A" ? "A" : "bary",
+        originKey,
         scale: 1,
       });
     }
@@ -344,10 +348,11 @@ export class PlanetPass {
       let ox = 0;
       let oy = 0;
       let oz = 0;
-      if (orbit.originKey === "A" && starOff) {
-        ox = starOff.A.x;
-        oy = starOff.A.y;
-        oz = starOff.A.z;
+      const origin = starOff ? starOff[orbit.originKey] : null;
+      if (origin) {
+        ox = origin.x;
+        oy = origin.y;
+        oz = origin.z;
       }
       const sc = orbit.scale ?? 1;
       const world = new Float32Array(orbit.local.length);
@@ -388,13 +393,16 @@ export class PlanetPass {
       return { x: system.x + w.x, y: system.y + w.y, z: system.z + w.z };
     };
 
-    const posA = starOff ? toWorld(starOff.A) : { x: system.x, y: system.y, z: system.z };
-    const posB = starOff ? toWorld(starOff.B) : null;
+    const starWorld = {
+      A: starOff ? toWorld(starOff.A) : { x: system.x, y: system.y, z: system.z },
+      B: starOff?.B ? toWorld(starOff.B) : null,
+      C: starOff?.C ? toWorld(starOff.C) : null,
+    };
 
     const starItems = [];
     if (starOff && system.binary?.stars) {
       const pair = [system.binary.stars[0], system.binary.stars[1]];
-      const pos = [posA, posB];
+      const pos = [starWorld.A, starWorld.B];
       for (let i = 0; i < 2; i++) {
         const star = pair[i];
         const p = pos[i];
@@ -423,7 +431,9 @@ export class PlanetPass {
       const off = planetOffsetAu(planet, tDays);
       if (!off) continue;
       const origin =
-        planet.around === "A" && starOff ? starOff.A : { x: 0, y: 0, z: 0 };
+        starOff && planet.around && starOff[planet.around]
+          ? starOff[planet.around]
+          : { x: 0, y: 0, z: 0 };
       const wpos = toWorld({
         x: origin.x + off.x,
         y: origin.y + off.y,
@@ -433,7 +443,9 @@ export class PlanetPass {
       const py = wpos.y;
       const pz = wpos.z;
       const light =
-        planet.around === "A" && starOff ? posA : { x: system.x, y: system.y, z: system.z };
+        planet.around && starWorld[planet.around]
+          ? starWorld[planet.around]
+          : { x: system.x, y: system.y, z: system.z };
       let lx = light.x - px;
       let ly = light.y - py;
       let lz = light.z - pz;

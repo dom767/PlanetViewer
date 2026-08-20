@@ -86,7 +86,7 @@ The picker iterates `TOURS` in array order. Adding an object is enough for it to
 
 ## 4. Hostname contract (the usual failure)
 
-Every `stops[]` entry and every `STAR_NOTES` key **must equal `system.name` exactly** — same spelling, spaces, punctuation, and letter case.
+Every `stops[]` entry and every `STAR_NOTES` key **must equal `system.name` or an alias exactly** — same spelling, spaces, punctuation, and letter case. Merged binaries (one map system, planets around A and B) keep the old NASA hostnames on `aliases` (`TOI-2267 A` still matches `TOI-2267`).
 
 That is **not** the Bayer/Flamsteed English name, SIMBAD main id, or Wikipedia title.
 
@@ -102,6 +102,7 @@ That is **not** the Bayer/Flamsteed English name, SIMBAD main id, or Wikipedia t
 | Kepler-90 | `KOI-351` |
 | TOI-1338 | `TOI-1338 A` |
 | TIC 172900988 | `TIC 172900988 Aa` |
+| TOI-2267 A / B | `TOI-2267` (aliases keep `TOI-2267 A`, `TOI-2267 B`) |
 | 40 Eridani / Vulcan | `40 Eri A` (landmark) |
 | Zeta Reticuli | `zet 2 Ret` (landmark) |
 
@@ -218,7 +219,7 @@ Read those `stops` arrays and a few `STAR_NOTES` entries before writing copy so 
 ## 10. Catalog facts useful when choosing stops
 
 - Hosts live in `data/exoplanets.json`. Multiplicity is inlined: `stars[]`, `multiplicity.{drawn, circumbinary, a, …}`.
-- **P-type (circumbinary):** planet around both stars (`circumbinary`). **S-type:** planet around one component (`around: "A"` etc.).
+- **P-type (circumbinary):** planet around both stars (`circumbinary`). **S-type:** planet around one component (`around: "A"` / `"B"`). Co-located NASA A/B host rows (same sky position, e.g. TOI-2267) are merged into **one** system; original hostnames stay on `aliases` and still match tour stops.
 - Companions are **drawn** in the orbit view only if close (`a` ≲ 5 AU, or ≲ 20× the outer planet, or a very tight CBP). Wide binaries (55 Cnc, Kepler-444, GJ 667 C, …) show in the info panel only — a poor “two suns” stop if the goal is two stars on screen.
 - Landmarks have `planets: []` by design. Do not add fake planets in `landmarkStars.js`.
 - Archive names are messy (`TOI-1338 A`, `TIC 172900988 Aa`). Always copy from the catalog.

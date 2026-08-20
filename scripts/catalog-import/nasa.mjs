@@ -1,4 +1,5 @@
 import { pressLabel } from "../star-label.mjs";
+import { mergeCoLocatedComponentHosts } from "../../js/catalog/mergeHosts.js";
 import {
   fetchJson,
   letterFromHostname,
@@ -180,6 +181,8 @@ export function buildSystemsFromPsCompPars(rows) {
     if (!planetName) continue;
     if (system.planets.some((p) => p.name === planetName)) continue;
 
+    const cbFlag = num(row.cb_flag) === 1;
+    const hostLetter = letterFromHostname(name);
     system.planets.push({
       name: planetName,
       a: num(row.pl_orbsmax),
@@ -194,7 +197,8 @@ export function buildSystemsFromPsCompPars(rows) {
       discoveryMethod: str(row.discoverymethod),
       discoveryYear: num(row.disc_year),
       discoveryFacility: str(row.disc_facility),
-      cbFlag: num(row.cb_flag) === 1,
+      cbFlag,
+      around: cbFlag ? "bary" : hostLetter || null,
     });
   }
 
@@ -229,6 +233,7 @@ export function attachStarsToSystems(systems, hostRows) {
         first.letter = "A";
       }
       system.stars = stars;
+      system.syName = hit.sy || system.syName;
       attached++;
     }
 
@@ -249,7 +254,14 @@ export function attachStarsToSystems(systems, hostRows) {
 
 export async function importExoplanetSystems(log) {
   const planetRows = await fetchPsCompPars(log);
-  const systems = buildSystemsFromPsCompPars(planetRows);
+  let systems = buildSystemsFromPsCompPars(planetRows);
+  const beforeMerge = systems.length;
+  systems = mergeCoLocatedComponentHosts(systems);
+  if (systems.length < beforeMerge) {
+    log?.(
+      `Merged ${beforeMerge - systems.length} co-located A/B host rows into one system each`
+    );
+  }
   log?.(`${systems.filter((s) => s.label !== s.name).length} of ${systems.length} hosts have press labels`);
 
   let hostRows = [];

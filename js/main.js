@@ -214,7 +214,13 @@ async function main() {
       : Math.max(FOCUS_ORBIT_RADIUS_PC * 2.2, 1.5);
     camera.focusOn(system, focusDist, fromStar);
     scene.setFocusedSystem(system, camera.getOrbitBasis());
-    const note = getStarNote(system.name, catalog.activeTourId) ?? system.note;
+    const names = [system.name, ...(system.aliases || [])];
+    let note = null;
+    for (const n of names) {
+      note = getStarNote(n, catalog.activeTourId);
+      if (note) break;
+    }
+    if (!note) note = system.note;
     hud.setSelection(system.label ?? system.name, system.distPc, true, note?.text, system.name);
     updateTourHud();
 

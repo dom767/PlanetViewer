@@ -100,6 +100,7 @@ function renderSystem(s) {
           <div>Orbit ${orbit}</div>
           <div>${sizeMass}</div>
           <div>Period ${period}</div>
+          ${planetAroundLine(s, p)}
         </div>
         ${discovery ? `<div class="discovery">${discovery}</div>` : ""}
       </li>`;
@@ -205,6 +206,19 @@ function planetSizeSols(p) {
 function planetMassSols(p) {
   if (p.massEarth != null) return fmt(p.massEarth, 2, "M⊕");
   return null;
+}
+
+function planetAroundLine(system, planet) {
+  const multiple =
+    (system.stars?.length ?? 0) >= 2 || !!system.binary?.stars;
+  if (!multiple) return "";
+  const around = planet.around;
+  let text = "";
+  if (around === "bary") text = "Orbits both stars";
+  else if (around === "A" || around === "B" || around === "C" || around === "D") {
+    text = `Orbits star ${around}`;
+  }
+  return text ? `<div>${text}</div>` : "";
 }
 
 /** "Transit · 2016 · La Silla Observatory", or null when the archive has nothing. */

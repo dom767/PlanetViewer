@@ -105,7 +105,7 @@ export const TOURS = [
       "TOI-1338 A",
       "DMPP-3 A",
       "Kepler-35",
-      "TOI-2267 A",
+      "TOI-2267",
       "TIC 172900988 Aa",
       "HIP 90988",
       "Kepler-1647",

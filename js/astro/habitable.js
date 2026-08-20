@@ -50,9 +50,20 @@ export function isInGoldilocksZone(semiMajorAu, star) {
  */
 export function applyGoldilocksZone(system) {
   for (const p of system.planets || []) {
-    const hz = isInGoldilocksZone(p.a, system);
+    const host = hostStarForPlanet(system, p);
+    const hz = isInGoldilocksZone(p.a, host);
     p.habitableZone = hz;
     if (hz) p.color = [...GOLDILOCKS_COLOR];
+  }
+  return system;
+}
+
+function hostStarForPlanet(system, planet) {
+  const letter = planet?.around;
+  const stars = system.binary?.stars || system.stars;
+  if (letter && letter !== "bary" && Array.isArray(stars)) {
+    const star = stars.find((s) => s.letter === letter);
+    if (star) return star;
   }
   return system;
 }

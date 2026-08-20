@@ -1,4 +1,5 @@
 import { readFile } from "node:fs/promises";
+import { assignPlanetAround } from "../../js/catalog/mergeHosts.js";
 import { SystemIndex, extractHd, extractHip } from "./names.mjs";
 import {
   CURATED_PATH,
@@ -87,16 +88,8 @@ function fillAFromPeriod(orbit, stars) {
   return orbit;
 }
 
-function assignPlanetAround(system, orbit) {
-  const a = orbit.a;
-  const cb = !!orbit.circumbinary || (system.planets || []).some((p) => p.cbFlag);
-  const heuristicCb = (system.planets || []).some((p) => p.a != null && a && p.a > 2 * a);
-  orbit.circumbinary = cb || heuristicCb;
-  for (const p of system.planets || []) {
-    if (orbit.circumbinary) p.around = "bary";
-    else if (p.a != null && a && p.a < 0.5 * a) p.around = "A";
-    else p.around = "bary";
-  }
+function fillPlanetAround(system, orbit) {
+  orbit.circumbinary = assignPlanetAround(system.planets, orbit);
 }
 
 function applyOrbit(system, orbit) {
@@ -127,7 +120,7 @@ function applyOrbit(system, orbit) {
   if (multiplicity.orbitQuality === "inferred" || (orbit.orbitInferred && !orbit.orbitQuality)) {
     multiplicity.orbitQuality = orbit.orbitQuality || "inferred";
   }
-  assignPlanetAround(system, multiplicity);
+  fillPlanetAround(system, multiplicity);
   multiplicity.drawn = shouldDrawBinary({
     a: multiplicity.a,
     circumbinary: multiplicity.circumbinary,

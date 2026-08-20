@@ -12,6 +12,11 @@ import {
   notableBookmarkHitbox,
   distanceToBookmark,
 } from "../render/bookmarkLayout.js";
+import {
+  assignPlanetAround,
+  isComponentAround,
+  mergeCoLocatedComponentHosts,
+} from "./mergeHosts.js";
 
 /**
  * In-memory catalog of host systems.
@@ -41,7 +46,9 @@ export class Catalog {
     this.tourIndex = 0;
 
     // Older snapshots stored NASA st_lum as log10(L/L☉). Convert if needed.
-    const systemsIn = convertLogLuminositiesIfNeeded(rawSystems);
+    const systemsIn = mergeCoLocatedComponentHosts(
+      convertLogLuminositiesIfNeeded(rawSystems)
+    );
 
     this.sol = createSolSystem();
     this.sol.id = 0;
@@ -99,11 +106,16 @@ export class Catalog {
 
     const names = new Set(tour.stops);
     for (const s of this.systems) {
-      s.notable = names.has(s.name);
+      s.notable = names.has(s.name) || (s.aliases || []).some((a) => names.has(a));
     }
-    this.notableSystems = tour.stops
-      .map((name) => this.byName.get(name))
-      .filter((s) => s?.notable);
+    const seen = new Set();
+    this.notableSystems = [];
+    for (const name of tour.stops) {
+      const s = this.byName.get(name);
+      if (!s?.notable || seen.has(s)) continue;
+      seen.add(s);
+      this.notableSystems.push(s);
+    }
     this.activeTourId = id;
     this.tourIndex = 0;
     return this.notableSystems[0] ?? null;
@@ -194,7 +206,9 @@ function ingestRawSystem(catalog, raw) {
     distPc: raw.distPc,
   };
 
-  const planets = (raw.planets || []).map((p, idx) => normalizePlanet(p, raw.mass, idx));
+  const planets = (raw.planets || []).map((p, idx) =>
+    normalizePlanet(p, massForPlanet(p, raw), idx)
+  );
   // PSCompPars has no Ω; share a stable per-host node so coplanarity is system-local.
   const hostNode = hashAngleDeg(raw.name || "Unknown");
   for (const p of planets) {
@@ -229,14 +243,14 @@ function ingestRawSystem(catalog, raw) {
   };
 
   applyPlanetColors(system);
-  applyGoldilocksZone(system);
   attachStarNote(system);
   if (raw.multiplicity || (Array.isArray(raw.stars) && raw.stars.length >= 2)) {
     attachBinary(system, raw);
   }
+  applyGoldilocksZone(system);
 
   catalog.systems.push(system);
-  catalog.byName.set(system.name, system);
+  indexSystemNames(catalog, system);
 }
 
 function normalizePlanet(p, starMass, idx) {
@@ -263,6 +277,7 @@ function normalizePlanet(p, starMass, idx) {
     }
   }
 
+  const cbFlag = p.cbFlag === true || p.cb_flag === 1;
   return {
     name: p.name || `Planet ${idx + 1}`,
     a,
@@ -279,9 +294,28 @@ function normalizePlanet(p, starMass, idx) {
     discoveryMethod: p.discoveryMethod ?? null,
     discoveryYear: p.discoveryYear ?? null,
     discoveryFacility: p.discoveryFacility ?? null,
-    cbFlag: p.cbFlag === true || p.cb_flag === 1,
-    around: "bary",
+    cbFlag,
+    around: isComponentAround(p.around)
+      ? p.around
+      : cbFlag
+        ? "bary"
+        : p.around || "bary",
   };
+}
+
+function massForPlanet(p, raw) {
+  if (isComponentAround(p?.around) && Array.isArray(raw.stars)) {
+    const star = raw.stars.find((s) => s.letter === p.around);
+    if (star?.mass > 0) return star.mass;
+  }
+  return raw.mass;
+}
+
+function indexSystemNames(catalog, system) {
+  catalog.byName.set(system.name, system);
+  for (const alias of system.aliases || []) {
+    if (alias && !catalog.byName.has(alias)) catalog.byName.set(alias, system);
+  }
 }
 
 /**
@@ -376,15 +410,10 @@ function attachBinary(system, raw) {
   }
 
   const anyCb = binary.circumbinary || system.planets.some((p) => p.cbFlag);
-  const heuristicCb =
-    binary.a != null && system.planets.some((p) => p.a != null && p.a > 2 * binary.a);
-  binary.circumbinary = anyCb || heuristicCb;
-
-  for (const p of system.planets) {
-    if (binary.circumbinary) p.around = "bary";
-    else if (binary.a != null && p.a != null && p.a < 0.5 * binary.a) p.around = "A";
-    else p.around = "bary";
-  }
+  binary.circumbinary = assignPlanetAround(system.planets, {
+    a: binary.a,
+    circumbinary: anyCb,
+  });
 
   system.binary = binary;
   system.stars = stars;
@@ -426,7 +455,13 @@ function convertLogLuminositiesIfNeeded(systems) {
  * @param {SystemRecord} system
  */
 function attachStarNote(system) {
-  system.note = getStarNote(system.name) ?? null;
+  const names = [system.name, ...(system.aliases || [])];
+  let note = null;
+  for (const n of names) {
+    note = getStarNote(n);
+    if (note) break;
+  }
+  system.note = note ?? null;
   system.notable = false;
 }
 

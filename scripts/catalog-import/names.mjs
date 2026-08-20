@@ -49,8 +49,10 @@ export class SystemIndex {
     this.byGaia = new Map();
     for (const s of systems) {
       this.byExact.set(s.name, s);
+      for (const alias of s.aliases || []) this.byExact.set(alias, s);
       addIndex(this.byCompact, compactName(s.name), s);
       addIndex(this.byCompact, compactName(s.label), s);
+      for (const alias of s.aliases || []) addIndex(this.byCompact, compactName(alias), s);
       const hd = s.hdName != null ? Number(s.hdName) : extractHd(s.name);
       const hip = s.hipName != null ? Number(s.hipName) : extractHip(s.name);
       if (Number.isFinite(hd)) addIndex(this.byHd, hd, s);
